@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { customers, customerStatuses } from '../data/customers';
 import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getCurrentDate, calculateOverdueDays as calculateOverdueDaysFromService } from '../services/dateService';
 
 const Customers = () => {
   const [customerList, setCustomerList] = useState(customers);
@@ -40,7 +41,7 @@ const Customers = () => {
       id: Date.now(),
       status: 'active',
       currentBalance: 0,
-      lastPurchase: new Date().toISOString().split('T')[0]
+      lastPurchase: getCurrentDate().toISOString().split('T')[0]
     };
     setCustomerList([customer, ...customerList]);
     setShowAddModal(false);
@@ -66,15 +67,13 @@ const Customers = () => {
     return statusObj?.color || 'gray';
   };
 
-  // Función para calcular días de atraso
+  // Función para calcular días de atraso usando el servicio de fecha
   const calculateOverdueDays = (customer) => {
-    if (!customer.lastPurchase || customer.currentBalance <= 0) return 0;
+    // Si no hay saldo pendiente, no hay atraso
+    if (customer.currentBalance <= 0) return 0;
     
-    const lastPurchaseDate = new Date(customer.lastPurchase);
-    const today = new Date();
-    const daysDiff = Math.floor((today - lastPurchaseDate) / (1000 * 60 * 60 * 24));
-    
-    return Math.max(0, daysDiff - customer.creditDays);
+    // Usar el servicio de fecha para calcular días de atraso
+    return calculateOverdueDaysFromService(customer.lastPurchase, customer.creditDays || 7);
   };
 
   // Función para verificar si un cliente está atrasado
@@ -242,9 +241,7 @@ const Customers = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Saldo Actual
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Días Fiado
-                </th>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Días Atraso
                 </th>
@@ -290,11 +287,7 @@ const Customers = () => {
                       ${customer.currentBalance.toLocaleString()}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {customer.creditDays}
-                    </div>
-                  </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm font-medium ${
                       isCustomerOverdue(customer) ? 'text-red-600' : 'text-green-600'
