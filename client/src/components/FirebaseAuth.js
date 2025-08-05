@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
-  signOut,
   onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -74,16 +73,6 @@ const FirebaseAuth = ({ onLogin }) => {
       toast.error(message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      toast.success('Sesión cerrada exitosamente');
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      toast.error('Error al cerrar sesión');
     }
   };
 

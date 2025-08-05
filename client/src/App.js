@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Store, Eye, EyeOff, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3 } from 'lucide-react';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import FirebaseAuth from './components/FirebaseAuth';
 import { auth } from './firebase';
