@@ -7,7 +7,6 @@ import {
   Trash2, 
   Receipt, 
   CreditCard, 
-  Cash, 
   Calculator,
   ArrowLeft,
   ArrowRight,
@@ -126,7 +125,7 @@ const CashRegister = () => {
   };
 
   const paymentMethods = [
-    { id: 'cash', name: 'Efectivo', icon: Cash, color: 'green' },
+    { id: 'cash', name: 'Efectivo', icon: DollarSign, color: 'green' },
     { id: 'card', name: 'Tarjeta', icon: CreditCard, color: 'blue' },
     { id: 'transfer', name: 'Transferencia', icon: Calculator, color: 'purple' }
   ];
