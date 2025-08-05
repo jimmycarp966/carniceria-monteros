@@ -36,18 +36,28 @@ const FirebaseAuth = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true);
 
+    console.log('🔐 Intentando autenticación con Firebase...');
+    console.log('📧 Email:', email);
+    console.log('🔑 Contraseña:', password ? '***' : 'vacía');
+    console.log('📝 Modo:', isSignUp ? 'Registro' : 'Login');
+
     try {
       if (isSignUp) {
         // Crear nuevo usuario
+        console.log('🆕 Creando nuevo usuario...');
         await createUserWithEmailAndPassword(auth, email, password);
         toast.success('¡Usuario creado exitosamente!');
       } else {
         // Iniciar sesión
+        console.log('🔑 Iniciando sesión...');
         await signInWithEmailAndPassword(auth, email, password);
         toast.success('¡Inicio de sesión exitoso!');
       }
     } catch (error) {
-      console.error('Error de autenticación:', error);
+      console.error('❌ Error de autenticación:', error);
+      console.error('🔍 Código de error:', error.code);
+      console.error('📝 Mensaje de error:', error.message);
+      
       let message = 'Error al autenticarse';
       
       switch (error.code) {
@@ -65,6 +75,12 @@ const FirebaseAuth = ({ onLogin }) => {
           break;
         case 'auth/email-already-in-use':
           message = 'El email ya está en uso';
+          break;
+        case 'auth/invalid-credential':
+          message = 'Credenciales inválidas. Verifica tu email y contraseña';
+          break;
+        case 'auth/operation-not-allowed':
+          message = 'La autenticación por email/contraseña no está habilitada';
           break;
         default:
           message = error.message;

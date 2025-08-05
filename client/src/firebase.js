@@ -14,6 +14,12 @@ const firebaseConfig = {
   measurementId: "G-8LQFDMWNND"
 };
 
+console.log('🚀 Inicializando Firebase...');
+console.log('📊 Configuración:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain
+});
+
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
@@ -21,5 +27,9 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const analytics = getAnalytics(app);
+
+console.log('✅ Firebase inicializado correctamente');
+console.log('🔐 Auth configurado:', !!auth);
+console.log('📊 Firestore configurado:', !!db);
 
 export default app; 
