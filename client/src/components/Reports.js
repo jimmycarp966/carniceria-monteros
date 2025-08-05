@@ -1,5 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, DollarSign, Package, Users, Calendar, Download, Filter } from 'lucide-react';
+import { 
+  BarChart3, 
+  TrendingUp, 
+  DollarSign, 
+  Package, 
+  Users, 
+  Calendar, 
+  Download, 
+  Filter,
+  Clock,
+  Eye,
+  Activity,
+  Target,
+  AlertTriangle,
+  TrendingDown,
+  FileText,
+  Share2,
+  Printer
+} from 'lucide-react';
 import { saleService } from '../services/firebaseService';
 
 const Reports = () => {
@@ -29,6 +47,16 @@ const Reports = () => {
     { name: 'Pollo Entero', sales: 63000, units: 35, growth: -2.1, category: 'pollo' },
     { name: 'Chorizo Parrillero', sales: 42000, units: 35, growth: 15.7, category: 'embutidos' },
     { name: 'Bife de Chorizo', sales: 42000, units: 12, growth: 5.2, category: 'carne' }
+  ];
+
+  // Datos de productos para el reporte de inventario
+  const products = [
+    { id: 1, name: 'Asado de Tira', stock: 15, minStock: 5, category: 'carne' },
+    { id: 2, name: 'Vacío', stock: 8, minStock: 3, category: 'carne' },
+    { id: 3, name: 'Pollo Entero', stock: 12, minStock: 5, category: 'pollo' },
+    { id: 4, name: 'Chorizo Parrillero', stock: 0, minStock: 4, category: 'embutidos' },
+    { id: 5, name: 'Bife de Chorizo', stock: 3, minStock: 2, category: 'carne' },
+    { id: 6, name: 'Carne Molida', stock: 2, minStock: 5, category: 'carne' }
   ];
 
   const customerStats = [
