@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ShoppingCart, 
   Plus, 
@@ -92,14 +92,14 @@ const EnhancedCashRegister = () => {
     return () => {
       realtimeService.cleanup();
     };
-  }, []);
+  }, [updateFilteredProducts]);
 
   // Cargar productos
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       const products = await productService.getAllProducts();
       setAllProducts(products);
@@ -108,9 +108,9 @@ const EnhancedCashRegister = () => {
       console.error('Error cargando productos:', error);
       toast.error('Error cargando productos');
     }
-  };
+  }, []);
 
-  const updateFilteredProducts = (products) => {
+  const updateFilteredProducts = useCallback((products) => {
     if (!searchTerm) {
       setFilteredProducts(products.slice(0, 10));
       return;
@@ -121,7 +121,7 @@ const EnhancedCashRegister = () => {
       product.code?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredProducts(filtered.slice(0, 10));
-  };
+  }, [searchTerm]);
 
   // Búsqueda de productos
   const handleProductSearch = (term) => {

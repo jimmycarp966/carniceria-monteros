@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   DollarSign, 
   Package, 
@@ -98,9 +98,9 @@ const Dashboard = () => {
       realtimeService.off('notification_received');
       realtimeService.off('sync_completed');
     };
-  }, []);
+  }, [loadInitialData]);
 
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -122,7 +122,7 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const updateSalesStats = (sales) => {
     const today = new Date().toDateString();
