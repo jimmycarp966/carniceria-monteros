@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -83,13 +83,13 @@ const Layout = ({ user, onLogout, children }) => {
 // Componente de navegación
 const NavItem = ({ icon: Icon, label, to }) => {
   return (
-    <a
-      href={to}
+    <Link
+      to={to}
       className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:border-b-2 hover:border-primary-600"
     >
       <Icon className="h-4 w-4 mr-2" />
       {label}
-    </a>
+    </Link>
   );
 };
 
