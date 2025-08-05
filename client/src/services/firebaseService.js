@@ -610,6 +610,139 @@ export const customerService = {
   }
 };
 
+// Servicios para Empleados
+export const employeeService = {
+  // Obtener todos los empleados
+  async getAllEmployees() {
+    try {
+      console.log('🔄 Obteniendo empleados desde Firebase...');
+      const querySnapshot = await getDocs(collection(db, 'employees'));
+      const employees = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Empleados obtenidos:', employees.length);
+      return employees;
+    } catch (error) {
+      console.error('❌ Error obteniendo empleados:', error);
+      throw error;
+    }
+  },
+
+  // Obtener empleado por ID
+  async getEmployeeById(id) {
+    try {
+      const docSnap = await getDoc(doc(db, 'employees', id));
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+      } else {
+        throw new Error('Empleado no encontrado');
+      }
+    } catch (error) {
+      console.error('Error obteniendo empleado:', error);
+      throw error;
+    }
+  },
+
+  // Agregar empleado
+  async addEmployee(employeeData) {
+    try {
+      console.log('🔄 Agregando empleado a Firebase:', employeeData);
+      const docRef = await addDoc(collection(db, 'employees'), {
+        ...employeeData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      console.log('✅ Empleado agregado con ID:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error agregando empleado:', error);
+      throw error;
+    }
+  },
+
+  // Actualizar empleado
+  async updateEmployee(employeeId, employeeData) {
+    try {
+      console.log('🔄 Actualizando empleado en Firebase:', employeeId);
+      await updateDoc(doc(db, 'employees', employeeId), {
+        ...employeeData,
+        updatedAt: serverTimestamp()
+      });
+      console.log('✅ Empleado actualizado exitosamente');
+    } catch (error) {
+      console.error('Error actualizando empleado:', error);
+      throw error;
+    }
+  },
+
+  // Eliminar empleado
+  async deleteEmployee(employeeId) {
+    try {
+      console.log('🔄 Eliminando empleado de Firebase:', employeeId);
+      await deleteDoc(doc(db, 'employees', employeeId));
+      console.log('✅ Empleado eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando empleado:', error);
+      throw error;
+    }
+  }
+};
+
+// Datos simulados para empleados
+const sampleEmployees = [
+  {
+    name: "Carlos Mendoza",
+    email: "carlos.mendoza@carniceria.com",
+    phone: "381-111-2222",
+    position: "Carnicero",
+    salary: 45000,
+    status: "active",
+    hireDate: "2024-01-15",
+    address: "Av. San Martín 100, Monteros"
+  },
+  {
+    name: "María Fernández",
+    email: "maria.fernandez@carniceria.com",
+    phone: "381-222-3333",
+    position: "Cajera",
+    salary: 38000,
+    status: "active",
+    hireDate: "2024-03-20",
+    address: "Belgrano 200, Monteros"
+  },
+  {
+    name: "Roberto Silva",
+    email: "roberto.silva@carniceria.com",
+    phone: "381-333-4444",
+    position: "Ayudante",
+    salary: 32000,
+    status: "active",
+    hireDate: "2024-06-10",
+    address: "Sarmiento 300, Monteros"
+  },
+  {
+    name: "Ana López",
+    email: "ana.lopez@carniceria.com",
+    phone: "381-444-5555",
+    position: "Carnicero",
+    salary: 42000,
+    status: "active",
+    hireDate: "2024-02-05",
+    address: "Mitre 400, Monteros"
+  },
+  {
+    name: "Luis Torres",
+    email: "luis.torres@carniceria.com",
+    phone: "381-555-6666",
+    position: "Ayudante",
+    salary: 30000,
+    status: "inactive",
+    hireDate: "2024-01-10",
+    address: "Independencia 500, Monteros"
+  }
+];
+
 // Datos simulados para demostración
 const sampleProducts = [
   {
@@ -739,6 +872,7 @@ export const loadSampleData = async () => {
     console.log('🔄 Verificando si Firebase está vacío...');
     const existingProducts = await productService.getAllProducts();
     const existingCustomers = await customerService.getAllCustomers();
+    const existingEmployees = await employeeService.getAllEmployees();
     
     if (existingProducts.length === 0) {
       console.log('📦 Firebase está vacío, cargando productos simulados...');
@@ -764,6 +898,19 @@ export const loadSampleData = async () => {
       console.log('🎉 Clientes simulados cargados exitosamente');
     } else {
       console.log('👥 Firebase ya tiene clientes, no se cargan simulados');
+    }
+
+    if (existingEmployees.length === 0) {
+      console.log('👨‍💼 Cargando empleados simulados...');
+      
+      for (const employee of sampleEmployees) {
+        await employeeService.addEmployee(employee);
+        console.log(`✅ Empleado simulado agregado: ${employee.name}`);
+      }
+      
+      console.log('🎉 Empleados simulados cargados exitosamente');
+    } else {
+      console.log('👨‍💼 Firebase ya tiene empleados, no se cargan simulados');
     }
 
     return true;

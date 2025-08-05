@@ -1,16 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { employees, positions, employeeStatuses } from '../data/employees';
 import { UserCheck, Plus, Edit, Trash2, Search, DollarSign, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { employeeService, loadSampleData } from '../services/firebaseService';
 
 const Employees = () => {
-  const [employeeList, setEmployeeList] = useState(employees);
+  const [employeeList, setEmployeeList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  // Cargar empleados desde Firebase
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        console.log('🔄 Cargando empleados desde Firebase...');
+        
+        // Intentar cargar datos simulados si Firebase está vacío
+        await loadSampleData();
+        
+        const employeesFromFirebase = await employeeService.getAllEmployees();
+        console.log('👥 Empleados cargados desde Firebase:', employeesFromFirebase.length);
+        setEmployeeList(employeesFromFirebase);
+      } catch (error) {
+        console.error('❌ Error cargando empleados:', error);
+        // Fallback a datos locales
+        setEmployeeList(employees);
+      }
+    };
+    loadEmployees();
+  }, []);
 
   // Filtrar empleados
   const filteredEmployees = employeeList.filter(employee => {
@@ -29,30 +51,62 @@ const Employees = () => {
     averageSalary: employeeList.length > 0 ? employeeList.reduce((sum, e) => sum + e.salary, 0) / employeeList.length : 0
   };
 
-  const handleAddEmployee = (newEmployee) => {
-    const employee = {
-      ...newEmployee,
-      id: Date.now(),
-      status: 'active',
-      hireDate: new Date().toISOString().split('T')[0]
-    };
-    setEmployeeList([employee, ...employeeList]);
-    setShowAddModal(false);
-    toast.success('Empleado agregado exitosamente');
+  const handleAddEmployee = async (newEmployee) => {
+    try {
+      console.log('🔄 Agregando empleado desde componente Employees...');
+      
+      const employeeData = {
+        ...newEmployee,
+        status: 'active',
+        hireDate: new Date().toISOString().split('T')[0],
+        salary: parseFloat(newEmployee.salary)
+      };
+      
+      const employeeId = await employeeService.addEmployee(employeeData);
+      console.log('✅ Empleado agregado a Firebase con ID:', employeeId);
+      
+      const employeeWithId = { ...employeeData, id: employeeId };
+      setEmployeeList([employeeWithId, ...employeeList]);
+      setShowAddModal(false);
+      toast.success('Empleado agregado exitosamente');
+    } catch (error) {
+      console.error('❌ Error agregando empleado desde Employees:', error);
+      toast.error('Error al agregar empleado');
+    }
   };
 
-  const handleEditEmployee = (updatedEmployee) => {
-    setEmployeeList(employeeList.map(e => 
-      e.id === updatedEmployee.id ? updatedEmployee : e
-    ));
-    setShowEditModal(false);
-    setSelectedEmployee(null);
-    toast.success('Empleado actualizado exitosamente');
+  const handleEditEmployee = async (updatedEmployee) => {
+    try {
+      console.log('🔄 Actualizando empleado desde componente Employees...');
+      
+      await employeeService.updateEmployee(updatedEmployee.id, updatedEmployee);
+      console.log('✅ Empleado actualizado en Firebase');
+      
+      setEmployeeList(employeeList.map(e => 
+        e.id === updatedEmployee.id ? updatedEmployee : e
+      ));
+      setShowEditModal(false);
+      setSelectedEmployee(null);
+      toast.success('Empleado actualizado exitosamente');
+    } catch (error) {
+      console.error('❌ Error actualizando empleado desde Employees:', error);
+      toast.error('Error al actualizar empleado');
+    }
   };
 
-  const handleDeleteEmployee = (id) => {
-    setEmployeeList(employeeList.filter(e => e.id !== id));
-    toast.success('Empleado eliminado exitosamente');
+  const handleDeleteEmployee = async (id) => {
+    try {
+      console.log('🔄 Eliminando empleado desde componente Employees...');
+      
+      await employeeService.deleteEmployee(id);
+      console.log('✅ Empleado eliminado de Firebase');
+      
+      setEmployeeList(employeeList.filter(e => e.id !== id));
+      toast.success('Empleado eliminado exitosamente');
+    } catch (error) {
+      console.error('❌ Error eliminando empleado desde Employees:', error);
+      toast.error('Error al eliminar empleado');
+    }
   };
 
   const getStatusColor = (status) => {

@@ -1,15 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { inventoryItems, inventoryMovements, inventoryStatuses, movementTypes } from '../data/inventory';
 import { Building, Search, AlertTriangle, TrendingUp, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { productService, loadSampleData } from '../services/firebaseService';
 
 const Inventory = () => {
-  const [inventoryList] = useState(inventoryItems);
-  const [movementsList, setMovementsList] = useState(inventoryMovements);
+  const [inventoryList, setInventoryList] = useState([]);
+  const [movementsList, setMovementsList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showMovementModal, setShowMovementModal] = useState(false);
+
+  // Cargar inventario desde Firebase
+  useEffect(() => {
+    const loadInventory = async () => {
+      try {
+        console.log('🔄 Cargando inventario desde Firebase...');
+        
+        // Intentar cargar datos simulados si Firebase está vacío
+        await loadSampleData();
+        
+        const productsFromFirebase = await productService.getAllProducts();
+        console.log('📦 Productos cargados para inventario:', productsFromFirebase.length);
+        
+        // Convertir productos a formato de inventario
+        const inventoryData = productsFromFirebase.map(product => ({
+          id: product.id,
+          productName: product.name,
+          category: product.category || 'Sin categoría',
+          currentStock: product.stock || 0,
+          minStock: product.minStock || 10,
+          cost: product.price || 0,
+          status: getStockStatus(product.stock || 0, product.minStock || 10),
+          lastUpdated: product.lastUpdated || new Date().toISOString()
+        }));
+        
+        setInventoryList(inventoryData);
+        
+        // Por ahora, usar movimientos simulados
+        setMovementsList(inventoryMovements);
+      } catch (error) {
+        console.error('❌ Error cargando inventario:', error);
+        setInventoryList(inventoryItems);
+        setMovementsList(inventoryMovements);
+      }
+    };
+    loadInventory();
+  }, []);
+
+  // Función para determinar el estado del stock
+  const getStockStatus = (currentStock, minStock) => {
+    if (currentStock === 0) return 'critical';
+    if (currentStock <= minStock) return 'low';
+    return 'normal';
+  };
 
   // Filtrar inventario
   const filteredInventory = inventoryList.filter(item => {
@@ -29,15 +74,26 @@ const Inventory = () => {
     totalStock: inventoryList.reduce((sum, i) => sum + i.currentStock, 0)
   };
 
-  const handleAddMovement = (newMovement) => {
-    const movement = {
-      ...newMovement,
-      id: Date.now(),
-      date: new Date().toISOString().split('T')[0]
-    };
-    setMovementsList([movement, ...movementsList]);
-    setShowMovementModal(false);
-    toast.success('Movimiento registrado');
+  const handleAddMovement = async (newMovement) => {
+    try {
+      console.log('🔄 Registrando movimiento de inventario...');
+      
+      const movement = {
+        ...newMovement,
+        id: Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        timestamp: new Date().toISOString()
+      };
+      
+      // Aquí se podría implementar la lógica para guardar en Firebase
+      // Por ahora, solo actualizar el estado local
+      setMovementsList([movement, ...movementsList]);
+      setShowMovementModal(false);
+      toast.success('Movimiento registrado');
+    } catch (error) {
+      console.error('❌ Error registrando movimiento:', error);
+      toast.error('Error al registrar movimiento');
+    }
   };
 
   const getStatusColor = (status) => {

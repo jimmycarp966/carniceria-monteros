@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { products } from '../data/products';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { saleService, productService, loadSampleData } from '../services/firebaseService';
 
 const Sales = () => {
   const [cart, setCart] = useState([]);
@@ -9,6 +10,34 @@ const Sales = () => {
   const [quantity, setQuantity] = useState(1);
   const [sales, setSales] = useState([]);
   const [showSalesHistory, setShowSalesHistory] = useState(false);
+  const [allProducts, setAllProducts] = useState([]);
+
+  // Cargar productos y ventas desde Firebase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        console.log('🔄 Cargando datos en componente Sales...');
+        
+        // Intentar cargar datos simulados si Firebase está vacío
+        await loadSampleData();
+        
+        // Cargar productos desde Firebase
+        const productsFromFirebase = await productService.getAllProducts();
+        console.log('📦 Productos cargados en Sales:', productsFromFirebase.length);
+        setAllProducts(productsFromFirebase);
+        
+        // Cargar ventas desde Firebase
+        const salesFromFirebase = await saleService.getAllSales();
+        console.log('💰 Ventas cargadas en Sales:', salesFromFirebase.length);
+        setSales(salesFromFirebase);
+      } catch (error) {
+        console.error('❌ Error cargando datos en Sales:', error);
+        // Fallback a datos locales
+        setAllProducts(products);
+      }
+    };
+    loadData();
+  }, []);
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -23,7 +52,7 @@ const Sales = () => {
       return;
     }
 
-    const product = products.find(p => p.id === parseInt(selectedProduct));
+    const product = allProducts.find(p => p.id === parseInt(selectedProduct));
     if (!product) return;
 
     const existingItem = cart.find(item => item.id === product.id);
@@ -57,23 +86,51 @@ const Sales = () => {
     ));
   };
 
-  const completeSale = () => {
+  const completeSale = async () => {
     if (cart.length === 0) {
       toast.error('El carrito está vacío');
       return;
     }
 
-    const sale = {
-      id: Date.now(),
-      items: [...cart],
-      total: cartTotal,
-      date: new Date().toISOString(),
-      customer: 'Cliente General'
-    };
+    try {
+      console.log('🔄 Completando venta desde componente Sales...');
+      
+      const saleData = {
+        items: cart.map(item => ({
+          productId: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          subtotal: item.price * item.quantity
+        })),
+        total: cartTotal,
+        date: new Date().toISOString(),
+        customer: 'Cliente General',
+        paymentMethod: 'cash' // Método de pago por defecto
+      };
 
-    setSales([sale, ...sales]);
-    setCart([]);
-    toast.success('Venta completada exitosamente');
+      const saleId = await saleService.addSale(saleData);
+      console.log('✅ Venta agregada a Firebase con ID:', saleId);
+      
+      // Actualizar stock de productos
+      for (const item of cart) {
+        try {
+          await productService.updateProductStock(item.id.toString(), item.quantity);
+          console.log(`✅ Stock actualizado para producto ${item.name}`);
+        } catch (error) {
+          console.error(`❌ Error actualizando stock para ${item.name}:`, error);
+        }
+      }
+
+      // Actualizar estado local
+      const saleWithId = { ...saleData, id: saleId };
+      setSales([saleWithId, ...sales]);
+      setCart([]);
+      toast.success('Venta completada exitosamente');
+    } catch (error) {
+      console.error('❌ Error completando venta desde Sales:', error);
+      toast.error('Error al completar la venta');
+    }
   };
 
   const stats = {
@@ -165,7 +222,7 @@ const Sales = () => {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">Seleccionar producto...</option>
-                {products.map(product => (
+                {allProducts.map(product => (
                   <option key={product.id} value={product.id}>
                     {product.name} - ${product.price.toLocaleString()}
                   </option>

@@ -15,6 +15,7 @@ import {
   ArrowRight,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   FileText,
   BarChart3,
   Calendar,
