@@ -9,14 +9,9 @@ import {
   Zap,
   Bell,
   RefreshCw,
-  BarChart3,
-  ShoppingCart,
-  Clock,
-  TrendingDown,
-  Eye,
-  EyeOff
+  ShoppingCart
 } from 'lucide-react';
-import { realtimeService, dataSyncService } from '../services/realtimeService';
+import { realtimeService } from '../services/realtimeService';
 import { productService, saleService } from '../services/firebaseService';
 import toast from 'react-hot-toast';
 
@@ -47,7 +42,7 @@ const Dashboard = () => {
   // Estados para gráficos y análisis
   const [salesChart, setSalesChart] = useState([]);
   const [productPerformance, setProductPerformance] = useState([]);
-  const [revenueTrend, setRevenueTrend] = useState([]);
+
 
   // Inicializar listeners de tiempo real
   useEffect(() => {
@@ -84,7 +79,10 @@ const Dashboard = () => {
     });
     
     // Cargar datos iniciales
-    loadInitialData();
+    const loadData = async () => {
+      await loadInitialData();
+    };
+    loadData();
     
     // Actualizar estado de conexión cada 30 segundos
     const connectionInterval = setInterval(() => {

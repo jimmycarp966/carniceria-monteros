@@ -1,16 +1,11 @@
 import { 
   ref, 
-  onValue, 
-  set, 
   push, 
   update, 
-  off,
-  serverTimestamp,
-  onDisconnect
+  serverTimestamp
 } from 'firebase/database';
 import { 
   collection, 
-  doc, 
   onSnapshot, 
   addDoc, 
   updateDoc,
@@ -38,17 +33,7 @@ let syncState = {
 const offlineQueue = [];
 const MAX_QUEUE_SIZE = 100;
 
-// Eventos de sincronización
-const syncEvents = {
-  SALE_COMPLETED: 'sale_completed',
-  INVENTORY_UPDATED: 'inventory_updated',
-  PRODUCT_ADDED: 'product_added',
-  CUSTOMER_ADDED: 'customer_added',
-  SHIFT_OPENED: 'shift_opened',
-  SHIFT_CLOSED: 'shift_closed',
-  STOCK_ALERT: 'stock_alert',
-  PAYMENT_RECEIVED: 'payment_received'
-};
+
 
 // Callbacks para actualizaciones en tiempo real
 const realtimeCallbacks = new Map();

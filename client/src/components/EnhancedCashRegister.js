@@ -1,34 +1,18 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShoppingCart, 
   Plus, 
   Minus, 
   Trash2, 
-  Clock, 
-  DollarSign, 
   CreditCard,
   Banknote,
-  AlertTriangle,
-  BarChart3,
-  Receipt,
   X,
-  Zap,
-  Target,
   Check,
-  Filter,
-  Smartphone,
   Search,
-  QrCode,
   Camera,
   Calculator,
-  Keyboard,
-  Volume2,
-  Printer,
-  Save,
   RotateCcw,
-  Gift,
   Percent,
-  Hash,
   Hash as BarcodeIcon
 } from 'lucide-react';
 import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
@@ -38,15 +22,14 @@ import toast from 'react-hot-toast';
 const EnhancedCashRegister = () => {
   // Estados principales
   const [cart, setCart] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cashAmount, setCashAmount] = useState(0);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   
   // Estados para turnos
-  const [currentShift, setCurrentShift] = useState(null);
-  const [shiftStartTime, setShiftStartTime] = useState(null);
+  const [currentShift] = useState(null);
   const [shiftSales, setShiftSales] = useState([]);
   const [shiftTotal, setShiftTotal] = useState(0);
   
@@ -61,7 +44,7 @@ const EnhancedCashRegister = () => {
   const [showNumericKeypad, setShowNumericKeypad] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
+
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   
   // Estados para descuentos y promociones
@@ -69,14 +52,12 @@ const EnhancedCashRegister = () => {
   const [discountValue, setDiscountValue] = useState(0);
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   
-  // Estados para notificaciones en tiempo real
-  const [realtimeNotifications, setRealtimeNotifications] = useState([]);
-  const [stockAlerts, setStockAlerts] = useState([]);
+
   
   // Referencias
   const searchInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
-  const numericKeypadRef = useRef(null);
+
   
   // Cálculos
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -91,7 +72,8 @@ const EnhancedCashRegister = () => {
     // Escuchar actualizaciones de productos
     realtimeService.on('products_updated', (data) => {
       setAllProducts(data.products);
-      updateFilteredProducts(data.products);
+      const updateFiltered = () => updateFilteredProducts(data.products);
+      updateFiltered();
     });
     
     // Escuchar alertas de stock
@@ -115,7 +97,10 @@ const EnhancedCashRegister = () => {
 
   // Cargar productos
   useEffect(() => {
-    loadProducts();
+    const loadInitialProducts = async () => {
+      await loadProducts();
+    };
+    loadInitialProducts();
   }, []);
 
   const loadProducts = async () => {

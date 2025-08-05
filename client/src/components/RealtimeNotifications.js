@@ -3,13 +3,11 @@ import {
   Bell, 
   X, 
   CheckCircle, 
-  AlertTriangle, 
   Info, 
   DollarSign,
   Package,
   Users,
-  TrendingUp,
-  Zap
+  TrendingUp
 } from 'lucide-react';
 import { realtimeService } from '../services/realtimeService';
 import toast from 'react-hot-toast';
@@ -21,9 +19,11 @@ const RealtimeNotifications = () => {
 
   useEffect(() => {
     // Escuchar notificaciones en tiempo real
-    realtimeService.on('notification_received', (notification) => {
+    const handleNotification = (notification) => {
       addNotification(notification);
-    });
+    };
+    
+    realtimeService.on('notification_received', handleNotification);
 
     // Escuchar alertas de stock
     realtimeService.on('stock_alert', (data) => {
@@ -56,7 +56,7 @@ const RealtimeNotifications = () => {
     });
 
     return () => {
-      realtimeService.off('notification_received');
+      realtimeService.off('notification_received', handleNotification);
       realtimeService.off('stock_alert');
       realtimeService.off('sale_synced');
     };
