@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Bell } from 'lucide-react';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Bell, Settings, Sun, Moon, Search } from 'lucide-react';
 import Products from './components/Products';
 import Sales from './components/Sales';
 import CashRegister from './components/CashRegister';
@@ -23,14 +23,14 @@ const NavItem = ({ icon: Icon, label, to, onClick, isActive, badge }) => {
       onClick={onClick}
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 relative group ${
         isActive 
-          ? 'text-primary-700 bg-primary-50/80 border border-primary-200/50 shadow-md transform scale-105 backdrop-blur-sm' 
-          : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50/60 hover:transform hover:scale-105 backdrop-blur-sm'
+          ? 'text-orange-700 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50 shadow-lg transform scale-105 backdrop-blur-sm' 
+          : 'text-gray-700 hover:text-orange-600 hover:bg-gradient-to-r hover:from-orange-50/60 hover:to-red-50/60 hover:transform hover:scale-105 backdrop-blur-sm'
       }`}
     >
-      <Icon className={`h-5 w-5 mr-3 transition-colors duration-200 ${isActive ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-500'}`} />
+      <Icon className={`h-5 w-5 mr-3 transition-colors duration-200 ${isActive ? 'text-orange-600' : 'text-gray-500 group-hover:text-orange-500'}`} />
       <span className="inline">{label}</span>
       {badge && (
-        <span className="absolute top-1/2 -translate-y-1/2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+        <span className="absolute top-1/2 -translate-y-1/2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse">
           {badge}
         </span>
       )}
@@ -44,7 +44,7 @@ const Layout = ({ children }) => {
   const [activeRoute, setActiveRoute] = useState('/');
   const [lowStockAlerts] = useState(3); // Simulación de alertas de inventario
   const [notifications] = useState(2); // Simulación de notificaciones
-
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -52,8 +52,6 @@ const Layout = ({ children }) => {
     });
     return () => unsubscribe();
   }, []);
-
-
 
   // Debug: Log cuando cambia el estado del sidebar
   useEffect(() => {
@@ -92,12 +90,12 @@ const Layout = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex ${darkMode ? 'dark' : ''}`}>
       {/* Mobile menu button optimizado */}
       <div className="lg:hidden fixed top-6 left-6 z-[9999]">
         <button
           onClick={toggleSidebar}
-          className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+          className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
           aria-label="Toggle menu"
           style={{ minWidth: '48px', minHeight: '48px' }}
         >
@@ -106,14 +104,20 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Notificaciones móviles optimizadas */}
-      <div className="lg:hidden fixed top-6 right-6 z-[9999]">
-        <button className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300 transform hover:scale-105 relative">
+      <div className="lg:hidden fixed top-6 right-6 z-[9999] flex space-x-2">
+        <button className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95 relative">
           <Bell className="h-5 w-5" />
           {notifications > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse">
               {notifications}
             </span>
           )}
+        </button>
+        <button 
+          onClick={() => setDarkMode(!darkMode)}
+          className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
+        >
+          {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
       </div>
 
@@ -127,23 +131,31 @@ const Layout = ({ children }) => {
 
       {/* Sidebar Mejorado */}
       <div className={`
-        fixed left-0 top-0 z-50 w-80 h-full bg-white/95 backdrop-blur-md shadow-2xl transform transition-transform duration-300 ease-in-out
+        fixed left-0 top-0 z-50 w-80 h-full bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200/50
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:w-72 lg:z-auto lg:bg-white
+        lg:translate-x-0 lg:static lg:w-72 lg:z-auto lg:bg-white/95
       `}>
         <div className="flex flex-col h-full">
           {/* Header Mejorado */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-primary-50/80 to-primary-100/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-orange-50/80 to-red-50/80 backdrop-blur-sm">
             <div className="flex items-center">
-              <div className="p-3 bg-primary-100 rounded-2xl">
-                <Store className="h-8 w-8 text-primary-600" />
+              <div className="relative p-3 bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl shadow-lg">
+                <Store className="h-8 w-8 text-orange-600" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
               <div className="ml-3">
-                <h1 className="text-xl font-bold text-gray-900">Carnicería Muñoz</h1>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">Carnicería Muñoz</h1>
                 <p className="text-xs text-gray-600">Sistema de Administración</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
+                aria-label="Toggle dark mode"
+              >
+                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
               <button
                 onClick={closeSidebar}
                 className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
@@ -173,21 +185,24 @@ const Layout = ({ children }) => {
           </nav>
 
           {/* Footer Mejorado */}
-          <div className="p-4 border-t border-gray-200/50 bg-gray-50/80 backdrop-blur-sm">
+          <div className="p-4 border-t border-gray-200/50 bg-gradient-to-r from-gray-50/80 to-orange-50/80 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
-                <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                  <UserCheck className="h-4 w-4 text-primary-600" />
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-full flex items-center justify-center shadow-sm">
+                  <UserCheck className="h-4 w-4 text-orange-600" />
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-900">{user?.email || 'Usuario'}</p>
                   <p className="text-xs text-gray-500">Administrador</p>
                 </div>
               </div>
+              <button className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200">
+                <Settings className="h-4 w-4" />
+              </button>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-gray-50/80 hover:border-gray-300/50 transition-all duration-200"
+              className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-gradient-to-r hover:from-orange-50/80 hover:to-red-50/80 hover:border-orange-200/50 transition-all duration-200"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar Sesión
@@ -206,8 +221,6 @@ const Layout = ({ children }) => {
   );
 };
 
-
-
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -222,10 +235,17 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="loading-spinner mx-auto mb-4"></div>
-          <p className="loading-text">Cargando...</p>
+          <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-red-100 rounded-3xl mb-6 shadow-lg">
+            <Store className="h-10 w-10 text-orange-600 animate-pulse" />
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white animate-ping"></div>
+          </div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+            Carnicería Monteros
+          </h2>
+          <p className="text-gray-600 mb-4">Cargando sistema...</p>
+          <div className="loading-spinner mx-auto"></div>
         </div>
       </div>
     );

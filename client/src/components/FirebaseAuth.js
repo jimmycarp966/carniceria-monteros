@@ -5,7 +5,7 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Store, Eye, EyeOff } from 'lucide-react';
+import { Store, Eye, EyeOff, Lock, Mail, User, Shield, Sparkles, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const FirebaseAuth = ({ onLogin }) => {
@@ -93,98 +93,164 @@ const FirebaseAuth = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100">
-            <Store className="h-8 w-8 text-primary-600" />
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Carnicería Monteros
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sistema de Administración
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="input rounded-t-lg rounded-b-none"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 p-4">
+      {/* Fondo decorativo */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-40 left-40 w-80 h-80 bg-yellow-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+      </div>
+
+      <div className="relative w-full max-w-md">
+        {/* Card principal */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-red-100 rounded-3xl mb-6 shadow-lg">
+              <Store className="h-10 w-10 text-orange-600" />
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white"></div>
             </div>
-            <div className="relative">
-              <label htmlFor="password" className="sr-only">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                required
-                className="input rounded-t-none rounded-b-lg pr-10"
-                placeholder="Contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <Eye className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+              Carnicería Monteros
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Sistema de Administración
+            </p>
+            <div className="flex items-center justify-center mt-4 space-x-2">
+              <Sparkles className="h-4 w-4 text-orange-500" />
+              <span className="text-xs text-gray-500">Gestión Inteligente</span>
+              <Sparkles className="h-4 w-4 text-orange-500" />
             </div>
           </div>
 
-          <div>
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Campo Email */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center">
+                <Mail className="h-4 w-4 mr-2 text-orange-500" />
+                Correo Electrónico
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 pl-12 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                  placeholder="tu@email.com"
+                  required
+                />
+                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              </div>
+            </div>
+
+            {/* Campo Contraseña */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center">
+                <Lock className="h-4 w-4 mr-2 text-orange-500" />
+                Contraseña
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pl-12 pr-12 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                  placeholder="••••••••"
+                  required
+                />
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Botón de envío */}
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 px-6 rounded-2xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:transform-none disabled:hover:shadow-none flex items-center justify-center space-x-2"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Procesando...</span>
+                </>
               ) : (
-                isSignUp ? 'Crear cuenta' : 'Iniciar sesión'
+                <>
+                  <span>{isSignUp ? 'Crear Cuenta' : 'Iniciar Sesión'}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
               )}
             </button>
+
+            {/* Cambiar modo */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium transition-colors duration-200"
+              >
+                {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
+              </button>
+            </div>
+          </form>
+
+          {/* Credenciales de prueba */}
+          <div className="mt-8 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl border border-orange-200">
+            <div className="flex items-center mb-2">
+              <Shield className="h-4 w-4 text-orange-600 mr-2" />
+              <span className="text-sm font-medium text-orange-800">Credenciales de Prueba</span>
+            </div>
+            <div className="space-y-1 text-xs text-orange-700">
+              <p><span className="font-medium">Email:</span> admin@carniceria.com</p>
+              <p><span className="font-medium">Contraseña:</span> admin123</p>
+            </div>
           </div>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary-600 hover:text-primary-500 text-sm"
-            >
-              {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
-            </button>
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <div className="flex items-center justify-center space-x-1 text-xs text-gray-500">
+              <User className="h-3 w-3" />
+              <span>Sistema Seguro</span>
+              <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+              <span>En Línea</span>
+            </div>
           </div>
-        </form>
-
-        <div className="text-center text-xs text-gray-500">
-          <p>Credenciales de prueba:</p>
-          <p>Email: admin@carniceria.com</p>
-          <p>Contraseña: admin123</p>
         </div>
       </div>
+
+      {/* Estilos CSS para animaciones */}
+      <style jsx>{`
+        @keyframes blob {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 };
