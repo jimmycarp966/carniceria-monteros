@@ -743,29 +743,31 @@ const sampleEmployees = [
   }
 ];
 
-// Datos simulados para demostración
+// Datos simulados para demostración - PRODUCTOS MEJORADOS
 const sampleProducts = [
   {
     name: "Asado de Tira",
-    description: "Corte premium de carne vacuna",
+    description: "Corte premium de carne vacuna para parrilla",
     category: "carne",
     price: 8500,
     stock: 25,
     unit: "kg",
     origin: "Tucumán",
     image: "🥩",
-    minStock: 10
+    minStock: 10,
+    salesCount: 15
   },
   {
     name: "Pollo Entero",
-    description: "Pollo fresco de granja",
+    description: "Pollo fresco de granja local",
     category: "pollo",
     price: 3200,
     stock: 15,
     unit: "kg",
     origin: "Tucumán",
     image: "🍗",
-    minStock: 8
+    minStock: 8,
+    salesCount: 22
   },
   {
     name: "Chorizo Parrillero",
@@ -776,18 +778,20 @@ const sampleProducts = [
     unit: "kg",
     origin: "Tucumán",
     image: "🥓",
-    minStock: 12
+    minStock: 12,
+    salesCount: 18
   },
   {
     name: "Bife de Chorizo",
-    description: "Corte fino de carne vacuna",
+    description: "Corte fino de carne vacuna premium",
     category: "carne",
     price: 9200,
     stock: 18,
     unit: "kg",
     origin: "Tucumán",
     image: "🥩",
-    minStock: 10
+    minStock: 10,
+    salesCount: 12
   },
   {
     name: "Pechuga de Pollo",
@@ -798,18 +802,188 @@ const sampleProducts = [
     unit: "kg",
     origin: "Tucumán",
     image: "🍗",
-    minStock: 8
+    minStock: 8,
+    salesCount: 28
   },
   {
     name: "Salchicha Vienesa",
-    description: "Salchicha tradicional",
+    description: "Salchicha tradicional alemana",
     category: "embutidos",
     price: 1500,
     stock: 35,
     unit: "kg",
     origin: "Tucumán",
     image: "🌭",
-    minStock: 15
+    minStock: 15,
+    salesCount: 25
+  },
+  {
+    name: "Vacío",
+    description: "Corte de carne vacuna para asado",
+    category: "carne",
+    price: 7800,
+    stock: 12,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 8,
+    salesCount: 8
+  },
+  {
+    name: "Alitas de Pollo",
+    description: "Alitas de pollo marinadas",
+    category: "pollo",
+    price: 2800,
+    stock: 20,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🍗",
+    minStock: 10,
+    salesCount: 16
+  },
+  {
+    name: "Morcilla",
+    description: "Morcilla tradicional argentina",
+    category: "embutidos",
+    price: 1200,
+    stock: 18,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥓",
+    minStock: 8,
+    salesCount: 14
+  },
+  {
+    name: "Lomo",
+    description: "Lomo de cerdo fresco",
+    category: "cerdo",
+    price: 4500,
+    stock: 14,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 6,
+    salesCount: 9
+  },
+  {
+    name: "Costilla de Cerdo",
+    description: "Costilla de cerdo para parrilla",
+    category: "cerdo",
+    price: 3800,
+    stock: 16,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 8,
+    salesCount: 11
+  },
+  {
+    name: "Panceta",
+    description: "Panceta ahumada",
+    category: "embutidos",
+    price: 2200,
+    stock: 12,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥓",
+    minStock: 6,
+    salesCount: 7
+  },
+  {
+    name: "Matambre",
+    description: "Matambre de ternera",
+    category: "carne",
+    price: 6800,
+    stock: 8,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 5,
+    salesCount: 6
+  },
+  {
+    name: "Pata y Muslo",
+    description: "Pata y muslo de pollo",
+    category: "pollo",
+    price: 2500,
+    stock: 25,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🍗",
+    minStock: 10,
+    salesCount: 19
+  },
+  {
+    name: "Jamón Cocido",
+    description: "Jamón cocido premium",
+    category: "embutidos",
+    price: 3200,
+    stock: 20,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥓",
+    minStock: 8,
+    salesCount: 13
+  },
+  {
+    name: "Bife Ancho",
+    description: "Bife ancho de carne vacuna",
+    category: "carne",
+    price: 9500,
+    stock: 10,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 6,
+    salesCount: 5
+  },
+  {
+    name: "Pollo Deshuesado",
+    description: "Pollo deshuesado y fileteado",
+    category: "pollo",
+    price: 4200,
+    stock: 18,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🍗",
+    minStock: 8,
+    salesCount: 15
+  },
+  {
+    name: "Salami",
+    description: "Salami italiano tradicional",
+    category: "embutidos",
+    price: 2800,
+    stock: 15,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥓",
+    minStock: 6,
+    salesCount: 10
+  },
+  {
+    name: "Carne Molida",
+    description: "Carne molida premium",
+    category: "carne",
+    price: 5800,
+    stock: 30,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 12,
+    salesCount: 24
+  },
+  {
+    name: "Pollo a la Parrilla",
+    description: "Pollo entero para parrilla",
+    category: "pollo",
+    price: 3500,
+    stock: 12,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🍗",
+    minStock: 6,
+    salesCount: 8
   }
 ];
 

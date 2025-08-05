@@ -1,20 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Bell, Settings, Sun, Moon, Search } from 'lucide-react';
-import Products from './components/Products';
-import Sales from './components/Sales';
-import CashRegister from './components/CashRegister';
-import Customers from './components/Customers';
-import Employees from './components/Employees';
-import Suppliers from './components/Suppliers';
-import Inventory from './components/Inventory';
-import Categories from './components/Categories';
-import Reports from './components/Reports';
-import Dashboard from './components/Dashboard';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
+
+// Lazy loading para mejorar el rendimiento
+const Products = lazy(() => import('./components/Products'));
+const Sales = lazy(() => import('./components/Sales'));
+const CashRegister = lazy(() => import('./components/CashRegister'));
+const Customers = lazy(() => import('./components/Customers'));
+const Employees = lazy(() => import('./components/Employees'));
+const Suppliers = lazy(() => import('./components/Suppliers'));
+const Inventory = lazy(() => import('./components/Inventory'));
+const Categories = lazy(() => import('./components/Categories'));
+const Reports = lazy(() => import('./components/Reports'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+
+// Componente de carga optimizado
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="text-center">
+      <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-red-100 rounded-3xl mb-6 shadow-lg">
+        <Store className="h-10 w-10 text-orange-600 animate-pulse" />
+        <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white animate-ping"></div>
+      </div>
+      <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+        Cargando...
+      </h2>
+      <p className="text-gray-600">Preparando módulo</p>
+    </div>
+  </div>
+);
 
 const NavItem = ({ icon: Icon, label, to, onClick, isActive, badge }) => {
   return (
@@ -214,7 +232,9 @@ const Layout = ({ children }) => {
       {/* Main content mejorado */}
       <div className="lg:pl-72 w-full flex-1">
         <div className="min-h-screen w-full">
-          {children}
+          <Suspense fallback={<LoadingSpinner />}>
+            {children}
+          </Suspense>
         </div>
       </div>
     </div>
