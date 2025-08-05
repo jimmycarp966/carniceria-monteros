@@ -167,7 +167,11 @@ const CashRegister = () => {
   };
 
   const getShiftName = (shift) => {
-    return shift === 'morning' ? 'Mañana' : shift === 'afternoon' ? 'Tarde' : 'Noche';
+    return shift === 'morning' ? 'Mañana' : 'Tarde';
+  };
+
+  const getShiftTime = (shift) => {
+    return shift === 'morning' ? '8:00 - 14:00' : '18:00 - 22:00';
   };
 
   const getShiftDuration = () => {
@@ -372,8 +376,8 @@ const CashRegister = () => {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Caja Cerrada</h2>
             <p className="text-gray-600 mb-6">Selecciona un turno para abrir la caja</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['morning', 'afternoon', 'night'].map(shift => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {['morning', 'afternoon'].map(shift => (
                 <button
                   key={shift}
                   onClick={() => openCashRegister(shift)}
@@ -383,7 +387,7 @@ const CashRegister = () => {
                     <Clock className="h-6 w-6" />
                   </div>
                   <h3 className="shift-title">{getShiftName(shift)}</h3>
-                  <p className="shift-time">8:00 - 16:00</p>
+                  <p className="shift-time">{getShiftTime(shift)}</p>
                 </button>
               ))}
             </div>
