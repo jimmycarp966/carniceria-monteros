@@ -9,6 +9,12 @@ import toast from 'react-hot-toast';
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
   const [dateRange, setDateRange] = useState('month');
+  
+  // Nuevos estados para filtros
+  const [periodFilter, setPeriodFilter] = useState('month'); // day, week, month, quarter, year
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [showCustomDateRange, setShowCustomDateRange] = useState(false);
 
   // Datos de ejemplo para reportes
   const salesData = [
@@ -61,29 +67,206 @@ const Reports = () => {
     // Aquí iría la lógica real de descarga
   };
 
+  // Función para obtener el nombre del período
+  const getPeriodName = (period) => {
+    switch (period) {
+      case 'day': return 'Diario';
+      case 'week': return 'Semanal';
+      case 'month': return 'Mensual';
+      case 'quarter': return 'Trimestral';
+      case 'year': return 'Anual';
+      case 'custom': return 'Personalizado';
+      default: return 'Mensual';
+    }
+  };
+
+  // Función para exportar reporte real
+  const exportRealReport = (reportType) => {
+    const reportData = {
+      type: reportType,
+      period: getPeriodName(periodFilter),
+      dateRange: periodFilter === 'custom' ? `${customStartDate} - ${customEndDate}` : new Date().toLocaleDateString(),
+      generatedAt: new Date().toISOString(),
+      data: {
+        sales: salesData,
+        products: topProducts,
+        customers: customerStats,
+        suppliers: supplierStats,
+        general: generalStats
+      }
+    };
+
+    // Crear archivo JSON para descarga
+    const dataStr = JSON.stringify(reportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `reporte_${reportType}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`Reporte ${reportType} exportado exitosamente`);
+  };
+
   const renderSalesReport = () => (
     <div className="space-y-6">
-      {/* Sales Chart */}
+      {/* Filtros de período */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Ventas Mensuales</h3>
-        <div className="space-y-4">
-          {salesData.map((item, index) => (
-            <div key={index} className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 text-sm font-medium text-gray-900">{item.month}</div>
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Filtros de Período</h3>
+          <button
+            onClick={() => setShowCustomDateRange(!showCustomDateRange)}
+            className="btn btn-secondary text-sm"
+          >
+            {showCustomDateRange ? 'Ocultar' : 'Rango Personalizado'}
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+          <button
+            onClick={() => setPeriodFilter('day')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              periodFilter === 'day'
+                ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Diario
+          </button>
+          <button
+            onClick={() => setPeriodFilter('week')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              periodFilter === 'week'
+                ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Semanal
+          </button>
+          <button
+            onClick={() => setPeriodFilter('month')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              periodFilter === 'month'
+                ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Mensual
+          </button>
+          <button
+            onClick={() => setPeriodFilter('quarter')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              periodFilter === 'quarter'
+                ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Trimestral
+          </button>
+          <button
+            onClick={() => setPeriodFilter('year')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              periodFilter === 'year'
+                ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Anual
+          </button>
+          <button
+            onClick={() => setPeriodFilter('custom')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              periodFilter === 'custom'
+                ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Personalizado
+          </button>
+        </div>
+
+        {showCustomDateRange && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sales Chart - Mejorado */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Ventas {getPeriodName(periodFilter)}</h3>
+          <button
+            onClick={() => exportRealReport('ventas')}
+            className="btn btn-primary flex items-center text-sm"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gráfico de ventas */}
+          <div className="space-y-3">
+            {salesData.map((item, index) => (
+              <div key={index} className="flex items-center space-x-4">
+                <div className="w-16 text-sm font-medium text-gray-900">{item.month}</div>
+                <div className="flex-1 bg-gray-200 rounded-full h-3">
                   <div 
-                    className="bg-blue-600 h-2 rounded-full" 
+                    className="bg-blue-600 h-3 rounded-full transition-all duration-300" 
                     style={{ width: `${(item.sales / 700000) * 100}%` }}
                   ></div>
                 </div>
+                <div className="text-right min-w-[120px]">
+                  <div className="text-sm font-medium text-gray-900">${item.sales.toLocaleString()}</div>
+                  <div className="text-xs text-green-600">+${item.profit.toLocaleString()}</div>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">${item.sales.toLocaleString()}</div>
-                <div className="text-xs text-green-600">+${item.profit.toLocaleString()}</div>
+            ))}
+          </div>
+
+          {/* Resumen estadístico */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 mb-3">Resumen del Período</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Ventas:</span>
+                <span className="text-sm font-medium">${generalStats.totalSales.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Ganancia:</span>
+                <span className="text-sm font-medium text-green-600">${generalStats.totalProfit.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Promedio por Período:</span>
+                <span className="text-sm font-medium">${generalStats.averageSale.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Crecimiento:</span>
+                <span className="text-sm font-medium text-blue-600">+{generalStats.growthRate}%</span>
               </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
 

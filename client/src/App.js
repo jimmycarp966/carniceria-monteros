@@ -50,7 +50,7 @@ const Layout = ({ children }) => {
   };
 
   const navigation = [
-    { icon: Home, label: 'Dashboard', to: '/' },
+    { icon: Home, label: 'Menú Principal', to: '/' },
     { icon: DollarSign, label: 'Caja', to: '/caja' },
     { icon: Package, label: 'Productos', to: '/productos' },
     { icon: ShoppingCart, label: 'Ventas', to: '/ventas' },
@@ -175,7 +175,7 @@ const Dashboard = () => {
     <div className="p-4 lg:p-6 space-y-4">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Menú Principal</h1>
         <p className="mt-2 text-gray-600">Bienvenido al sistema de administración de Carnicería Muñoz</p>
       </div>
 

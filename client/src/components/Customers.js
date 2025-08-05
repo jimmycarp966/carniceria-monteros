@@ -10,6 +10,12 @@ const Customers = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  
+  // Estados para fiado
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [selectedCustomerForCredit, setSelectedCustomerForCredit] = useState(null);
+  const [creditAmount, setCreditAmount] = useState(0);
+  const [creditDays, setCreditDays] = useState(7);
 
   // Filtrar clientes
   const filteredCustomers = customerList.filter(customer => {
@@ -58,6 +64,54 @@ const Customers = () => {
   const getStatusColor = (status) => {
     const statusObj = customerStatuses.find(s => s.id === status);
     return statusObj?.color || 'gray';
+  };
+
+  // Función para calcular días de atraso
+  const calculateOverdueDays = (customer) => {
+    if (!customer.lastPurchase || customer.currentBalance <= 0) return 0;
+    
+    const lastPurchaseDate = new Date(customer.lastPurchase);
+    const today = new Date();
+    const daysDiff = Math.floor((today - lastPurchaseDate) / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, daysDiff - customer.creditDays);
+  };
+
+  // Función para verificar si un cliente está atrasado
+  const isCustomerOverdue = (customer) => {
+    return calculateOverdueDays(customer) > 0;
+  };
+
+  // Función para agregar fiado
+  const handleAddCredit = (customer) => {
+    setSelectedCustomerForCredit(customer);
+    setCreditAmount(0);
+    setCreditDays(customer.creditDays || 7);
+    setShowCreditModal(true);
+  };
+
+  // Función para procesar el fiado
+  const processCredit = () => {
+    if (!selectedCustomerForCredit || creditAmount <= 0) {
+      toast.error('Monto inválido');
+      return;
+    }
+
+    const updatedCustomer = {
+      ...selectedCustomerForCredit,
+      currentBalance: selectedCustomerForCredit.currentBalance + creditAmount,
+      creditDays: creditDays,
+      lastPurchase: new Date().toISOString().split('T')[0],
+      status: 'active'
+    };
+
+    setCustomerList(customerList.map(c => 
+      c.id === updatedCustomer.id ? updatedCustomer : c
+    ));
+    
+    setShowCreditModal(false);
+    setSelectedCustomerForCredit(null);
+    toast.success(`Fiado agregado: $${creditAmount.toLocaleString()} - ${creditDays} días`);
   };
 
   return (
@@ -189,6 +243,12 @@ const Customers = () => {
                   Saldo Actual
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Días Fiado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Días Atraso
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -231,6 +291,18 @@ const Customers = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {customer.creditDays}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`text-sm font-medium ${
+                      isCustomerOverdue(customer) ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {calculateOverdueDays(customer)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getStatusColor(customer.status)}-100 text-${getStatusColor(customer.status)}-800`}>
                       {customerStatuses.find(s => s.id === customer.status)?.name}
                     </span>
@@ -247,6 +319,12 @@ const Customers = () => {
                       className="text-primary-600 hover:text-primary-900 mr-3"
                     >
                       <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleAddCredit(customer)}
+                      className="text-blue-600 hover:text-blue-900 mr-3"
+                    >
+                      <DollarSign className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteCustomer(customer.id)}
@@ -273,6 +351,75 @@ const Customers = () => {
             setSelectedCustomer(null);
           }}
         />
+      )}
+
+      {/* Credit Modal */}
+      {showCreditModal && selectedCustomerForCredit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Agregar Fiado - {selectedCustomerForCredit.name}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Monto del Fiado
+                </label>
+                <input
+                  type="number"
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Días de Margen
+                </label>
+                <input
+                  type="number"
+                  value={creditDays}
+                  onChange={(e) => setCreditDays(parseInt(e.target.value) || 7)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="7"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Días que tiene el cliente para pagar antes de considerarse atrasado
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-sm text-gray-600">
+                  <strong>Saldo actual:</strong> ${selectedCustomerForCredit.currentBalance.toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Nuevo saldo:</strong> ${(selectedCustomerForCredit.currentBalance + creditAmount).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={processCredit}
+                className="flex-1 btn btn-primary"
+              >
+                Confirmar Fiado
+              </button>
+              <button
+                onClick={() => {
+                  setShowCreditModal(false);
+                  setSelectedCustomerForCredit(null);
+                }}
+                className="flex-1 btn btn-secondary"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

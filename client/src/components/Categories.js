@@ -18,7 +18,11 @@ const Categories = () => {
   // Estadísticas
   const stats = {
     total: categoryList.length,
-    totalProducts: categoryList.reduce((sum, c) => sum + (c.productCount || 0), 0)
+    totalProducts: categoryList.reduce((sum, c) => sum + (c.productCount || 0), 0),
+    activeCategories: categoryList.filter(c => c.active !== false).length,
+    topCategory: categoryList.reduce((max, c) => 
+      (c.productCount || 0) > (max.productCount || 0) ? c : max
+    , categoryList[0] || {})
   };
 
   const handleAddCategory = (newCategory) => {
@@ -79,7 +83,7 @@ const Categories = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
             <Tag className="h-8 w-8 text-blue-600" />
@@ -95,6 +99,25 @@ const Categories = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Productos</p>
               <p className="text-2xl font-semibold text-gray-900">{stats.totalProducts}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center">
+            <Tag className="h-8 w-8 text-purple-600" />
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Categorías Activas</p>
+              <p className="text-2xl font-semibold text-gray-900">{stats.activeCategories}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center">
+            <Tag className="h-8 w-8 text-orange-600" />
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Categoría Principal</p>
+              <p className="text-lg font-semibold text-gray-900">{stats.topCategory.name || 'N/A'}</p>
+              <p className="text-xs text-gray-500">{stats.topCategory.productCount || 0} productos</p>
             </div>
           </div>
         </div>

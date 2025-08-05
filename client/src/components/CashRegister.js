@@ -26,6 +26,12 @@ const CashRegister = () => {
   const [dailyTotal, setDailyTotal] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
   
+  // Estados para turnos
+  const [currentShift, setCurrentShift] = useState('morning'); // 'morning' o 'afternoon'
+  const [shiftStartTime, setShiftStartTime] = useState(null);
+  const [shiftSales, setShiftSales] = useState([]);
+  const [shiftTotal, setShiftTotal] = useState(0);
+  
   // Nuevos estados para filtros
   const [periodFilter, setPeriodFilter] = useState('today'); // today, week, month, quarter, custom
   const [customDate, setCustomDate] = useState('');
@@ -112,6 +118,34 @@ const CashRegister = () => {
     }
   };
 
+  // Función para abrir caja
+  const openCashRegister = (shift) => {
+    setIsOpen(true);
+    setCurrentShift(shift);
+    setShiftStartTime(new Date().toISOString());
+    setShiftSales([]);
+    setShiftTotal(0);
+    toast.success(`Caja abierta - Turno ${shift === 'morning' ? 'Mañana' : 'Tarde'}`);
+  };
+
+  // Función para cerrar caja
+  const closeCashRegister = () => {
+    setIsOpen(false);
+    setShiftStartTime(null);
+    toast.success('Caja cerrada');
+  };
+
+  // Función para obtener el nombre del turno
+  const getShiftName = (shift) => {
+    return shift === 'morning' ? 'Mañana' : 'Tarde';
+  };
+
+  // Función para obtener el estado del turno
+  const getShiftStatus = () => {
+    if (!isOpen) return 'Cerrada';
+    return `Abierta - Turno ${getShiftName(currentShift)}`;
+  };
+
   const addToCart = () => {
     if (!selectedProduct) {
       toast.error('Selecciona un producto');
@@ -175,10 +209,14 @@ const CashRegister = () => {
       cashAmount: paymentMethod === 'cash' ? cashAmount : 0,
       change: paymentMethod === 'cash' ? change : 0,
       date: new Date().toISOString(),
-      customer: 'Cliente General'
+      customer: 'Cliente General',
+      shift: currentShift,
+      shiftStartTime: shiftStartTime
     };
 
     setSales([sale, ...sales]);
+    setShiftSales([sale, ...shiftSales]);
+    setShiftTotal(shiftTotal + cartTotal);
     setCart([]);
     setCashAmount(0);
     toast.success('Venta completada exitosamente');
@@ -216,33 +254,48 @@ const CashRegister = () => {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Caja</h1>
           <p className="mt-2 text-gray-600">Sistema de caja y ventas</p>
+          {isOpen && shiftStartTime && (
+            <p className="text-sm text-primary-600 mt-1">
+              Turno {getShiftName(currentShift)} - Abierta desde {new Date(shiftStartTime).toLocaleTimeString('es-ES')}
+            </p>
+          )}
         </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
-          <button
-            onClick={() => setShowSalesHistory(!showSalesHistory)}
-            className="btn btn-secondary flex items-center justify-center flex-1 sm:flex-none"
-          >
-            <Receipt className="h-4 w-4 mr-2" />
-            Historial
-          </button>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className={`btn flex items-center justify-center flex-1 sm:flex-none ${
-              isOpen ? 'btn-success' : 'btn-danger'
-            }`}
-          >
-            {isOpen ? (
-              <>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          {!isOpen ? (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => openCashRegister('morning')}
+                className="btn btn-success flex items-center justify-center flex-1 sm:flex-none"
+              >
                 <Check className="h-4 w-4 mr-2" />
-                Abierta
-              </>
-            ) : (
-              <>
+                Abrir Turno Mañana
+              </button>
+              <button
+                onClick={() => openCashRegister('afternoon')}
+                className="btn btn-success flex items-center justify-center flex-1 sm:flex-none"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Abrir Turno Tarde
+              </button>
+            </div>
+          ) : (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowSalesHistory(!showSalesHistory)}
+                className="btn btn-secondary flex items-center justify-center flex-1 sm:flex-none"
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Historial
+              </button>
+              <button
+                onClick={closeCashRegister}
+                className="btn btn-danger flex items-center justify-center flex-1 sm:flex-none"
+              >
                 <X className="h-4 w-4 mr-2" />
-                Cerrada
-              </>
-            )}
-          </button>
+                Cerrar Caja
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -253,10 +306,10 @@ const CashRegister = () => {
             <DollarSign className="h-6 w-6 text-primary-600" />
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">
-                {showSalesHistory ? getPeriodName(periodFilter) : 'Caja Hoy'}
+                {isOpen ? `Caja Turno ${getShiftName(currentShift)}` : 'Caja Cerrada'}
               </p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
-                ${showSalesHistory ? periodTotal.toLocaleString() : dailyTotal.toLocaleString()}
+                ${isOpen ? shiftTotal.toLocaleString() : '0'}
               </p>
             </div>
           </div>
@@ -266,10 +319,10 @@ const CashRegister = () => {
             <Receipt className="h-6 w-6 text-green-600" />
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">
-                {showSalesHistory ? 'Ventas del Período' : 'Ventas Hoy'}
+                {isOpen ? 'Ventas del Turno' : 'Ventas Hoy'}
               </p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
-                {showSalesHistory ? stats.periodSales : stats.todaySales}
+                {isOpen ? shiftSales.length : stats.todaySales}
               </p>
             </div>
           </div>
@@ -279,10 +332,10 @@ const CashRegister = () => {
             <CreditCard className="h-6 w-6 text-blue-600" />
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">
-                {showSalesHistory ? 'Promedio del Período' : 'Total Ventas'}
+                {isOpen ? 'Promedio del Turno' : 'Total Ventas'}
               </p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
-                ${showSalesHistory ? stats.periodAverage.toFixed(0) : stats.totalSales}
+                ${isOpen ? (shiftSales.length > 0 ? (shiftTotal / shiftSales.length).toFixed(0) : '0') : stats.totalSales}
               </p>
             </div>
           </div>
@@ -292,10 +345,10 @@ const CashRegister = () => {
             <Calculator className="h-6 w-6 text-purple-600" />
             <div className="ml-3">
               <p className="text-xs lg:text-sm font-medium text-gray-500">
-                {showSalesHistory ? 'Promedio por Venta' : 'Promedio'}
+                {isOpen ? 'Estado' : 'Promedio'}
               </p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
-                ${showSalesHistory ? (stats.periodRevenue / Math.max(stats.periodSales, 1)).toFixed(0) : stats.averageSale.toFixed(0)}
+                {isOpen ? getShiftStatus() : `$${stats.averageSale.toFixed(0)}`}
               </p>
             </div>
           </div>
