@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { inventoryItems, inventoryMovements, inventoryStatuses, movementTypes } from '../data/inventory';
-import { Building, Plus, Search, AlertTriangle, TrendingUp, Package } from 'lucide-react';
+import { Building, Search, AlertTriangle, TrendingUp, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Inventory = () => {
-  const [inventoryList, setInventoryList] = useState(inventoryItems);
+  const [inventoryList] = useState(inventoryItems);
   const [movementsList, setMovementsList] = useState(inventoryMovements);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
