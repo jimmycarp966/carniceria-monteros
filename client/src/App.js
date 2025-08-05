@@ -20,13 +20,13 @@ const NavItem = ({ icon: Icon, label, to, onClick, isActive, badge }) => {
     <Link
       to={to}
       onClick={onClick}
-      className={`flex items-center px-4 py-4 text-sm font-medium rounded-2xl transition-all duration-300 relative ${
+      className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 relative group ${
         isActive 
-          ? 'text-primary-700 bg-primary-50 border border-primary-200 shadow-md transform scale-105' 
-          : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50 hover:transform hover:scale-105'
+          ? 'text-primary-700 bg-primary-50/80 border border-primary-200/50 shadow-md transform scale-105 backdrop-blur-sm' 
+          : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50/60 hover:transform hover:scale-105 backdrop-blur-sm'
       }`}
     >
-      <Icon className={`h-5 w-5 mr-3 ${isActive ? 'text-primary-600' : 'text-gray-500'}`} />
+      <Icon className={`h-5 w-5 mr-3 transition-colors duration-200 ${isActive ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-500'}`} />
       <span className="inline">{label}</span>
       {badge && (
         <span className="absolute top-1/2 -translate-y-1/2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
@@ -89,24 +89,24 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
-      {/* Mobile menu button mejorado - SIEMPRE VISIBLE */}
-      <div className="lg:hidden fixed top-4 left-4 z-[9999]">
+      {/* Mobile menu button optimizado */}
+      <div className="lg:hidden fixed top-6 left-6 z-[9999]">
         <button
           onClick={toggleSidebar}
-          className="p-4 rounded-2xl bg-red-600 text-white shadow-2xl border-2 border-red-700 hover:bg-red-700 hover:shadow-3xl transition-all duration-300 transform hover:scale-110"
+          className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           aria-label="Toggle menu"
-          style={{ minWidth: '60px', minHeight: '60px' }}
+          style={{ minWidth: '48px', minHeight: '48px' }}
         >
-          {sidebarOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
-      {/* Notificaciones móviles */}
-      <div className="lg:hidden fixed top-4 right-4 z-[9999]">
-        <button className="p-4 rounded-2xl bg-white shadow-2xl border-2 border-gray-200 hover:shadow-3xl transition-all duration-300 transform hover:scale-110 relative">
-          <Bell className="h-7 w-7" />
+      {/* Notificaciones móviles optimizadas */}
+      <div className="lg:hidden fixed top-6 right-6 z-[9999]">
+        <button className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300 transform hover:scale-105 relative">
+          <Bell className="h-5 w-5" />
           {notifications > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
               {notifications}
             </span>
           )}
@@ -116,20 +116,20 @@ const Layout = ({ children }) => {
       {/* Overlay para móvil - DEBE IR ANTES DEL SIDEBAR */}
       {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-60 z-40"
+          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
           onClick={closeSidebar}
         />
       )}
 
       {/* Sidebar Mejorado */}
       <div className={`
-        fixed left-0 top-0 z-50 w-80 h-full bg-white shadow-2xl transform transition-transform duration-300 ease-in-out
+        fixed left-0 top-0 z-50 w-80 h-full bg-white/95 backdrop-blur-md shadow-2xl transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:w-72 lg:z-auto
+        lg:translate-x-0 lg:static lg:w-72 lg:z-auto lg:bg-white
       `}>
         <div className="flex flex-col h-full">
           {/* Header Mejorado */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-primary-100">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-primary-50/80 to-primary-100/80 backdrop-blur-sm">
             <div className="flex items-center">
               <div className="p-3 bg-primary-100 rounded-2xl">
                 <Store className="h-8 w-8 text-primary-600" />
@@ -141,10 +141,10 @@ const Layout = ({ children }) => {
             </div>
             <button
               onClick={closeSidebar}
-              className="lg:hidden p-3 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+              className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
               aria-label="Close menu"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5" />
             </button>
           </div>
 
@@ -167,7 +167,7 @@ const Layout = ({ children }) => {
           </nav>
 
           {/* Footer Mejorado */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <div className="p-4 border-t border-gray-200/50 bg-gray-50/80 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
@@ -181,7 +181,7 @@ const Layout = ({ children }) => {
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 bg-white rounded-2xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+              className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-gray-50/80 hover:border-gray-300/50 transition-all duration-200"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar Sesión
