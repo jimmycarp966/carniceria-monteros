@@ -112,10 +112,19 @@ const Layout = ({ children }) => {
         </button>
       </div>
 
+      {/* Overlay para móvil - DEBE IR ANTES DEL SIDEBAR */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* Sidebar Mejorado */}
       <div className={`
-        fixed left-0 top-0 z-40 w-80 h-full bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:w-72
+        fixed left-0 top-0 z-50 w-80 h-full bg-white shadow-2xl transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 lg:static lg:w-72 lg:z-auto
       `}>
         <div className="flex flex-col h-full">
           {/* Header Mejorado */}
@@ -186,14 +195,6 @@ const Layout = ({ children }) => {
           {children}
         </div>
       </div>
-
-      {/* Overlay para móvil */}
-      {sidebarOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={closeSidebar}
-        />
-      )}
     </div>
   );
 };
