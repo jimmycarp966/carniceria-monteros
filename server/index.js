@@ -12,6 +12,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const isProduction = process.env.NODE_ENV === 'production';
 
+console.log('🚀 Iniciando servidor de Carnicería Monteros...');
+console.log('📊 Entorno:', process.env.NODE_ENV);
+console.log('🔧 Puerto:', PORT);
+
 // Middleware
 app.use(helmet());
 app.use(compression());
@@ -42,15 +46,28 @@ const authenticateToken = (req, res, next) => {
 
 // Rutas básicas
 app.get('/api/health', (req, res) => {
+  console.log('✅ Health check solicitado');
   res.json({ 
     status: 'OK', 
     message: 'Sistema de Carnicería Monteros funcionando correctamente',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
+  });
+});
+
+// Ruta de prueba
+app.get('/api/test', (req, res) => {
+  console.log('🧪 Test endpoint solicitado');
+  res.json({ 
+    message: 'Servidor funcionando correctamente',
     timestamp: new Date().toISOString()
   });
 });
 
 // Ruta de autenticación
 app.post('/api/auth/login', async (req, res) => {
+  console.log('🔐 Login solicitado:', req.body);
+  
   try {
     const { email, password } = req.body;
     const { db } = require('./database/database');
@@ -64,17 +81,24 @@ app.post('/api/auth/login', async (req, res) => {
       [email],
       async (err, user) => {
         if (err) {
+          console.error('❌ Error en base de datos:', err);
           return res.status(500).json({ error: 'Error del servidor' });
         }
         
         if (!user) {
+          console.log('❌ Usuario no encontrado:', email);
           return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        console.log('👤 Usuario encontrado:', user.email);
+
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
+          console.log('❌ Contraseña inválida para:', email);
           return res.status(401).json({ error: 'Credenciales inválidas' });
         }
+
+        console.log('✅ Login exitoso para:', email);
 
         const token = jwt.sign(
           { 
@@ -100,6 +124,7 @@ app.post('/api/auth/login', async (req, res) => {
       }
     );
   } catch (error) {
+    console.error('❌ Error en login:', error);
     res.status(500).json({ error: 'Error del servidor' });
   }
 });

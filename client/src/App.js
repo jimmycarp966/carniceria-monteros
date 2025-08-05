@@ -20,7 +20,12 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
+      console.log('Intentando login con:', { email, password });
+      console.log('URL base:', axios.defaults.baseURL);
+      
       const response = await axios.post('/auth/login', { email, password });
+      console.log('Respuesta del servidor:', response.data);
+      
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
@@ -29,7 +34,11 @@ const Login = ({ onLogin }) => {
       toast.success('¡Inicio de sesión exitoso!');
       onLogin(user);
     } catch (error) {
-      const message = error.response?.data?.error || 'Error al iniciar sesión';
+      console.error('Error en login:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+      
+      const message = error.response?.data?.error || error.message || 'Error al iniciar sesión';
       toast.error(message);
     } finally {
       setLoading(false);
