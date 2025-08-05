@@ -65,6 +65,30 @@ const EnhancedCashRegister = () => {
   const finalTotal = cartTotal - appliedDiscount;
   const change = cashAmount - finalTotal;
 
+  const updateFilteredProducts = useCallback((products) => {
+    if (!searchTerm) {
+      setFilteredProducts(products.slice(0, 10));
+      return;
+    }
+    
+    const filtered = products.filter(product =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.code?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredProducts(filtered.slice(0, 10));
+  }, [searchTerm]);
+
+  const loadProducts = useCallback(async () => {
+    try {
+      const products = await productService.getAllProducts();
+      setAllProducts(products);
+      updateFilteredProducts(products);
+    } catch (error) {
+      console.error('Error cargando productos:', error);
+      toast.error('Error cargando productos');
+    }
+  }, [updateFilteredProducts]);
+
   // Inicializar listeners de tiempo real
   useEffect(() => {
     realtimeService.initializeRealtimeListeners();
@@ -98,30 +122,6 @@ const EnhancedCashRegister = () => {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
-
-  const loadProducts = useCallback(async () => {
-    try {
-      const products = await productService.getAllProducts();
-      setAllProducts(products);
-      updateFilteredProducts(products);
-    } catch (error) {
-      console.error('Error cargando productos:', error);
-      toast.error('Error cargando productos');
-    }
-  }, []);
-
-  const updateFilteredProducts = useCallback((products) => {
-    if (!searchTerm) {
-      setFilteredProducts(products.slice(0, 10));
-      return;
-    }
-    
-    const filtered = products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.code?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProducts(filtered.slice(0, 10));
-  }, [searchTerm]);
 
   // Búsqueda de productos
   const handleProductSearch = (term) => {

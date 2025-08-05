@@ -43,6 +43,29 @@ const Dashboard = () => {
   const [salesChart, setSalesChart] = useState([]);
   const [productPerformance, setProductPerformance] = useState([]);
 
+  const loadInitialData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Cargar estadísticas básicas
+      const [products, sales] = await Promise.all([
+        productService.getAllProducts(),
+        saleService.getAllSales()
+      ]);
+      
+      updateSalesStats(sales);
+      updateProductStats(products);
+      
+      // Generar datos de gráficos
+      generateChartData(sales);
+      
+    } catch (error) {
+      console.error('Error cargando datos iniciales:', error);
+      toast.error('Error cargando datos del dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Inicializar listeners de tiempo real
   useEffect(() => {
@@ -99,30 +122,6 @@ const Dashboard = () => {
       realtimeService.off('sync_completed');
     };
   }, [loadInitialData]);
-
-  const loadInitialData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      // Cargar estadísticas básicas
-      const [products, sales] = await Promise.all([
-        productService.getAllProducts(),
-        saleService.getAllSales()
-      ]);
-      
-      updateSalesStats(sales);
-      updateProductStats(products);
-      
-      // Generar datos de gráficos
-      generateChartData(sales);
-      
-    } catch (error) {
-      console.error('Error cargando datos iniciales:', error);
-      toast.error('Error cargando datos del dashboard');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
   const updateSalesStats = (sales) => {
     const today = new Date().toDateString();
