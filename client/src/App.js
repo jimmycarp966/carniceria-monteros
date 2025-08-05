@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import FirebaseAuth from './components/FirebaseAuth';
+import Products from './components/Products';
+import Sales from './components/Sales';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -268,8 +270,8 @@ const App = () => {
           <Layout user={user} onLogout={handleLogout}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/productos" element={<div className="p-6">Productos - En desarrollo</div>} />
-              <Route path="/ventas" element={<div className="p-6">Ventas - En desarrollo</div>} />
+              <Route path="/productos" element={<Products />} />
+              <Route path="/ventas" element={<Sales />} />
               <Route path="/inventario" element={<div className="p-6">Inventario - En desarrollo</div>} />
               <Route path="/clientes" element={<div className="p-6">Clientes - En desarrollo</div>} />
               <Route path="/empleados" element={<div className="p-6">Empleados - En desarrollo</div>} />
