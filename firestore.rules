@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para usuarios autenticados
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Reglas específicas para productos
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == "admin@carniceria.com";
+    }
+    
+    // Reglas para ventas
+    match /sales/{saleId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Reglas para turnos
+    match /shifts/{shiftId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Reglas para inventario
+    match /inventory/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == "admin@carniceria.com";
+    }
+    
+    // Reglas para clientes
+    match /customers/{customerId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Reglas para empleados
+    match /employees/{employeeId} {
+      allow read, write: if request.auth != null && request.auth.token.email == "admin@carniceria.com";
+    }
+    
+    // Reglas para proveedores
+    match /suppliers/{supplierId} {
+      allow read, write: if request.auth != null && request.auth.token.email == "admin@carniceria.com";
+    }
+    
+    // Reglas para reportes
+    match /reports/{reportId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+} 

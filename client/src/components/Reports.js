@@ -19,8 +19,10 @@ import {
   Eye,
   FileText,
   Share2,
-  Printer
+  Printer,
+  Clock
 } from 'lucide-react';
+import { saleService, shiftService, reportService } from '../services/firebaseService';
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
@@ -36,16 +38,13 @@ const Reports = () => {
   const [reportHistory, setReportHistory] = useState([]);
   const [showInsights, setShowInsights] = useState(false);
 
-  // Datos de ejemplo mejorados para reportes
-  const salesData = [
-    { month: 'Ene', sales: 450000, profit: 120000, growth: 5.2 },
-    { month: 'Feb', sales: 520000, profit: 140000, growth: 15.6 },
-    { month: 'Mar', sales: 480000, profit: 130000, growth: -7.7 },
-    { month: 'Abr', sales: 610000, profit: 160000, growth: 27.1 },
-    { month: 'May', sales: 550000, profit: 150000, growth: -9.8 },
-    { month: 'Jun', sales: 680000, profit: 180000, growth: 23.6 }
-  ];
+  // Estados para datos de Firebase
+  const [salesData, setSalesData] = useState([]);
+  const [shiftsData, setShiftsData] = useState([]);
+  const [dailyReport, setDailyReport] = useState(null);
+  const [shiftReports, setShiftReports] = useState({});
 
+  // Datos de ejemplo mejorados para reportes
   const topProducts = [
     { name: 'Asado de Tira', sales: 125000, units: 45, growth: 12.5, category: 'carne' },
     { name: 'Vacío', sales: 96000, units: 30, growth: 8.3, category: 'carne' },
@@ -70,18 +69,40 @@ const Reports = () => {
     { name: 'Frigorífico Regional', totalOrdered: 1800000, totalPaid: 1600000, reliability: 89, lastOrder: '2024-01-15' }
   ];
 
-  // Estadísticas generales mejoradas
-  const generalStats = {
-    totalSales: salesData.reduce((sum, item) => sum + item.sales, 0),
-    totalProfit: salesData.reduce((sum, item) => sum + item.profit, 0),
-    totalCustomers: customers.length,
-    totalProducts: products.length,
-    totalSuppliers: suppliers.length,
-    totalInventory: inventoryItems.reduce((sum, item) => sum + item.currentStock, 0),
-    averageSale: salesData.reduce((sum, item) => sum + item.sales, 0) / salesData.length,
-    growthRate: ((salesData[5].sales - salesData[0].sales) / salesData[0].sales * 100).toFixed(1),
-    profitMargin: ((salesData.reduce((sum, item) => sum + item.profit, 0) / salesData.reduce((sum, item) => sum + item.sales, 0)) * 100).toFixed(1)
-  };
+  // Cargar datos desde Firebase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Cargar ventas
+        const sales = await saleService.getAllSales();
+        setSalesData(sales);
+
+        // Cargar turnos
+        const shifts = await shiftService.getAllShifts();
+        setShiftsData(shifts);
+
+        // Generar reporte diario
+        const today = new Date();
+        const dailyReportData = await reportService.generateDailyReport(today);
+        setDailyReport(dailyReportData);
+
+        // Generar reportes por turno
+        const shiftReportsData = {};
+        for (const shift of shifts) {
+          if (shift.isActive === false) { // Solo turnos cerrados
+            const shiftReport = await reportService.generateShiftReport(shift.id);
+            shiftReportsData[shift.id] = shiftReport;
+          }
+        }
+        setShiftReports(shiftReportsData);
+
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Insights inteligentes
   const insights = [
@@ -141,7 +162,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Ventas Totales</p>
-              <p className="stats-value">${generalStats.totalSales.toLocaleString()}</p>
+              <p className="stats-value">${dailyReport?.totalSales?.toLocaleString() || '0'}</p>
             </div>
             <div className="stats-icon">
               <DollarSign className="h-6 w-6" />
@@ -152,8 +173,8 @@ const Reports = () => {
         <div className="stats-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="stats-label">Ganancias</p>
-              <p className="stats-value">${generalStats.totalProfit.toLocaleString()}</p>
+              <p className="stats-label">Transacciones</p>
+              <p className="stats-value">{dailyReport?.salesCount || 0}</p>
             </div>
             <div className="stats-icon">
               <TrendingUp className="h-6 w-6" />
@@ -165,7 +186,9 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Promedio</p>
-              <p className="stats-value">${generalStats.averageSale.toLocaleString()}</p>
+              <p className="stats-value">
+                ${dailyReport?.salesCount > 0 ? (dailyReport.totalSales / dailyReport.salesCount).toLocaleString() : '0'}
+              </p>
             </div>
             <div className="stats-icon">
               <BarChart3 className="h-6 w-6" />
@@ -176,20 +199,20 @@ const Reports = () => {
         <div className="stats-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="stats-label">Crecimiento</p>
-              <p className="stats-value">{generalStats.growthRate}%</p>
+              <p className="stats-label">Turnos Activos</p>
+              <p className="stats-value">{shiftsData.filter(s => s.isActive).length}</p>
             </div>
             <div className="stats-icon">
-              <Activity className="h-6 w-6" />
+              <Clock className="h-6 w-6" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Gráfico de Ventas */}
+      {/* Reportes por Turno */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Evolución de Ventas</h3>
+          <h3 className="text-lg font-bold text-gray-900">Reportes por Turno</h3>
           <div className="flex space-x-2">
             <button className="btn btn-secondary">
               <Eye className="h-4 w-4 mr-2" />
@@ -203,53 +226,65 @@ const Reports = () => {
         </div>
         
         <div className="space-y-4">
-          {salesData.map((item, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-primary-100 rounded-2xl flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary-600">{item.month}</span>
+          {shiftsData.filter(shift => !shift.isActive).map(shift => {
+            const shiftReport = shiftReports[shift.id];
+            const shiftName = shift.type === 'morning' ? 'Mañana' : 'Tarde';
+            const shiftTime = shift.type === 'morning' ? '8:00 - 14:00' : '18:00 - 22:00';
+            
+            return (
+              <div key={shift.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-primary-100 rounded-2xl flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-primary-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Turno {shiftName}</p>
+                    <p className="text-sm text-gray-600">{shiftTime}</p>
+                    <p className="text-xs text-gray-500">
+                      {shift.createdAt?.toDate?.()?.toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">Ventas: ${item.sales.toLocaleString()}</p>
-                  <p className="text-sm text-gray-600">Ganancia: ${item.profit.toLocaleString()}</p>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">
+                    ${shiftReport?.totalSales?.toLocaleString() || shift.totalSales?.toLocaleString() || '0'}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {shiftReport?.salesCount || shift.salesCount || 0} ventas
+                  </p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className={`flex items-center space-x-1 ${item.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {item.growth >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  <span className="text-sm font-medium">{item.growth}%</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      {/* Productos Más Vendidos */}
+      {/* Ventas Recientes */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Productos Más Vendidos</h3>
-          <button className="text-primary-600 hover:text-primary-700 font-medium">Ver todos</button>
+          <h3 className="text-lg font-bold text-gray-900">Ventas Recientes</h3>
+          <button className="text-primary-600 hover:text-primary-700 font-medium">Ver todas</button>
         </div>
         
         <div className="space-y-3">
-          {topProducts.map((product, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+          {salesData.slice(0, 5).map(sale => (
+            <div key={sale.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary-600">{index + 1}</span>
+                  <span className="text-sm font-bold text-primary-600">V</span>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">{product.name}</p>
-                  <p className="text-sm text-gray-600">{product.units} unidades</p>
+                  <p className="font-medium text-gray-900">
+                    Venta #{sale.id.slice(-6)}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {sale.date?.toDate?.()?.toLocaleString() || new Date(sale.date).toLocaleString()}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-gray-900">${product.sales.toLocaleString()}</p>
-                <div className={`flex items-center space-x-1 ${product.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {product.growth >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  <span className="text-xs">{product.growth}%</span>
-                </div>
+                <p className="font-bold text-gray-900">${sale.total?.toLocaleString()}</p>
+                <p className="text-xs text-gray-600">{sale.items?.length || 0} items</p>
               </div>
             </div>
           ))}
@@ -266,7 +301,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Total Clientes</p>
-              <p className="stats-value">{generalStats.totalCustomers}</p>
+              <p className="stats-value">{customerStats.length}</p>
             </div>
             <div className="stats-icon">
               <Users className="h-6 w-6" />
@@ -367,7 +402,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Total Productos</p>
-              <p className="stats-value">{generalStats.totalProducts}</p>
+              <p className="stats-value">{products.length}</p>
             </div>
             <div className="stats-icon">
               <Package className="h-6 w-6" />
@@ -379,7 +414,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Stock Total</p>
-              <p className="stats-value">{generalStats.totalInventory}</p>
+              <p className="stats-value">{products.reduce((sum, p) => sum + p.stock, 0)}</p>
             </div>
             <div className="stats-icon">
               <BarChart3 className="h-6 w-6" />
@@ -461,7 +496,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Total Proveedores</p>
-              <p className="stats-value">{generalStats.totalSuppliers}</p>
+              <p className="stats-value">{supplierStats.length}</p>
             </div>
             <div className="stats-icon">
               <Users className="h-6 w-6" />

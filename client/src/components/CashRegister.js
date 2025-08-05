@@ -14,9 +14,13 @@ import {
   Clock,
   ShoppingCart,
   Check,
-  Filter
+  Filter,
+  Search,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { productService, saleService, shiftService } from '../services/firebaseService';
 
 const CashRegister = () => {
   const [cart, setCart] = useState([]);
@@ -49,13 +53,68 @@ const CashRegister = () => {
   const [quickActions, setQuickActions] = useState([]);
   const [showQuickActions, setShowQuickActions] = useState(false);
 
+  // Estados para buscador de productos
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
+
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const change = cashAmount - cartTotal;
 
+  // Cargar productos desde Firebase
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const productsFromFirebase = await productService.getAllProducts();
+        if (productsFromFirebase.length > 0) {
+          setAllProducts(productsFromFirebase);
+        } else {
+          // Si no hay productos en Firebase, usar los datos locales
+          setAllProducts(products);
+        }
+      } catch (error) {
+        console.error('Error cargando productos:', error);
+        setAllProducts(products);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  // Filtrar productos basado en búsqueda
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredProducts(allProducts);
+    } else {
+      const filtered = allProducts.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchTerm, allProducts]);
+
+  // Verificar turno activo al cargar
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      try {
+        const activeShift = await shiftService.getActiveShift();
+        if (activeShift) {
+          setCurrentShift(activeShift);
+          setIsOpen(true);
+          setShiftStartTime(new Date(activeShift.createdAt?.toDate() || Date.now()));
+        }
+      } catch (error) {
+        console.error('Error verificando turno activo:', error);
+      }
+    };
+    checkActiveShift();
+  }, []);
+
   // Simular alertas de inventario inteligente
   useEffect(() => {
-    const alerts = products
+    const alerts = allProducts
       .filter(product => product.stock <= product.minStock)
       .map(product => ({
         id: product.id,
@@ -65,11 +124,11 @@ const CashRegister = () => {
         priority: product.stock === 0 ? 'high' : 'medium'
       }));
     setLowStockAlerts(alerts);
-  }, []);
+  }, [allProducts]);
 
   // Generar acciones rápidas basadas en ventas frecuentes
   useEffect(() => {
-    const frequentProducts = products
+    const frequentProducts = allProducts
       .sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))
       .slice(0, 6)
       .map(product => ({
@@ -79,7 +138,7 @@ const CashRegister = () => {
         icon: product.category === 'carne' ? '🥩' : product.category === 'pollo' ? '🍗' : '🥓'
       }));
     setQuickActions(frequentProducts);
-  }, []);
+  }, [allProducts]);
 
   // Función para filtrar ventas por período
   const filterSalesByPeriod = useCallback((period, customDateValue = null) => {
@@ -101,22 +160,19 @@ const CashRegister = () => {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
         break;
-      case 'quarter':
-        const quarter = Math.floor(now.getMonth() / 3);
-        startDate = new Date(now.getFullYear(), quarter * 3, 1);
-        endDate = new Date(now.getFullYear(), (quarter + 1) * 3, 1);
-        break;
       case 'custom':
         if (customDateValue) {
-          const selectedDate = new Date(customDateValue);
-          startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-          endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 1);
+          startDate = new Date(customDateValue);
+          endDate = new Date(customDateValue);
+          endDate.setDate(endDate.getDate() + 1);
         } else {
-          return;
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         }
         break;
       default:
-        return;
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     }
 
     const filtered = sales.filter(sale => {
@@ -125,11 +181,9 @@ const CashRegister = () => {
     });
 
     setFilteredSales(filtered);
-    const total = filtered.reduce((sum, sale) => sum + sale.total, 0);
-    setPeriodTotal(total);
+    setPeriodTotal(filtered.reduce((sum, sale) => sum + sale.total, 0));
   }, [sales]);
 
-  // Aplicar filtro cuando cambie el período
   useEffect(() => {
     filterSalesByPeriod(periodFilter, customDate);
   }, [periodFilter, customDate, filterSalesByPeriod]);
@@ -139,31 +193,68 @@ const CashRegister = () => {
       case 'today': return 'Hoy';
       case 'week': return 'Esta Semana';
       case 'month': return 'Este Mes';
-      case 'quarter': return 'Este Trimestre';
       case 'custom': return 'Personalizado';
       default: return 'Hoy';
     }
   };
 
-  const openCashRegister = (shift) => {
-    setCurrentShift(shift);
-    setShiftStartTime(new Date());
-    setIsOpen(true);
-    toast.success(`Caja abierta - Turno ${getShiftName(shift)}`);
+  const openCashRegister = async (shift) => {
+    try {
+      // Verificar si ya hay un turno activo
+      const activeShift = await shiftService.getActiveShift();
+      if (activeShift) {
+        toast.error('Ya hay un turno activo. Cierra el turno actual primero.');
+        return;
+      }
+
+      // Crear nuevo turno en Firebase
+      const shiftData = {
+        type: shift,
+        startTime: new Date(),
+        totalSales: 0,
+        totalItems: 0
+      };
+
+      const shiftId = await shiftService.addShift(shiftData);
+      
+      setCurrentShift({ id: shiftId, ...shiftData });
+      setShiftStartTime(new Date());
+      setIsOpen(true);
+      toast.success(`Caja abierta - Turno ${getShiftName(shift)}`);
+    } catch (error) {
+      console.error('Error abriendo caja:', error);
+      toast.error('Error al abrir la caja');
+    }
   };
 
-  const closeCashRegister = () => {
+  const closeCashRegister = async () => {
     if (cart.length > 0) {
       toast.error('No se puede cerrar la caja con productos en el carrito');
       return;
     }
     
-    setCurrentShift(null);
-    setShiftStartTime(null);
-    setShiftSales([]);
-    setShiftTotal(0);
-    setIsOpen(false);
-    toast.success('Caja cerrada correctamente');
+    try {
+      if (currentShift) {
+        const closingData = {
+          endTime: new Date(),
+          totalSales: shiftTotal,
+          totalItems: shiftSales.reduce((sum, sale) => sum + sale.items.length, 0),
+          salesCount: shiftSales.length
+        };
+
+        await shiftService.closeShift(currentShift.id, closingData);
+      }
+      
+      setCurrentShift(null);
+      setShiftStartTime(null);
+      setShiftSales([]);
+      setShiftTotal(0);
+      setIsOpen(false);
+      toast.success('Caja cerrada correctamente');
+    } catch (error) {
+      console.error('Error cerrando caja:', error);
+      toast.error('Error al cerrar la caja');
+    }
   };
 
   const getShiftName = (shift) => {
@@ -185,12 +276,17 @@ const CashRegister = () => {
   };
 
   const addToCart = () => {
+    if (!isOpen) {
+      toast.error('La caja debe estar abierta para vender');
+      return;
+    }
+
     if (!selectedProduct) {
       toast.error('Selecciona un producto');
       return;
     }
 
-    const product = products.find(p => p.id === selectedProduct);
+    const product = allProducts.find(p => p.id === selectedProduct);
     if (!product) {
       toast.error('Producto no encontrado');
       return;
@@ -215,6 +311,8 @@ const CashRegister = () => {
 
     setSelectedProduct('');
     setQuantity(1);
+    setSearchTerm('');
+    setShowProductDropdown(false);
     toast.success(`${product.name} agregado al carrito`);
   };
 
@@ -235,6 +333,11 @@ const CashRegister = () => {
   };
 
   const completeSale = async () => {
+    if (!isOpen) {
+      toast.error('La caja debe estar abierta para vender');
+      return;
+    }
+
     if (cart.length === 0) {
       toast.error('El carrito está vacío');
       return;
@@ -251,19 +354,34 @@ const CashRegister = () => {
       // Simular procesamiento
       await new Promise(resolve => setTimeout(resolve, 1500));
 
+      // Crear objeto de venta
       const sale = {
-        id: Date.now(),
         items: [...cart],
         total: cartTotal,
         paymentMethod,
         cashAmount,
         change,
         date: new Date(),
-        shift: currentShift
+        shiftId: currentShift?.id,
+        shiftType: currentShift?.type
       };
 
-      setSales([sale, ...sales]);
-      setShiftSales([sale, ...shiftSales]);
+      // Guardar venta en Firebase
+      const saleId = await saleService.addSale(sale);
+
+      // Actualizar stock de productos
+      for (const item of cart) {
+        const product = allProducts.find(p => p.id === item.id);
+        if (product) {
+          const newStock = product.stock - item.quantity;
+          await productService.updateProductStock(item.id, newStock);
+        }
+      }
+
+      // Actualizar estado local
+      const saleWithId = { id: saleId, ...sale };
+      setSales([saleWithId, ...sales]);
+      setShiftSales([saleWithId, ...shiftSales]);
       setShiftTotal(shiftTotal + cartTotal);
       setCart([]);
       setCashAmount(0);
@@ -271,16 +389,43 @@ const CashRegister = () => {
 
       toast.success('Venta completada exitosamente');
     } catch (error) {
-      toast.error('Error al procesar la venta');
+      console.error('Error completando venta:', error);
+      toast.error('Error al completar la venta');
     } finally {
       setIsProcessingSale(false);
     }
   };
 
   const addQuickAction = (product) => {
+    if (!isOpen) {
+      toast.error('La caja debe estar abierta para vender');
+      return;
+    }
+
+    const existingItem = cart.find(item => item.id === product.id);
+    
+    if (existingItem) {
+      setCart(cart.map(item => 
+        item.id === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCart([...cart, { ...product, quantity: 1 }]);
+    }
+
+    toast.success(`${product.name} agregado al carrito`);
+  };
+
+  const handleProductSearch = (term) => {
+    setSearchTerm(term);
+    setShowProductDropdown(true);
+  };
+
+  const selectProductFromDropdown = (product) => {
     setSelectedProduct(product.id);
-    setQuantity(1);
-    addToCart();
+    setSearchTerm(product.name);
+    setShowProductDropdown(false);
   };
 
   return (
@@ -402,7 +547,7 @@ const CashRegister = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Turno Activo</h3>
-                  <p className="text-sm text-gray-600">{getShiftName(currentShift)}</p>
+                  <p className="text-sm text-gray-600">{getShiftName(currentShift?.type)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Duración</p>
@@ -423,24 +568,56 @@ const CashRegister = () => {
               </div>
             </div>
 
-            {/* Selección de Productos */}
+            {/* Selección de Productos con Buscador */}
             <div className="card">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Agregar Producto</h3>
               <div className="space-y-4">
-                <div className="form-group">
-                  <label className="form-label">Producto</label>
-                  <select
-                    value={selectedProduct}
-                    onChange={(e) => setSelectedProduct(e.target.value)}
-                    className="form-select"
-                  >
-                    <option value="">Selecciona un producto</option>
-                    {products.map(product => (
-                      <option key={product.id} value={product.id}>
-                        {product.name} - ${product.price.toLocaleString()} (Stock: {product.stock})
-                      </option>
-                    ))}
-                  </select>
+                <div className="form-group relative">
+                  <label className="form-label">Buscar Producto</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => handleProductSearch(e.target.value)}
+                      placeholder="Buscar productos..."
+                      className="form-input pr-10"
+                      onFocus={() => setShowProductDropdown(true)}
+                    />
+                    <button
+                      onClick={() => setShowProductDropdown(!showProductDropdown)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showProductDropdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  
+                  {/* Dropdown de productos */}
+                  {showProductDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto">
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map(product => (
+                          <button
+                            key={product.id}
+                            onClick={() => selectProductFromDropdown(product)}
+                            className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between"
+                          >
+                            <div>
+                              <p className="font-medium text-gray-900">{product.name}</p>
+                              <p className="text-sm text-gray-600">{product.category}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-primary-600">${product.price.toLocaleString()}</p>
+                              <p className="text-xs text-gray-500">Stock: {product.stock}</p>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-gray-500 text-center">
+                          No se encontraron productos
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -471,10 +648,33 @@ const CashRegister = () => {
                 <button
                   onClick={addToCart}
                   className="btn btn-primary w-full"
+                  disabled={!selectedProduct}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Agregar al Carrito
                 </button>
+              </div>
+            </div>
+
+            {/* Acciones Rápidas */}
+            <div className="card">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones Rápidas</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {quickActions.map(product => (
+                  <button
+                    key={product.id}
+                    onClick={() => addQuickAction(product)}
+                    className="p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-200 text-left"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl">{product.icon}</span>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{product.name}</p>
+                        <p className="text-primary-600 font-bold">${product.price.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -493,122 +693,113 @@ const CashRegister = () => {
 
               {cart.length === 0 ? (
                 <div className="text-center py-8">
-                  <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">El carrito está vacío</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {cart.map(item => (
-                    <div key={item.id} className="cart-item">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                          <span className="text-sm font-bold text-primary-600">{item.category?.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div>
                           <p className="font-medium text-gray-900">{item.name}</p>
                           <p className="text-sm text-gray-600">${item.price.toLocaleString()} c/u</p>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="text-sm font-medium">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="p-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-600"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-primary-600">
-                          ${(item.price * item.quantity).toLocaleString()}
-                        </p>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="p-1 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="font-medium text-gray-900 min-w-[2rem] text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="p-1 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => removeFromCart(item.id)}
+                          className="p-1 rounded-lg bg-red-100 hover:bg-red-200 transition-colors text-red-600"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-
-              {cart.length > 0 && (
-                <div className="cart-total mt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-gray-900">Total:</span>
-                    <span className="text-2xl font-bold text-primary-600">
-                      ${cartTotal.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Método de Pago */}
-            {cart.length > 0 && (
-              <div className="card">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Método de Pago</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setPaymentMethod('cash')}
-                      className={`payment-method-card ${paymentMethod === 'cash' ? 'selected' : ''}`}
-                    >
-                      <DollarSign className="h-6 w-6 mb-2" />
-                      <span className="text-sm font-medium">Efectivo</span>
-                    </button>
-                    <button
-                      onClick={() => setPaymentMethod('card')}
-                      className={`payment-method-card ${paymentMethod === 'card' ? 'selected' : ''}`}
-                    >
-                      <CreditCard className="h-6 w-6 mb-2" />
-                      <span className="text-sm font-medium">Tarjeta</span>
-                    </button>
-                  </div>
-
-                  {paymentMethod === 'cash' && (
-                    <div className="form-group">
-                      <label className="form-label">Monto en Efectivo</label>
-                      <input
-                        type="number"
-                        value={cashAmount}
-                        onChange={(e) => setCashAmount(parseFloat(e.target.value) || 0)}
-                        className="form-input"
-                        placeholder="0"
-                      />
-                      {cashAmount > 0 && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          Cambio: ${change.toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
+            <div className="card">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Método de Pago</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={completeSale}
-                    disabled={isProcessingSale || cart.length === 0}
-                    className="btn btn-success w-full"
+                    onClick={() => setPaymentMethod('cash')}
+                    className={`payment-method-card ${paymentMethod === 'cash' ? 'selected' : ''}`}
                   >
-                    {isProcessingSale ? (
-                      <>
-                        <div className="loading-spinner mr-2"></div>
-                        Procesando...
-                      </>
-                    ) : (
-                      <>
-                        <Receipt className="h-4 w-4 mr-2" />
-                        Completar Venta
-                      </>
-                    )}
+                    <DollarSign className="h-6 w-6" />
+                    <span>Efectivo</span>
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('card')}
+                    className={`payment-method-card ${paymentMethod === 'card' ? 'selected' : ''}`}
+                  >
+                    <CreditCard className="h-6 w-6" />
+                    <span>Tarjeta</span>
                   </button>
                 </div>
+
+                {paymentMethod === 'cash' && (
+                  <div className="form-group">
+                    <label className="form-label">Monto Recibido</label>
+                    <input
+                      type="number"
+                      value={cashAmount}
+                      onChange={(e) => setCashAmount(parseFloat(e.target.value) || 0)}
+                      className="form-input"
+                      placeholder="0"
+                    />
+                    {change > 0 && (
+                      <p className="text-sm text-green-600 mt-1">Cambio: ${change.toLocaleString()}</p>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Total y Completar Venta */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Total</h3>
+                <p className="text-2xl font-bold text-primary-600">${cartTotal.toLocaleString()}</p>
+              </div>
+              
+              <button
+                onClick={completeSale}
+                disabled={cart.length === 0 || isProcessingSale}
+                className="btn btn-primary w-full"
+              >
+                {isProcessingSale ? (
+                  <div className="flex items-center">
+                    <div className="loading-spinner mr-2"></div>
+                    Procesando...
+                  </div>
+                ) : (
+                  <>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Completar Venta
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
