@@ -10,12 +10,10 @@ import {
   Calculator,
   X,
   Check,
-  Calendar,
   Filter,
   ShoppingCart,
   Clock,
-  TrendingUp,
-  AlertCircle
+  TrendingUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -34,7 +32,6 @@ const CashRegister = () => {
   const [shiftStartTime, setShiftStartTime] = useState(null);
   const [shiftSales, setShiftSales] = useState([]);
   const [shiftTotal, setShiftTotal] = useState(0);
-  const [shiftNotes, setShiftNotes] = useState('');
   
   // Estados para filtros
   const [periodFilter, setPeriodFilter] = useState('today');
@@ -44,7 +41,6 @@ const CashRegister = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   // Estados para mejor UX
-  const [showProductModal, setShowProductModal] = useState(false);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
 
@@ -124,7 +120,6 @@ const CashRegister = () => {
     setShiftStartTime(new Date().toISOString());
     setShiftSales([]);
     setShiftTotal(0);
-    setShiftNotes('');
     setShowShiftModal(false);
     toast.success(`Caja abierta - Turno ${shift === 'morning' ? 'Mañana' : 'Tarde'}`);
   };
@@ -147,7 +142,6 @@ const CashRegister = () => {
     setShiftStartTime(null);
     setShiftSales([]);
     setShiftTotal(0);
-    setShiftNotes('');
   };
 
   // Función para obtener el nombre del turno
@@ -155,11 +149,7 @@ const CashRegister = () => {
     return shift === 'morning' ? 'Mañana' : 'Tarde';
   };
 
-  // Función para obtener el estado del turno
-  const getShiftStatus = () => {
-    if (!isOpen) return 'Cerrada';
-    return `Abierta - Turno ${getShiftName(currentShift)}`;
-  };
+
 
   // Función para obtener duración del turno
   const getShiftDuration = () => {
@@ -410,13 +400,6 @@ const CashRegister = () => {
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Agregar Productos</h3>
-            <button
-              onClick={() => setShowProductModal(true)}
-              className="btn btn-primary flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Buscar
-            </button>
           </div>
           
           <div className="space-y-4">
