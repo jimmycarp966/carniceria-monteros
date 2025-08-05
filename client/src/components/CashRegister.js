@@ -420,9 +420,11 @@ const CashRegister = () => {
                         {new Date(sale.date).toLocaleDateString()} - {new Date(sale.date).toLocaleTimeString()}
                       </p>
                       <div className="flex items-center mt-1">
-                        {paymentMethods.find(m => m.id === sale.paymentMethod)?.icon && (
-                          <paymentMethods.find(m => m.id === sale.paymentMethod).icon className="h-4 w-4 text-gray-400 mr-1" />
-                        )}
+                        {(() => {
+                          const method = paymentMethods.find(m => m.id === sale.paymentMethod);
+                          const IconComponent = method?.icon;
+                          return IconComponent ? <IconComponent className="h-4 w-4 text-gray-400 mr-1" /> : null;
+                        })()}
                         <span className="text-xs text-gray-500">
                           {paymentMethods.find(m => m.id === sale.paymentMethod)?.name}
                         </span>
