@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback, memo 
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Bell, Settings, Sun, Moon } from 'lucide-react';
+import RealtimeNotifications from './components/RealtimeNotifications';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
@@ -9,7 +10,7 @@ import FirebaseAuth from './components/FirebaseAuth';
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
 const Sales = lazy(() => import('./components/Sales'));
-const CashRegister = lazy(() => import('./components/CashRegister'));
+const CashRegister = lazy(() => import('./components/EnhancedCashRegister'));
 const Customers = lazy(() => import('./components/Customers'));
 const Employees = lazy(() => import('./components/Employees'));
 const Suppliers = lazy(() => import('./components/Suppliers'));
@@ -135,14 +136,7 @@ const Layout = memo(({ children }) => {
 
       {/* Notificaciones móviles optimizadas */}
       <div className="lg:hidden fixed top-6 right-6 z-[9999] flex space-x-2">
-        <button className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95 relative">
-          <Bell className="h-5 w-5" />
-          {notifications > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse">
-              {notifications}
-            </span>
-          )}
-        </button>
+        <RealtimeNotifications />
         <button 
           onClick={toggleDarkMode}
           className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
@@ -179,6 +173,7 @@ const Layout = memo(({ children }) => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <RealtimeNotifications />
               <button
                 onClick={toggleDarkMode}
                 className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"

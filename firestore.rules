@@ -1,19 +1,128 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 9, 3);
+    // Reglas para usuarios autenticados
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Reglas para administradores
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'admin' || 
+         request.auth.token.email == 'admin@carniceria.com');
+    }
+    
+    // Reglas para empleados
+    function isEmployee() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'empleado' || 
+         request.auth.token.role == 'admin');
+    }
+    
+    // Colección de productos
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    // Colección de ventas
+    match /sales/{saleId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmployee();
+      allow update: if isEmployee() && resource.data.createdBy == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+    
+    // Colección de inventario
+    match /inventory/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    // Colección de clientes
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    // Colección de empleados
+    match /employees/{employeeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Colección de proveedores
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    // Colección de categorías
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    // Colección de turnos
+    match /shifts/{shiftId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmployee();
+      allow update: if isEmployee() && 
+        (resource.data.createdBy == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    // Colección de notificaciones
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmployee();
+      allow update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    // Colección de alertas
+    match /alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmployee();
+      allow update: if isEmployee();
+      allow delete: if isAdmin();
+    }
+    
+    // Colección de estadísticas
+    match /stats/{statId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    // Colección de configuraciones
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Reglas para subcolecciones
+    match /sales/{saleId}/items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    match /products/{productId}/images/{imageId} {
+      allow read: if isAuthenticated();
+      allow write: if isEmployee();
+    }
+    
+    // Reglas para datos en tiempo real
+    match /realtime/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Reglas para logs de actividad
+    match /activity_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmployee();
+      allow update, delete: if isAdmin();
     }
   }
 }

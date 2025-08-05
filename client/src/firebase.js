@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
 // import { getAnalytics } from 'firebase/analytics';
 
 // Configuración de Firebase
@@ -26,10 +27,12 @@ const app = initializeApp(firebaseConfig);
 // Obtener servicios
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const realtimeDb = getDatabase(app);
 // export const analytics = getAnalytics(app);
 
 console.log('✅ Firebase inicializado correctamente');
 console.log('🔐 Auth configurado:', !!auth);
 console.log('📊 Firestore configurado:', !!db);
+console.log('⚡ Realtime Database configurado:', !!realtimeDb);
 
 export default app; 
