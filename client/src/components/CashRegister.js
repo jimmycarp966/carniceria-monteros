@@ -8,11 +8,8 @@ import {
   Receipt, 
   CreditCard, 
   Calculator,
-  ArrowLeft,
-  ArrowRight,
   X,
-  Check,
-  AlertCircle
+  Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
