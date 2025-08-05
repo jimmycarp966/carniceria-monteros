@@ -444,7 +444,7 @@ const Products = () => {
   const getCategoryColor = useCallback((categoryName) => {
     const category = categories.find(c => c.name === categoryName);
     return category?.color || 'gray';
-  }, [categories]);
+  }, []);
 
   const getStockStatus = useCallback((stock, minStock = 10) => {
     if (stock === 0) return { color: 'red', text: 'Sin Stock' };
