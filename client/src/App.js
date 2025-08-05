@@ -150,8 +150,8 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Main content mejorado */}
-      <div className="lg:pl-72">
-        <div className="min-h-screen">
+      <div className="lg:pl-72 w-full">
+        <div className="min-h-screen w-full">
           {children}
         </div>
       </div>

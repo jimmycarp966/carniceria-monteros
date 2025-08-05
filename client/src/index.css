@@ -24,11 +24,15 @@
 #root {
   min-height: 100vh;
   background-color: #f9fafb;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .App {
   min-height: 100vh;
   background-color: #f9fafb;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 html {
@@ -47,6 +51,13 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+html {
+  background-color: #f9fafb;
+  margin: 0;
+  padding: 0;
 }
 
 /* Scrollbar personalizada */
