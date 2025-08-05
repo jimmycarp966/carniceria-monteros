@@ -21,7 +21,6 @@ import {
   Share2,
   Printer
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
@@ -34,7 +33,6 @@ const Reports = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   // Estados para funcionalidades avanzadas
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportHistory, setReportHistory] = useState([]);
   const [showInsights, setShowInsights] = useState(false);
 
@@ -134,18 +132,6 @@ const Reports = () => {
     ];
     setReportHistory(history);
   }, []);
-
-  const getPeriodName = (period) => {
-    switch (period) {
-      case 'day': return 'Diario';
-      case 'week': return 'Semanal';
-      case 'month': return 'Mensual';
-      case 'quarter': return 'Trimestral';
-      case 'year': return 'Anual';
-      case 'custom': return 'Personalizado';
-      default: return 'Mensual';
-    }
-  };
 
   const renderSalesReport = () => (
     <div className="space-y-6">
@@ -741,17 +727,6 @@ const Reports = () => {
           ))}
         </div>
       </div>
-
-      {/* Overlay de Generación */}
-      {isGeneratingReport && (
-        <div className="processing-overlay">
-          <div className="processing-content">
-            <div className="processing-spinner"></div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Generando Reporte</h3>
-            <p className="text-gray-600">Por favor espera...</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
