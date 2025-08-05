@@ -57,6 +57,11 @@ html {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease;
+}
+
+html.dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
 body {
@@ -69,6 +74,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color 0.3s ease;
 }
 
 #root {
@@ -78,6 +84,11 @@ body {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease;
+}
+
+html.dark #root {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
 .App {
@@ -88,6 +99,11 @@ body {
   display: flex;
   flex-direction: column;
   flex: 1;
+  transition: background-color 0.3s ease;
+}
+
+html.dark .App {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
 /* Scrollbar personalizada */
@@ -111,7 +127,7 @@ body {
 /* Componentes optimizados para móvil */
 @layer components {
   .card {
-    @apply bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 p-6 transition-all duration-300 hover:shadow-2xl hover:border-gray-300/50;
+    @apply bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 p-6 transition-all duration-300 hover:shadow-2xl hover:border-gray-300/50 dark:bg-gray-800/95 dark:border-gray-700/50 dark:hover:border-gray-600/50;
   }
 
   .btn {
@@ -119,11 +135,11 @@ body {
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-lg hover:shadow-xl;
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-lg hover:shadow-xl dark:bg-primary-700 dark:hover:bg-primary-800;
   }
 
   .btn-secondary {
-    @apply bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500 border border-gray-200/50;
+    @apply bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500 border border-gray-200/50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:border-gray-600/50;
   }
 
   .btn-success {
@@ -143,31 +159,31 @@ body {
   }
 
   .form-label {
-    @apply block text-sm font-medium text-gray-700 mb-2;
+    @apply block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300;
   }
 
   .form-input {
-    @apply w-full px-4 py-3 text-sm border border-gray-200/50 rounded-2xl bg-white/80 backdrop-blur-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 placeholder-gray-400;
+    @apply w-full px-4 py-3 text-sm border border-gray-200/50 rounded-2xl bg-white/80 backdrop-blur-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 placeholder-gray-400 dark:bg-gray-800/80 dark:border-gray-600/50 dark:text-white dark:placeholder-gray-500;
   }
 
   .form-select {
-    @apply w-full px-4 py-3 text-sm border border-gray-200/50 rounded-2xl bg-white/80 backdrop-blur-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
+    @apply w-full px-4 py-3 text-sm border border-gray-200/50 rounded-2xl bg-white/80 backdrop-blur-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 dark:bg-gray-800/80 dark:border-gray-600/50 dark:text-white;
   }
 
   .stats-card {
-    @apply bg-white/95 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-gray-200/50 transition-all duration-300 hover:shadow-2xl hover:border-gray-300/50;
+    @apply bg-white/95 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-gray-200/50 transition-all duration-300 hover:shadow-2xl hover:border-gray-300/50 dark:bg-gray-800/95 dark:border-gray-700/50 dark:hover:border-gray-600/50;
   }
 
   .stats-label {
-    @apply text-sm font-medium text-gray-600;
+    @apply text-sm font-medium text-gray-600 dark:text-gray-400;
   }
 
   .stats-value {
-    @apply text-2xl font-bold text-gray-900;
+    @apply text-2xl font-bold text-gray-900 dark:text-white;
   }
 
   .stats-icon {
-    @apply p-3 bg-primary-100/80 rounded-2xl backdrop-blur-sm;
+    @apply p-3 bg-primary-100/80 rounded-2xl backdrop-blur-sm dark:bg-primary-900/80;
   }
 
   .badge {
@@ -175,43 +191,43 @@ body {
   }
 
   .badge-success {
-    @apply bg-success-100 text-success-800;
+    @apply bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200;
   }
 
   .badge-warning {
-    @apply bg-warning-100 text-warning-800;
+    @apply bg-warning-100 text-warning-800 dark:bg-warning-900 dark:text-warning-200;
   }
 
   .badge-danger {
-    @apply bg-red-100 text-red-800;
+    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
   }
 
   .badge-info {
-    @apply bg-info-100 text-info-800;
+    @apply bg-info-100 text-info-800 dark:bg-info-900 dark:text-info-200;
   }
 
   .payment-method-card {
-    @apply flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-gray-200/50 bg-white/80 backdrop-blur-sm transition-all duration-300 hover:border-primary-300/50 hover:bg-primary-50/30 hover:transform hover:scale-105;
+    @apply flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-gray-200/50 bg-white/80 backdrop-blur-sm transition-all duration-300 hover:border-primary-300/50 hover:bg-primary-50/30 hover:transform hover:scale-105 dark:bg-gray-800/80 dark:border-gray-600/50 dark:hover:border-primary-400/50 dark:hover:bg-primary-900/30;
   }
 
   .payment-method-card.selected {
-    @apply border-primary-500 bg-primary-50/50 text-primary-700;
+    @apply border-primary-500 bg-primary-50/50 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300;
   }
 
   .shift-card {
-    @apply flex flex-col items-center justify-center p-6 bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 transition-all duration-300 hover:shadow-2xl hover:border-gray-300/50 hover:transform hover:scale-105;
+    @apply flex flex-col items-center justify-center p-6 bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 transition-all duration-300 hover:shadow-2xl hover:border-gray-300/50 hover:transform hover:scale-105 dark:bg-gray-800/95 dark:border-gray-700/50 dark:hover:border-gray-600/50;
   }
 
   .shift-icon {
-    @apply p-3 bg-primary-100/80 rounded-2xl backdrop-blur-sm mb-3;
+    @apply p-3 bg-primary-100/80 rounded-2xl backdrop-blur-sm mb-3 dark:bg-primary-900/80;
   }
 
   .shift-title {
-    @apply text-lg font-bold text-gray-900 mb-1;
+    @apply text-lg font-bold text-gray-900 mb-1 dark:text-white;
   }
 
   .shift-time {
-    @apply text-sm text-gray-600;
+    @apply text-sm text-gray-600 dark:text-gray-400;
   }
 
   .caja-status {
@@ -219,11 +235,11 @@ body {
   }
 
   .caja-status.open {
-    @apply bg-success-100 text-success-800;
+    @apply bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200;
   }
 
   .caja-status.closed {
-    @apply bg-gray-100 text-gray-800;
+    @apply bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200;
   }
 
   .processing-overlay {
@@ -231,11 +247,11 @@ body {
   }
 
   .processing-content {
-    @apply bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-gray-200/50 text-center;
+    @apply bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-gray-200/50 text-center dark:bg-gray-800/95 dark:border-gray-700/50;
   }
 
   .processing-spinner {
-    @apply w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4;
+    @apply w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4 dark:border-primary-700 dark:border-t-primary-400;
   }
 
   .loading-spinner {
@@ -243,11 +259,11 @@ body {
   }
 
   .icon-container {
-    @apply p-3 bg-primary-100/80 rounded-2xl backdrop-blur-sm;
+    @apply p-3 bg-primary-100/80 rounded-2xl backdrop-blur-sm dark:bg-primary-900/80;
   }
 
   .table-container {
-    @apply bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 overflow-hidden;
+    @apply bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 overflow-hidden dark:bg-gray-800/95 dark:border-gray-700/50;
   }
 
   .modal-overlay {
@@ -255,11 +271,11 @@ body {
   }
 
   .modal-content {
-    @apply bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-gray-200/50 max-w-md w-full max-h-[90vh] overflow-y-auto;
+    @apply bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-gray-200/50 max-w-md w-full max-h-[90vh] overflow-y-auto dark:bg-gray-800/95 dark:border-gray-700/50;
   }
 
   .toast {
-    @apply bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50;
+    @apply bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:bg-gray-800/95 dark:border-gray-700/50;
   }
 
   /* Optimizaciones específicas para móvil */

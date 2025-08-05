@@ -1,4 +1,5 @@
 import { 
+  getFirestore, 
   collection, 
   doc, 
   getDocs, 
@@ -8,10 +9,113 @@ import {
   deleteDoc, 
   query, 
   where, 
-  serverTimestamp 
+  serverTimestamp,
+  enableNetwork,
+  disableNetwork,
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
+
+// Estado de conexión
+let isOnline = navigator.onLine;
+let pendingOperations = [];
+
+// Detectar cambios de conectividad
+window.addEventListener('online', () => {
+  isOnline = true;
+  console.log('Conexión restaurada');
+  syncPendingOperations();
+});
+
+window.addEventListener('offline', () => {
+  isOnline = false;
+  console.log('Sin conexión - Modo offline activado');
+});
+
+// Función para sincronizar operaciones pendientes
+const syncPendingOperations = async () => {
+  if (pendingOperations.length === 0) return;
+  
+  console.log(`Sincronizando ${pendingOperations.length} operaciones pendientes...`);
+  
+  for (const operation of pendingOperations) {
+    try {
+      await operation();
+      console.log('Operación sincronizada exitosamente');
+    } catch (error) {
+      console.error('Error sincronizando operación:', error);
+    }
+  }
+  
+  pendingOperations = [];
+  console.log('Sincronización completada');
+};
+
+// Función para agregar operación pendiente
+const addPendingOperation = (operation) => {
+  pendingOperations.push(operation);
+  localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
+};
+
+// Función para cargar operaciones pendientes al iniciar
+const loadPendingOperations = () => {
+  const saved = localStorage.getItem('pendingOperations');
+  if (saved) {
+    pendingOperations = JSON.parse(saved);
+  }
+};
+
+// Cargar operaciones pendientes al iniciar la app
+loadPendingOperations();
+
+// Función para backup automático
+const autoBackup = async (data, collectionName) => {
+  try {
+    const backup = {
+      data,
+      timestamp: new Date().toISOString(),
+      collection: collectionName,
+      version: '1.0'
+    };
+    
+    localStorage.setItem(`backup_${collectionName}`, JSON.stringify(backup));
+    console.log(`Backup automático creado para ${collectionName}`);
+  } catch (error) {
+    console.error('Error en backup automático:', error);
+  }
+};
+
+// Función para restaurar desde backup
+const restoreFromBackup = (collectionName) => {
+  try {
+    const backup = localStorage.getItem(`backup_${collectionName}`);
+    if (backup) {
+      return JSON.parse(backup).data;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error restaurando backup:', error);
+    return null;
+  }
+};
+
+// Función para verificar estado de conexión
+export const checkConnectionStatus = () => {
+  return {
+    isOnline,
+    pendingOperations: pendingOperations.length
+  };
+};
+
+// Función para forzar sincronización
+export const forceSync = async () => {
+  if (isOnline) {
+    await syncPendingOperations();
+    return true;
+  }
+  return false;
+};
 
 // Servicios para Productos
 export const productService = {

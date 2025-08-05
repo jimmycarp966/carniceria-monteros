@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, AlertTriangle, TrendingUp, Activity, Bell } from 'lucide-react';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, AlertTriangle, TrendingUp, Activity, Bell, Moon, Sun } from 'lucide-react';
 import Products from './components/Products';
 import Sales from './components/Sales';
 import CashRegister from './components/CashRegister';
@@ -11,6 +11,7 @@ import Suppliers from './components/Suppliers';
 import Inventory from './components/Inventory';
 import Categories from './components/Categories';
 import Reports from './components/Reports';
+import Dashboard from './components/Dashboard';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
@@ -43,6 +44,7 @@ const Layout = ({ children }) => {
   const [activeRoute, setActiveRoute] = useState('/');
   const [lowStockAlerts] = useState(3); // Simulación de alertas de inventario
   const [notifications] = useState(2); // Simulación de notificaciones
+  const [darkMode, setDarkMode] = useState(false); // Estado para modo oscuro
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -50,6 +52,15 @@ const Layout = ({ children }) => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Aplicar modo oscuro al body
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   // Debug: Log cuando cambia el estado del sidebar
   useEffect(() => {
@@ -129,23 +140,33 @@ const Layout = ({ children }) => {
       `}>
         <div className="flex flex-col h-full">
           {/* Header Mejorado */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-primary-50/80 to-primary-100/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-primary-50/80 to-primary-100/80 backdrop-blur-sm dark:from-gray-800/80 dark:to-gray-900/80 dark:border-gray-700/50">
             <div className="flex items-center">
-              <div className="p-3 bg-primary-100 rounded-2xl">
-                <Store className="h-8 w-8 text-primary-600" />
+              <div className="p-3 bg-primary-100 rounded-2xl dark:bg-primary-900">
+                <Store className="h-8 w-8 text-primary-600 dark:text-primary-400" />
               </div>
               <div className="ml-3">
-                <h1 className="text-xl font-bold text-gray-900">Carnicería Muñoz</h1>
-                <p className="text-xs text-gray-600">Sistema de Administración</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Carnicería Muñoz</h1>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Sistema de Administración</p>
               </div>
             </div>
-            <button
-              onClick={closeSidebar}
-              className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
-              aria-label="Close menu"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center space-x-2">
+              {/* Toggle Modo Oscuro */}
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 dark:text-gray-400 dark:hover:text-gray-200 transition-all duration-200"
+                aria-label="Toggle dark mode"
+              >
+                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </button>
+              <button
+                onClick={closeSidebar}
+                className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-200"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Navegación Mejorada */}
