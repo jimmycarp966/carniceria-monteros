@@ -64,6 +64,46 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+// Ruta de prueba simple para login
+app.post('/api/auth/test-login', (req, res) => {
+  console.log('🔐 Test login solicitado:', req.body);
+  
+  const { email, password } = req.body;
+  
+  // Credenciales de prueba
+  if (email === 'admin@carniceria.com' && password === 'admin123') {
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_jwt_super_seguro';
+    
+    const token = jwt.sign(
+      { 
+        id: 1, 
+        email: email, 
+        rol: 'admin',
+        sucursal_id: 1
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log('✅ Test login exitoso para:', email);
+
+    res.json({
+      token,
+      user: {
+        id: 1,
+        nombre: 'Administrador',
+        email: email,
+        rol: 'admin',
+        sucursal_id: 1
+      }
+    });
+  } else {
+    console.log('❌ Test login fallido para:', email);
+    res.status(401).json({ error: 'Credenciales inválidas' });
+  }
+});
+
 // Ruta de autenticación
 app.post('/api/auth/login', async (req, res) => {
   console.log('🔐 Login solicitado:', req.body);

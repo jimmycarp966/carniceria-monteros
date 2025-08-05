@@ -23,7 +23,8 @@ const Login = ({ onLogin }) => {
       console.log('Intentando login con:', { email, password });
       console.log('URL base:', axios.defaults.baseURL);
       
-      const response = await axios.post('/auth/login', { email, password });
+      // Usar endpoint de prueba temporalmente
+      const response = await axios.post('/auth/test-login', { email, password });
       console.log('Respuesta del servidor:', response.data);
       
       const { token, user } = response.data;
