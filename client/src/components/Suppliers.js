@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { suppliers, supplierCategories, supplierStatuses } from '../data/suppliers';
-import { Truck, Plus, Edit, Trash2, Search, Filter, DollarSign, AlertTriangle, Package } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Suppliers = () => {

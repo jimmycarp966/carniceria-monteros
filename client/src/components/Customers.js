@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { customers, customerStatuses } from '../data/customers';
-import { Users, Plus, Edit, Trash2, Search, Filter, DollarSign, AlertTriangle, UserCheck } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Customers = () => {

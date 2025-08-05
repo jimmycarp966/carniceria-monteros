@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { inventoryItems, inventoryMovements, inventoryStatuses, movementTypes } from '../data/inventory';
-import { Building, Plus, Edit, Trash2, Search, Filter, AlertTriangle, TrendingUp, TrendingDown, Package } from 'lucide-react';
+import { Building, Plus, Search, AlertTriangle, TrendingUp, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Inventory = () => {
@@ -9,9 +9,7 @@ const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showMovementModal, setShowMovementModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
 
   // Filtrar inventario
   const filteredInventory = inventoryList.filter(item => {
@@ -29,18 +27,6 @@ const Inventory = () => {
     critical: inventoryList.filter(i => i.status === 'critical').length,
     totalValue: inventoryList.reduce((sum, i) => sum + (i.currentStock * i.cost), 0),
     totalStock: inventoryList.reduce((sum, i) => sum + i.currentStock, 0)
-  };
-
-  const handleAddItem = (newItem) => {
-    const item = {
-      ...newItem,
-      id: Date.now(),
-      status: 'normal',
-      lastUpdated: new Date().toISOString().split('T')[0]
-    };
-    setInventoryList([item, ...inventoryList]);
-    setShowAddModal(false);
-    toast.success('Producto agregado al inventario');
   };
 
   const handleAddMovement = (newMovement) => {
@@ -81,13 +67,6 @@ const Inventory = () => {
           >
             <TrendingUp className="h-4 w-4 mr-2" />
             Registrar Movimiento
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn btn-primary flex items-center"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Producto
           </button>
         </div>
       </div>

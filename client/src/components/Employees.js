@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { employees, positions, employeeStatuses } from '../data/employees';
-import { UserCheck, Plus, Edit, Trash2, Search, Filter, DollarSign, Calendar, Users } from 'lucide-react';
+import { UserCheck, Plus, Edit, Trash2, Search, DollarSign, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Employees = () => {

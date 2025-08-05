@@ -3,7 +3,7 @@ import { products } from '../data/products';
 import { customers } from '../data/customers';
 import { suppliers } from '../data/suppliers';
 import { inventoryItems } from '../data/inventory';
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Users, Package, Calendar, Download, Filter } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Users, Package, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Reports = () => {

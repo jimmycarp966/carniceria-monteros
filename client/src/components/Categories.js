@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { categories } from '../data/products';
-import { Tag, Plus, Edit, Trash2, Search, Filter, Package } from 'lucide-react';
+import { Tag, Plus, Edit, Trash2, Search, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Categories = () => {
