@@ -16,8 +16,6 @@ import {
   Target,
   Check,
   Filter,
-  ChevronDown,
-  ChevronUp,
   Smartphone,
   Search
 } from 'lucide-react';
