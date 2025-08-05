@@ -118,13 +118,20 @@ export const productService = {
   // Obtener todos los productos
   async getAllProducts() {
     try {
+      console.log('🔄 Intentando cargar productos desde Firebase...');
       const querySnapshot = await getDocs(collection(db, 'products'));
-      return querySnapshot.docs.map(doc => ({
+      const products = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      console.log('✅ Productos cargados desde Firebase:', products.length, 'productos');
+      return products;
     } catch (error) {
-      console.error('Error obteniendo productos:', error);
+      console.error('❌ Error obteniendo productos:', error);
+      console.error('🔍 Detalles del error:', {
+        code: error.code,
+        message: error.message
+      });
       toast.error('Error al cargar productos');
       return [];
     }
@@ -149,15 +156,22 @@ export const productService = {
   // Agregar producto
   async addProduct(productData) {
     try {
+      console.log('🔄 Intentando agregar producto a Firebase:', productData);
       const docRef = await addDoc(collection(db, 'products'), {
         ...productData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      console.log('✅ Producto agregado exitosamente con ID:', docRef.id);
       toast.success('Producto agregado exitosamente');
       return docRef.id;
     } catch (error) {
-      console.error('Error agregando producto:', error);
+      console.error('❌ Error agregando producto:', error);
+      console.error('🔍 Detalles del error:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       toast.error('Error al agregar producto');
       throw error;
     }
@@ -277,15 +291,22 @@ export const saleService = {
   // Agregar venta
   async addSale(saleData) {
     try {
+      console.log('🔄 Intentando agregar venta a Firebase:', saleData);
       const docRef = await addDoc(collection(db, 'sales'), {
         ...saleData,
         date: serverTimestamp(),
         createdAt: serverTimestamp()
       });
+      console.log('✅ Venta agregada exitosamente con ID:', docRef.id);
       toast.success('Venta registrada exitosamente');
       return docRef.id;
     } catch (error) {
-      console.error('Error agregando venta:', error);
+      console.error('❌ Error agregando venta:', error);
+      console.error('🔍 Detalles del error:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       toast.error('Error al registrar venta');
       throw error;
     }
