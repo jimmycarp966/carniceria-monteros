@@ -149,8 +149,6 @@ const CashRegister = () => {
     return shift === 'morning' ? 'Mañana' : 'Tarde';
   };
 
-
-
   // Función para obtener duración del turno
   const getShiftDuration = () => {
     if (!shiftStartTime) return 0;
