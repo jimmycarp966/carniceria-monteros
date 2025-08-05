@@ -401,9 +401,25 @@ const CashRegister = () => {
       // Actualizar stock de productos
       for (const item of cart) {
         const product = allProducts.find(p => p.id === item.id);
-        if (product) {
-          const newStock = product.stock - item.quantity;
-          await productService.updateProductStock(item.id, newStock);
+        if (product && product.id) {
+          try {
+            const newStock = Math.max(0, product.stock - item.quantity);
+            // Convertir ID a string si es numérico
+            const productId = typeof product.id === 'number' ? product.id.toString() : product.id;
+            await productService.updateProductStock(productId, newStock);
+            
+            // Actualizar el estado local del producto
+            setAllProducts(prevProducts => 
+              prevProducts.map(p => 
+                p.id === product.id 
+                  ? { ...p, stock: newStock }
+                  : p
+              )
+            );
+          } catch (error) {
+            console.error(`Error actualizando stock de ${product.name}:`, error);
+            // Continuar con la venta aunque falle la actualización de stock
+          }
         }
       }
 

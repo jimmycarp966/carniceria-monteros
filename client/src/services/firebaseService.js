@@ -182,6 +182,12 @@ export const productService = {
   // Actualizar stock de producto
   async updateProductStock(id, newStock) {
     try {
+      // Validar que el ID sea un string válido
+      if (!id || typeof id !== 'string') {
+        console.error('ID de producto inválido:', id);
+        throw new Error('ID de producto inválido');
+      }
+
       const docRef = doc(db, 'products', id);
       await updateDoc(docRef, {
         stock: newStock,
