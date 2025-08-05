@@ -331,7 +331,6 @@ export const saleService = {
 
 // Servicios para Turnos
 export const shiftService = {
-  // Obtener todos los turnos
   async getAllShifts() {
     try {
       const querySnapshot = await getDocs(collection(db, 'shifts'));
@@ -341,56 +340,61 @@ export const shiftService = {
       }));
     } catch (error) {
       console.error('Error obteniendo turnos:', error);
-      toast.error('Error al cargar turnos');
-      return [];
-    }
-  },
-
-  // Obtener turno activo
-  async getActiveShift() {
-    try {
-      const q = query(
-        collection(db, 'shifts'),
-        where('isActive', '==', true)
-      );
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
-        return { id: doc.id, ...doc.data() };
-      }
-      return null;
-    } catch (error) {
-      console.error('Error obteniendo turno activo:', error);
-      toast.error('Error al cargar turno activo');
-      return null;
-    }
-  },
-
-  // Agregar turno
-  async addShift(shiftData) {
-    try {
-      const docRef = await addDoc(collection(db, 'shifts'), {
-        ...shiftData,
-        isActive: true,
-        createdAt: serverTimestamp()
-      });
-      toast.success('Turno iniciado exitosamente');
-      return docRef.id;
-    } catch (error) {
-      console.error('Error agregando turno:', error);
-      toast.error('Error al iniciar turno');
       throw error;
     }
   },
 
-  // Cerrar turno
+  async getActiveShift() {
+    try {
+      const querySnapshot = await getDocs(
+        query(collection(db, 'shifts'), where('endTime', '==', null))
+      );
+      return querySnapshot.docs.length > 0 ? {
+        id: querySnapshot.docs[0].id,
+        ...querySnapshot.docs[0].data()
+      } : null;
+    } catch (error) {
+      console.error('Error obteniendo turno activo:', error);
+      throw error;
+    }
+  },
+
+  async getShiftsByDate(date) {
+    try {
+      console.log('🔄 Obteniendo turnos para la fecha:', date);
+      const querySnapshot = await getDocs(
+        query(collection(db, 'shifts'), where('date', '==', date))
+      );
+      const shifts = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Turnos obtenidos para la fecha:', shifts.length);
+      return shifts;
+    } catch (error) {
+      console.error('❌ Error obteniendo turnos por fecha:', error);
+      throw error;
+    }
+  },
+
+  async addShift(shiftData) {
+    try {
+      const docRef = await addDoc(collection(db, 'shifts'), {
+        ...shiftData,
+        createdAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error agregando turno:', error);
+      throw error;
+    }
+  },
+
   async closeShift(shiftId, closingData) {
     try {
-      const docRef = doc(db, 'shifts', shiftId);
-      await updateDoc(docRef, {
+      await updateDoc(doc(db, 'shifts', shiftId), {
         ...closingData,
-        isActive: false,
-        closedAt: serverTimestamp()
+        endTime: serverTimestamp()
       });
     } catch (error) {
       console.error('Error cerrando turno:', error);
@@ -398,13 +402,10 @@ export const shiftService = {
     }
   },
 
-  // Actualizar total del turno
-  async updateShiftTotal(shiftId, newTotal) {
+  async updateShiftTotal(shiftId, total) {
     try {
-      const docRef = doc(db, 'shifts', shiftId);
-      await updateDoc(docRef, {
-        totalSales: newTotal,
-        updatedAt: serverTimestamp()
+      await updateDoc(doc(db, 'shifts', shiftId), {
+        totalSales: total
       });
     } catch (error) {
       console.error('Error actualizando total del turno:', error);
@@ -532,7 +533,7 @@ export const syncDataWithFirebase = async () => {
     
     // Sincronizar inventario
     const inventory = await inventoryService.getAllInventory();
-    console.log(`📊 Inventario sincronizado: ${inventory.length}`);
+    console.log(`�� Inventario sincronizado: ${inventory.length}`);
     
     console.log('✅ Sincronización completada');
     toast.success('Datos sincronizados correctamente');
@@ -549,6 +550,65 @@ export const syncDataWithFirebase = async () => {
     throw error;
   }
 }; 
+
+// Servicios para clientes
+export const customerService = {
+  async getAllCustomers() {
+    try {
+      console.log('🔄 Obteniendo clientes desde Firebase...');
+      const querySnapshot = await getDocs(collection(db, 'customers'));
+      const customers = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Clientes obtenidos:', customers.length);
+      return customers;
+    } catch (error) {
+      console.error('❌ Error obteniendo clientes:', error);
+      throw error;
+    }
+  },
+
+  async addCustomer(customerData) {
+    try {
+      console.log('🔄 Agregando cliente a Firebase:', customerData);
+      const docRef = await addDoc(collection(db, 'customers'), {
+        ...customerData,
+        createdAt: serverTimestamp()
+      });
+      console.log('✅ Cliente agregado con ID:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error agregando cliente:', error);
+      throw error;
+    }
+  },
+
+  async updateCustomer(customerId, customerData) {
+    try {
+      console.log('🔄 Actualizando cliente en Firebase:', customerId);
+      await updateDoc(doc(db, 'customers', customerId), {
+        ...customerData,
+        updatedAt: serverTimestamp()
+      });
+      console.log('✅ Cliente actualizado');
+    } catch (error) {
+      console.error('❌ Error actualizando cliente:', error);
+      throw error;
+    }
+  },
+
+  async deleteCustomer(customerId) {
+    try {
+      console.log('🔄 Eliminando cliente de Firebase:', customerId);
+      await deleteDoc(doc(db, 'customers', customerId));
+      console.log('✅ Cliente eliminado');
+    } catch (error) {
+      console.error('❌ Error eliminando cliente:', error);
+      throw error;
+    }
+  }
+};
 
 // Datos simulados para demostración
 const sampleProducts = [
@@ -620,26 +680,93 @@ const sampleProducts = [
   }
 ];
 
+const sampleCustomers = [
+  {
+    name: "Juan Pérez",
+    email: "juan.perez@email.com",
+    phone: "381-123-4567",
+    address: "Av. San Martín 123, Monteros",
+    status: "active",
+    currentBalance: 0,
+    creditLimit: 50000,
+    lastPurchase: "2025-08-01"
+  },
+  {
+    name: "María González",
+    email: "maria.gonzalez@email.com",
+    phone: "381-234-5678",
+    address: "Belgrano 456, Monteros",
+    status: "overdue",
+    currentBalance: 15000,
+    creditLimit: 30000,
+    lastPurchase: "2025-07-25"
+  },
+  {
+    name: "Carlos Rodríguez",
+    email: "carlos.rodriguez@email.com",
+    phone: "381-345-6789",
+    address: "Sarmiento 789, Monteros",
+    status: "active",
+    currentBalance: 0,
+    creditLimit: 75000,
+    lastPurchase: "2025-08-03"
+  },
+  {
+    name: "Ana López",
+    email: "ana.lopez@email.com",
+    phone: "381-456-7890",
+    address: "Mitre 321, Monteros",
+    status: "overdue",
+    currentBalance: 25000,
+    creditLimit: 40000,
+    lastPurchase: "2025-07-20"
+  },
+  {
+    name: "Roberto Silva",
+    email: "roberto.silva@email.com",
+    phone: "381-567-8901",
+    address: "Independencia 654, Monteros",
+    status: "active",
+    currentBalance: 0,
+    creditLimit: 60000,
+    lastPurchase: "2025-08-02"
+  }
+];
+
 // Función para cargar datos simulados en Firebase
 export const loadSampleData = async () => {
   try {
     console.log('🔄 Verificando si Firebase está vacío...');
     const existingProducts = await productService.getAllProducts();
+    const existingCustomers = await customerService.getAllCustomers();
     
     if (existingProducts.length === 0) {
-      console.log('📦 Firebase está vacío, cargando datos simulados...');
+      console.log('📦 Firebase está vacío, cargando productos simulados...');
       
       for (const product of sampleProducts) {
         await productService.addProduct(product);
         console.log(`✅ Producto simulado agregado: ${product.name}`);
       }
       
-      console.log('🎉 Datos simulados cargados exitosamente');
-      return true;
+      console.log('🎉 Productos simulados cargados exitosamente');
     } else {
-      console.log('📦 Firebase ya tiene datos, no se cargan simulados');
-      return false;
+      console.log('📦 Firebase ya tiene productos, no se cargan simulados');
     }
+
+    if (existingCustomers.length === 0) {
+      console.log('👥 Cargando clientes simulados...');
+      
+      for (const customer of sampleCustomers) {
+        await customerService.addCustomer(customer);
+        console.log(`✅ Cliente simulado agregado: ${customer.name}`);
+      }
+      
+      console.log('🎉 Clientes simulados cargados exitosamente');
+    } else {
+      console.log('👥 Firebase ya tiene clientes, no se cargan simulados');
+    }
+
+    return true;
   } catch (error) {
     console.error('❌ Error cargando datos simulados:', error);
     return false;

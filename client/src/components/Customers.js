@@ -4,10 +4,10 @@ import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck
 import toast from 'react-hot-toast';
 import { getCurrentDate, calculateOverdueDays as calculateOverdueDaysFromService } from '../services/dateService';
 import { processCustomerPayment, validateCustomerPayment } from '../services/paymentService';
-import { shiftService } from '../services/firebaseService';
+import { shiftService, customerService } from '../services/firebaseService';
 
 const Customers = () => {
-  const [customerList, setCustomerList] = useState(customers);
+  const [customerList, setCustomerList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -28,6 +28,23 @@ const Customers = () => {
 
   // Estado para el turno actual
   const [currentShift, setCurrentShift] = useState(null);
+
+  // Cargar clientes desde Firebase
+  useEffect(() => {
+    const loadCustomers = async () => {
+      try {
+        console.log('🔄 Cargando clientes desde Firebase...');
+        const customersFromFirebase = await customerService.getAllCustomers();
+        console.log('👥 Clientes cargados de Firebase:', customersFromFirebase.length);
+        setCustomerList(customersFromFirebase);
+      } catch (error) {
+        console.error('❌ Error cargando clientes de Firebase:', error);
+        // Fallback a datos locales solo si hay error
+        setCustomerList(customers);
+      }
+    };
+    loadCustomers();
+  }, []);
 
   // Cargar turno actual al montar el componente
   useEffect(() => {
@@ -59,31 +76,60 @@ const Customers = () => {
     totalOwed: customerList.reduce((sum, c) => sum + c.currentBalance, 0)
   };
 
-  const handleAddCustomer = (newCustomer) => {
-    const customer = {
-      ...newCustomer,
-      id: Date.now(),
-      status: 'active',
-      currentBalance: 0,
-      lastPurchase: getCurrentDate().toISOString().split('T')[0]
-    };
-    setCustomerList([customer, ...customerList]);
-    setShowAddModal(false);
-    toast.success('Cliente agregado exitosamente');
+  const handleAddCustomer = async (newCustomer) => {
+    try {
+      console.log('🔄 Agregando cliente desde componente Customers...');
+      const customerData = {
+        ...newCustomer,
+        status: 'active',
+        currentBalance: 0,
+        lastPurchase: getCurrentDate().toISOString().split('T')[0]
+      };
+      
+      const customerId = await customerService.addCustomer(customerData);
+      console.log('✅ Cliente agregado a Firebase con ID:', customerId);
+      
+      // Actualizar el estado local con el nuevo cliente
+      const customerWithId = { ...customerData, id: customerId };
+      setCustomerList([customerWithId, ...customerList]);
+      setShowAddModal(false);
+      toast.success('Cliente agregado exitosamente');
+    } catch (error) {
+      console.error('❌ Error agregando cliente desde Customers:', error);
+      toast.error('Error al agregar cliente');
+    }
   };
 
-  const handleEditCustomer = (updatedCustomer) => {
-    setCustomerList(customerList.map(c => 
-      c.id === updatedCustomer.id ? updatedCustomer : c
-    ));
-    setShowEditModal(false);
-    setSelectedCustomer(null);
-    toast.success('Cliente actualizado exitosamente');
+  const handleEditCustomer = async (updatedCustomer) => {
+    try {
+      console.log('🔄 Actualizando cliente desde componente Customers...');
+      await customerService.updateCustomer(updatedCustomer.id, updatedCustomer);
+      console.log('✅ Cliente actualizado en Firebase');
+      
+      setCustomerList(customerList.map(c => 
+        c.id === updatedCustomer.id ? updatedCustomer : c
+      ));
+      setShowEditModal(false);
+      setSelectedCustomer(null);
+      toast.success('Cliente actualizado exitosamente');
+    } catch (error) {
+      console.error('❌ Error actualizando cliente desde Customers:', error);
+      toast.error('Error al actualizar cliente');
+    }
   };
 
-  const handleDeleteCustomer = (id) => {
-    setCustomerList(customerList.filter(c => c.id !== id));
-    toast.success('Cliente eliminado exitosamente');
+  const handleDeleteCustomer = async (id) => {
+    try {
+      console.log('🔄 Eliminando cliente desde componente Customers...');
+      await customerService.deleteCustomer(id);
+      console.log('✅ Cliente eliminado de Firebase');
+      
+      setCustomerList(customerList.filter(c => c.id !== id));
+      toast.success('Cliente eliminado exitosamente');
+    } catch (error) {
+      console.error('❌ Error eliminando cliente desde Customers:', error);
+      toast.error('Error al eliminar cliente');
+    }
   };
 
   const getStatusColor = (status) => {

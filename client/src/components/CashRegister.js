@@ -19,7 +19,15 @@ import {
   BarChart3,
   Calendar,
   Receipt,
-  Calculator
+  Calculator,
+  X,
+  Zap,
+  Target,
+  Check,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  Smartphone
 } from 'lucide-react';
 import { products } from '../data/products';
 import { productService, saleService, shiftService, loadSampleData } from '../services/firebaseService';
@@ -76,6 +84,12 @@ const CashRegister = () => {
     transferTransactions: 0,
     debitTransactions: 0
   });
+
+  // Estados para sistema de fechas y validaciones
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [pendingShift, setPendingShift] = useState(null);
+  const [morningShiftExists, setMorningShiftExists] = useState(false);
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -244,9 +258,39 @@ const CashRegister = () => {
         return;
       }
 
+      // Para el turno tarde, verificar que exista un turno mañana del mismo día
+      if (shift === 'afternoon') {
+        const today = new Date().toISOString().split('T')[0];
+        const morningShifts = await shiftService.getShiftsByDate(today);
+        const morningShift = morningShifts.find(s => s.type === 'morning');
+        
+        if (!morningShift) {
+          toast.error('No se puede abrir el turno tarde sin haber abierto el turno mañana primero.');
+          return;
+        }
+      }
+
+      // Para el turno mañana, solicitar fecha
+      if (shift === 'morning') {
+        setPendingShift(shift);
+        setShowDateModal(true);
+        return;
+      }
+
+      // Para el turno tarde, usar la fecha actual
+      await createShift(shift, new Date().toISOString().split('T')[0]);
+    } catch (error) {
+      console.error('Error abriendo caja:', error);
+      toast.error('Error al abrir la caja');
+    }
+  };
+
+  const createShift = async (shift, date) => {
+    try {
       // Crear nuevo turno en Firebase
       const shiftData = {
         type: shift,
+        date: date,
         startTime: new Date(),
         totalSales: 0,
         totalItems: 0
@@ -257,11 +301,23 @@ const CashRegister = () => {
       setCurrentShift({ id: shiftId, ...shiftData });
       setShiftStartTime(new Date());
       setIsOpen(true);
-      toast.success(`Caja abierta - Turno ${getShiftName(shift)}`);
+      toast.success(`Caja abierta - Turno ${getShiftName(shift)} - ${date}`);
     } catch (error) {
-      console.error('Error abriendo caja:', error);
-      toast.error('Error al abrir la caja');
+      console.error('Error creando turno:', error);
+      toast.error('Error al crear el turno');
     }
+  };
+
+  const handleDateSubmit = async () => {
+    if (!selectedDate) {
+      toast.error('Por favor selecciona una fecha');
+      return;
+    }
+
+    setShowDateModal(false);
+    await createShift(pendingShift, selectedDate);
+    setPendingShift(null);
+    setSelectedDate('');
   };
 
   const closeCashRegister = async () => {
@@ -1250,6 +1306,46 @@ const CashRegister = () => {
                   Guardar Reporte
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Fecha para Turno Mañana */}
+      {showDateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Fecha para el Turno Mañana</h3>
+              <button
+                onClick={() => setShowDateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Por favor, selecciona la fecha para el turno mañana.
+            </p>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="form-input mb-4"
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowDateModal(false)}
+                className="btn btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDateSubmit}
+                className="btn btn-primary"
+              >
+                Aceptar
+              </button>
             </div>
           </div>
         </div>
