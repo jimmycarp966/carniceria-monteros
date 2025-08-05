@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { customers, customerStatuses } from '../data/customers';
-import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentDate, calculateOverdueDays as calculateOverdueDaysFromService } from '../services/dateService';
+import { processCustomerPayment, validateCustomerPayment } from '../services/paymentService';
+import { shiftService } from '../services/firebaseService';
 
 const Customers = () => {
   const [customerList, setCustomerList] = useState(customers);
@@ -17,6 +19,28 @@ const Customers = () => {
   const [selectedCustomerForCredit, setSelectedCustomerForCredit] = useState(null);
   const [creditAmount, setCreditAmount] = useState(0);
   const [creditDays, setCreditDays] = useState(7);
+
+  // Estados para pago de clientes atrasados
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedCustomerForPayment, setSelectedCustomerForPayment] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Estado para el turno actual
+  const [currentShift, setCurrentShift] = useState(null);
+
+  // Cargar turno actual al montar el componente
+  useEffect(() => {
+    const loadCurrentShift = async () => {
+      try {
+        const activeShift = await shiftService.getActiveShift();
+        setCurrentShift(activeShift);
+      } catch (error) {
+        console.error('Error cargando turno actual:', error);
+      }
+    };
+    loadCurrentShift();
+  }, []);
 
   // Filtrar clientes
   const filteredCustomers = customerList.filter(customer => {
@@ -111,6 +135,63 @@ const Customers = () => {
     setShowCreditModal(false);
     setSelectedCustomerForCredit(null);
     toast.success(`Fiado agregado: $${creditAmount.toLocaleString()} - ${creditDays} días`);
+  };
+
+  // Función para procesar pago de cliente atrasado
+  const handlePayment = (customer) => {
+    if (customer.currentBalance <= 0) {
+      toast.error('Este cliente no tiene saldo pendiente');
+      return;
+    }
+    
+    setSelectedCustomerForPayment(customer);
+    setPaymentAmount(customer.currentBalance); // Por defecto, el monto completo
+    setShowPaymentModal(true);
+  };
+
+  // Función para procesar el pago
+  const processPayment = async () => {
+    if (!selectedCustomerForPayment || paymentAmount <= 0) {
+      toast.error('Monto inválido');
+      return;
+    }
+
+    // Validar el pago
+    const validation = validateCustomerPayment(selectedCustomerForPayment, paymentAmount);
+    if (!validation.valid) {
+      toast.error(validation.message);
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    try {
+      // Procesar pago usando el servicio
+      const result = await processCustomerPayment(selectedCustomerForPayment, paymentAmount, currentShift);
+
+      if (result.success) {
+        // Actualizar el cliente localmente
+        const updatedCustomer = {
+          ...selectedCustomerForPayment,
+          currentBalance: selectedCustomerForPayment.currentBalance - paymentAmount,
+          status: selectedCustomerForPayment.currentBalance - paymentAmount <= 0 ? 'active' : 'overdue'
+        };
+
+        setCustomerList(customerList.map(c => 
+          c.id === updatedCustomer.id ? updatedCustomer : c
+        ));
+        
+        toast.success(`Pago procesado: $${paymentAmount.toLocaleString()} - Cliente: ${selectedCustomerForPayment.name}`);
+        
+        setShowPaymentModal(false);
+        setSelectedCustomerForPayment(null);
+      }
+    } catch (error) {
+      console.error('Error procesando pago:', error);
+      toast.error('Error al procesar el pago');
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   return (
@@ -319,6 +400,15 @@ const Customers = () => {
                     >
                       <DollarSign className="h-4 w-4" />
                     </button>
+                    {isCustomerOverdue(customer) && customer.currentBalance > 0 && (
+                      <button
+                        onClick={() => handlePayment(customer)}
+                        className="text-green-600 hover:text-green-900 mr-3"
+                        title="Procesar Pago"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteCustomer(customer.id)}
                       className="text-red-600 hover:text-red-900"
@@ -406,6 +496,79 @@ const Customers = () => {
                   setShowCreditModal(false);
                   setSelectedCustomerForCredit(null);
                 }}
+                className="flex-1 btn btn-secondary"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedCustomerForPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Procesar Pago - {selectedCustomerForPayment.name}
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-800">
+                  <strong>Cliente Atrasado:</strong> {calculateOverdueDays(selectedCustomerForPayment)} días
+                </p>
+                <p className="text-sm text-red-800">
+                  <strong>Saldo pendiente:</strong> ${selectedCustomerForPayment.currentBalance.toLocaleString()}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Monto a Pagar
+                </label>
+                <input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="0.00"
+                  max={selectedCustomerForPayment.currentBalance}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Máximo: ${selectedCustomerForPayment.currentBalance.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  <strong>Saldo después del pago:</strong> ${(selectedCustomerForPayment.currentBalance - paymentAmount).toLocaleString()}
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  Este pago se sumará a la caja del turno actual
+                </p>
+                {currentShift && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    Turno: {currentShift.type === 'morning' ? 'Mañana' : 'Tarde'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={processPayment}
+                disabled={isProcessingPayment}
+                className="flex-1 btn btn-success"
+              >
+                {isProcessingPayment ? 'Procesando...' : 'Confirmar Pago'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setSelectedCustomerForPayment(null);
+                }}
+                disabled={isProcessingPayment}
                 className="flex-1 btn btn-secondary"
               >
                 Cancelar
