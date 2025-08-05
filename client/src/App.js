@@ -6,6 +6,12 @@ import toast from 'react-hot-toast';
 import FirebaseAuth from './components/FirebaseAuth';
 import Products from './components/Products';
 import Sales from './components/Sales';
+import Customers from './components/Customers';
+import Employees from './components/Employees';
+import Suppliers from './components/Suppliers';
+import Inventory from './components/Inventory';
+import Categories from './components/Categories';
+import Reports from './components/Reports';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -272,12 +278,12 @@ const App = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/productos" element={<Products />} />
               <Route path="/ventas" element={<Sales />} />
-              <Route path="/inventario" element={<div className="p-6">Inventario - En desarrollo</div>} />
-              <Route path="/clientes" element={<div className="p-6">Clientes - En desarrollo</div>} />
-              <Route path="/empleados" element={<div className="p-6">Empleados - En desarrollo</div>} />
-              <Route path="/proveedores" element={<div className="p-6">Proveedores - En desarrollo</div>} />
-              <Route path="/categorias" element={<div className="p-6">Categorías - En desarrollo</div>} />
-              <Route path="/reportes" element={<div className="p-6">Reportes - En desarrollo</div>} />
+              <Route path="/inventario" element={<Inventory />} />
+              <Route path="/clientes" element={<Customers />} />
+              <Route path="/empleados" element={<Employees />} />
+              <Route path="/proveedores" element={<Suppliers />} />
+              <Route path="/categorias" element={<Categories />} />
+              <Route path="/reportes" element={<Reports />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>
