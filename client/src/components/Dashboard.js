@@ -79,10 +79,7 @@ const Dashboard = () => {
     });
     
     // Cargar datos iniciales
-    const loadData = async () => {
-      await loadInitialData();
-    };
-    loadData();
+    loadInitialData();
     
     // Actualizar estado de conexión cada 30 segundos
     const connectionInterval = setInterval(() => {
@@ -213,19 +210,19 @@ const Dashboard = () => {
     
     setProductPerformance(topProducts);
     
-    // Datos para tendencia de ingresos
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const daySales = sales.filter(sale => {
-        const saleDate = new Date(sale.createdAt?.toDate?.() || sale.createdAt);
-        return saleDate.toDateString() === date.toDateString();
-      });
-      return {
-        fecha: date.toLocaleDateString('es-ES', { weekday: 'short' }),
-        ingresos: daySales.reduce((sum, sale) => sum + (sale.total || 0), 0)
-      };
-    }).reverse();
+    // Datos para tendencia de ingresos (comentado porque se removió el estado)
+    // const last7Days = Array.from({ length: 7 }, (_, i) => {
+    //   const date = new Date();
+    //   date.setDate(date.getDate() - i);
+    //   const daySales = sales.filter(sale => {
+    //     const saleDate = new Date(sale.createdAt?.toDate?.() || sale.createdAt);
+    //     return saleDate.toDateString() === date.toDateString();
+    //   });
+    //   return {
+    //     fecha: date.toLocaleDateString('es-ES', { weekday: 'short' }),
+    //     ingresos: daySales.reduce((sum, sale) => sum + (sale.total || 0), 0)
+    //   };
+    // }).reverse();
     
     // setRevenueTrend(last7Days); // This state was removed
   };

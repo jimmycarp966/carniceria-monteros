@@ -72,8 +72,7 @@ const EnhancedCashRegister = () => {
     // Escuchar actualizaciones de productos
     realtimeService.on('products_updated', (data) => {
       setAllProducts(data.products);
-      const updateFiltered = () => updateFilteredProducts(data.products);
-      updateFiltered();
+      updateFilteredProducts(data.products);
     });
     
     // Escuchar alertas de stock
@@ -97,10 +96,7 @@ const EnhancedCashRegister = () => {
 
   // Cargar productos
   useEffect(() => {
-    const loadInitialProducts = async () => {
-      await loadProducts();
-    };
-    loadInitialProducts();
+    loadProducts();
   }, []);
 
   const loadProducts = async () => {

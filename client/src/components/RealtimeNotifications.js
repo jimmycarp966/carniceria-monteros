@@ -60,7 +60,7 @@ const RealtimeNotifications = () => {
       realtimeService.off('stock_alert');
       realtimeService.off('sale_synced');
     };
-  }, []);
+  }, [addNotification]);
 
   const addNotification = (notification) => {
     setNotifications(prev => [notification, ...prev.slice(0, 19)]); // Máximo 20 notificaciones
