@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { products, categories } from '../data/products';
 import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { productService } from '../services/firebaseService';
+import { productService, loadSampleData } from '../services/firebaseService';
 
 const Products = () => {
   const [productList, setProductList] = useState([]);
@@ -17,6 +17,10 @@ const Products = () => {
     const loadProducts = async () => {
       try {
         console.log('🔄 Cargando productos en componente Products...');
+        
+        // Intentar cargar datos simulados si Firebase está vacío
+        await loadSampleData();
+        
         const productsFromFirebase = await productService.getAllProducts();
         console.log('📦 Productos cargados en Products:', productsFromFirebase.length);
         setProductList(productsFromFirebase);

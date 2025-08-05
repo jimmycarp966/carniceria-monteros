@@ -549,3 +549,99 @@ export const syncDataWithFirebase = async () => {
     throw error;
   }
 }; 
+
+// Datos simulados para demostración
+const sampleProducts = [
+  {
+    name: "Asado de Tira",
+    description: "Corte premium de carne vacuna",
+    category: "carne",
+    price: 8500,
+    stock: 25,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 10
+  },
+  {
+    name: "Pollo Entero",
+    description: "Pollo fresco de granja",
+    category: "pollo",
+    price: 3200,
+    stock: 15,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🍗",
+    minStock: 8
+  },
+  {
+    name: "Chorizo Parrillero",
+    description: "Chorizo artesanal para parrilla",
+    category: "embutidos",
+    price: 1800,
+    stock: 30,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥓",
+    minStock: 12
+  },
+  {
+    name: "Bife de Chorizo",
+    description: "Corte fino de carne vacuna",
+    category: "carne",
+    price: 9200,
+    stock: 18,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 10
+  },
+  {
+    name: "Pechuga de Pollo",
+    description: "Pechuga sin hueso y sin piel",
+    category: "pollo",
+    price: 3800,
+    stock: 22,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🍗",
+    minStock: 8
+  },
+  {
+    name: "Salchicha Vienesa",
+    description: "Salchicha tradicional",
+    category: "embutidos",
+    price: 1500,
+    stock: 35,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🌭",
+    minStock: 15
+  }
+];
+
+// Función para cargar datos simulados en Firebase
+export const loadSampleData = async () => {
+  try {
+    console.log('🔄 Verificando si Firebase está vacío...');
+    const existingProducts = await productService.getAllProducts();
+    
+    if (existingProducts.length === 0) {
+      console.log('📦 Firebase está vacío, cargando datos simulados...');
+      
+      for (const product of sampleProducts) {
+        await productService.addProduct(product);
+        console.log(`✅ Producto simulado agregado: ${product.name}`);
+      }
+      
+      console.log('🎉 Datos simulados cargados exitosamente');
+      return true;
+    } else {
+      console.log('📦 Firebase ya tiene datos, no se cargan simulados');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error cargando datos simulados:', error);
+    return false;
+  }
+}; 

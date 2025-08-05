@@ -1,28 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { products } from '../data/products';
 import { 
-  DollarSign, 
+  ShoppingCart, 
   Plus, 
   Minus, 
   Trash2, 
-  Receipt, 
-  CreditCard, 
-  AlertTriangle,
-  Zap,
-  Target,
-  BarChart3,
-  Clock,
-  ShoppingCart,
-  Check,
-  Filter,
-  ChevronDown,
-  ChevronUp,
+  Search, 
+  Clock, 
+  DollarSign, 
+  Package, 
+  TrendingUp, 
+  Users, 
+  CreditCard,
   Banknote,
-  Smartphone,
-  X
+  ArrowRight,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  BarChart3,
+  Calendar,
+  Receipt,
+  Calculator
 } from 'lucide-react';
+import { products } from '../data/products';
+import { productService, saleService, shiftService, loadSampleData } from '../services/firebaseService';
 import toast from 'react-hot-toast';
-import { productService, saleService, shiftService } from '../services/firebaseService';
 
 const CashRegister = () => {
   const [cart, setCart] = useState([]);
@@ -85,6 +86,10 @@ const CashRegister = () => {
     const loadProducts = async () => {
       try {
         console.log('🔄 Cargando productos desde Firebase...');
+        
+        // Intentar cargar datos simulados si Firebase está vacío
+        await loadSampleData();
+        
         const productsFromFirebase = await productService.getAllProducts();
         console.log('📦 Productos cargados de Firebase:', productsFromFirebase.length);
         
