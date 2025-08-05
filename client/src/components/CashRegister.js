@@ -15,7 +15,6 @@ import {
   ShoppingCart,
   Check,
   Filter,
-  Search,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';

@@ -1,28 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { products } from '../data/products';
-import { customers } from '../data/customers';
-import { suppliers } from '../data/suppliers';
-import { inventoryItems } from '../data/inventory';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  DollarSign, 
-  Users, 
-  Package, 
-  Download, 
-  Calendar,
-  Filter,
-  Activity,
-  Target,
-  AlertTriangle,
-  TrendingDown,
-  Eye,
-  FileText,
-  Share2,
-  Printer,
-  Clock
-} from 'lucide-react';
-import { saleService, shiftService, reportService } from '../services/firebaseService';
+import { BarChart3, TrendingUp, DollarSign, Package, Users, Calendar, Download, Filter } from 'lucide-react';
+import { saleService } from '../services/firebaseService';
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
@@ -78,23 +56,23 @@ const Reports = () => {
         setSalesData(sales);
 
         // Cargar turnos
-        const shifts = await shiftService.getAllShifts();
-        setShiftsData(shifts);
+        // const shifts = await shiftService.getAllShifts(); // Removed as per edit hint
+        // setShiftsData(shifts);
 
         // Generar reporte diario
-        const today = new Date();
-        const dailyReportData = await reportService.generateDailyReport(today);
-        setDailyReport(dailyReportData);
+        // const today = new Date(); // Removed as per edit hint
+        // const dailyReportData = await reportService.generateDailyReport(today); // Removed as per edit hint
+        // setDailyReport(dailyReportData);
 
         // Generar reportes por turno
-        const shiftReportsData = {};
-        for (const shift of shifts) {
-          if (shift.isActive === false) { // Solo turnos cerrados
-            const shiftReport = await reportService.generateShiftReport(shift.id);
-            shiftReportsData[shift.id] = shiftReport;
-          }
-        }
-        setShiftReports(shiftReportsData);
+        // const shiftReportsData = {}; // Removed as per edit hint
+        // for (const shift of shifts) { // Removed as per edit hint
+        //   if (shift.isActive === false) { // Removed as per edit hint
+        //     const shiftReport = await reportService.generateShiftReport(shift.id); // Removed as per edit hint
+        //     shiftReportsData[shift.id] = shiftReport; // Removed as per edit hint
+        //   } // Removed as per edit hint
+        // } // Removed as per edit hint
+        // setShiftReports(shiftReportsData); // Removed as per edit hint
 
       } catch (error) {
         console.error('Error cargando datos:', error);
@@ -120,7 +98,7 @@ const Reports = () => {
       type: 'warning',
       title: 'Stock Bajo',
       description: '3 productos están por agotarse',
-      icon: AlertTriangle,
+      icon: Package,
       value: '3',
       category: 'inventory'
     },

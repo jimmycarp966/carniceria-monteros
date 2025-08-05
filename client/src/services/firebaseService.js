@@ -1,4 +1,5 @@
 import { 
+  getFirestore, 
   collection, 
   doc, 
   getDocs, 
@@ -8,10 +9,7 @@ import {
   deleteDoc, 
   query, 
   where, 
-  orderBy, 
-  limit,
-  serverTimestamp,
-  onSnapshot
+  serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
@@ -227,8 +225,7 @@ export const shiftService = {
     try {
       const q = query(
         collection(db, 'shifts'),
-        where('isActive', '==', true),
-        limit(1)
+        where('isActive', '==', true)
       );
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
