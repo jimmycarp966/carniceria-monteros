@@ -78,7 +78,7 @@ const EnhancedCashRegister = () => {
     
     // Escuchar alertas de stock
     realtimeService.on('stock_alert', (data) => {
-      setStockAlerts(data.items);
+      // setStockAlerts(data.items); // This state was removed
       if (data.items.length > 0) {
         toast.error(`¡Alerta! ${data.items.length} productos con stock bajo`);
       }
@@ -86,7 +86,7 @@ const EnhancedCashRegister = () => {
     
     // Escuchar notificaciones
     realtimeService.on('notification_received', (notification) => {
-      setRealtimeNotifications(prev => [notification, ...prev.slice(0, 9)]);
+      // setRealtimeNotifications(prev => [notification, ...prev.slice(0, 9)]); // This state was removed
       toast.success(notification.data.message || 'Nueva notificación');
     });
     
@@ -135,7 +135,7 @@ const EnhancedCashRegister = () => {
   };
 
   const selectProductFromDropdown = (product) => {
-    setSelectedProduct(product);
+    // setSelectedProduct(product); // This state was removed
     setQuantity(1);
     setSearchTerm('');
     setShowProductDropdown(false);
@@ -658,7 +658,7 @@ const EnhancedCashRegister = () => {
               {[
                 { id: 'cash', label: 'Efectivo', icon: Banknote },
                 { id: 'card', label: 'Tarjeta', icon: CreditCard },
-                { id: 'transfer', label: 'Transferencia', icon: Smartphone },
+                { id: 'transfer', label: 'Transferencia', icon: CreditCard },
                 { id: 'debit', label: 'Débito', icon: CreditCard }
               ].map(method => (
                 <button

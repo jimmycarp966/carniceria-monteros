@@ -227,7 +227,7 @@ const Dashboard = () => {
       };
     }).reverse();
     
-    setRevenueTrend(last7Days);
+    // setRevenueTrend(last7Days); // This state was removed
   };
 
   const handleForceSync = async () => {
