@@ -89,23 +89,24 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
-      {/* Mobile menu button mejorado */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      {/* Mobile menu button mejorado - SIEMPRE VISIBLE */}
+      <div className="lg:hidden fixed top-4 left-4 z-[9999]">
         <button
           onClick={toggleSidebar}
-          className="p-3 rounded-2xl bg-white shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+          className="p-4 rounded-2xl bg-red-600 text-white shadow-2xl border-2 border-red-700 hover:bg-red-700 hover:shadow-3xl transition-all duration-300 transform hover:scale-110"
           aria-label="Toggle menu"
+          style={{ minWidth: '60px', minHeight: '60px' }}
         >
-          {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {sidebarOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
         </button>
       </div>
 
       {/* Notificaciones móviles */}
-      <div className="lg:hidden fixed top-4 right-4 z-50">
-        <button className="p-3 rounded-2xl bg-white shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative">
-          <Bell className="h-6 w-6" />
+      <div className="lg:hidden fixed top-4 right-4 z-[9999]">
+        <button className="p-4 rounded-2xl bg-white shadow-2xl border-2 border-gray-200 hover:shadow-3xl transition-all duration-300 transform hover:scale-110 relative">
+          <Bell className="h-7 w-7" />
           {notifications > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold">
               {notifications}
             </span>
           )}
@@ -115,7 +116,7 @@ const Layout = ({ children }) => {
       {/* Overlay para móvil - DEBE IR ANTES DEL SIDEBAR */}
       {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-60 z-40"
           onClick={closeSidebar}
         />
       )}
@@ -140,10 +141,10 @@ const Layout = ({ children }) => {
             </div>
             <button
               onClick={closeSidebar}
-              className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+              className="lg:hidden p-3 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
               aria-label="Close menu"
             >
-              <X className="h-5 w-5" />
+              <X className="h-6 w-6" />
             </button>
           </div>
 
