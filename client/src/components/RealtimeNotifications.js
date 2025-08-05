@@ -86,33 +86,7 @@ const RealtimeNotifications = () => {
     };
   }, []);
 
-  const addNotification = (notification) => {
-    setNotifications(prev => [notification, ...prev.slice(0, 19)]); // Máximo 20 notificaciones
-    setUnreadCount(prev => prev + 1);
-    
-    // Mostrar toast
-    const icon = getNotificationIcon(notification.type);
-    const color = getNotificationColor(notification.priority);
-    
-    toast.success(
-      <div className="flex items-center">
-        {icon}
-        <div className="ml-2">
-          <div className="font-medium">{notification.title}</div>
-          <div className="text-sm text-gray-600">{notification.message}</div>
-        </div>
-      </div>,
-      {
-        duration: 4000,
-        style: {
-          background: color.background,
-          color: color.text,
-          borderRadius: '12px',
-          border: `1px solid ${color.border}`,
-        },
-      }
-    );
-  };
+
 
   const getNotificationIcon = (type) => {
     switch (type) {
