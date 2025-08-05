@@ -61,7 +61,7 @@ const Layout = ({ children }) => {
   ];
 
   return (
-    <div className="bg-gray-50">
+    <div className="flex bg-gray-50">
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
@@ -74,7 +74,7 @@ const Layout = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        fixed left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col">
@@ -139,7 +139,7 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="flex-1 lg:ml-0">
         {children}
       </div>
 
