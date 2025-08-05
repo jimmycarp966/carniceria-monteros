@@ -29,7 +29,7 @@ const NavItem = ({ icon: Icon, label, to, onClick, isActive, badge }) => {
       <Icon className={`h-5 w-5 mr-3 ${isActive ? 'text-primary-600' : 'text-gray-500'}`} />
       <span className="inline">{label}</span>
       {badge && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+        <span className="absolute top-1/2 -translate-y-1/2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
           {badge}
         </span>
       )}
