@@ -58,7 +58,7 @@ const Products = () => {
   };
 
   return (
-    <div className="p-4 lg:p-8 space-y-6">
+    <div className="p-4 lg:p-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

@@ -140,9 +140,7 @@ const Layout = ({ children }) => {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        <div className="min-h-screen">
-          {children}
-        </div>
+        {children}
       </div>
 
       {/* Mobile overlay */}
@@ -172,9 +170,9 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="p-4 lg:p-8 space-y-6">
+    <div className="p-4 lg:p-6 space-y-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-2 text-gray-600">Bienvenido al sistema de administración de Carnicería Muñoz</p>
       </div>
