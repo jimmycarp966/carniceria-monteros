@@ -99,6 +99,19 @@ const CashRegister = () => {
     loadProducts();
   }, []);
 
+  // Cargar ventas desde Firebase
+  useEffect(() => {
+    const loadSales = async () => {
+      try {
+        const salesFromFirebase = await saleService.getAllSales();
+        setSales(salesFromFirebase);
+      } catch (error) {
+        console.error('Error cargando ventas:', error);
+      }
+    };
+    loadSales();
+  }, []);
+
   // Filtrar productos basado en búsqueda
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -369,9 +382,6 @@ const CashRegister = () => {
     setIsProcessingSale(true);
 
     try {
-      // Simular procesamiento
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       // Crear objeto de venta
       const sale = {
         items: [...cart],
@@ -381,7 +391,8 @@ const CashRegister = () => {
         change: paymentMethod === 'cash' ? change : 0,
         date: new Date(),
         shiftId: currentShift?.id,
-        shiftType: currentShift?.type
+        shiftType: currentShift?.type,
+        createdAt: new Date()
       };
 
       // Guardar venta en Firebase
@@ -396,14 +407,19 @@ const CashRegister = () => {
         }
       }
 
-      // Actualizar estado local
+      // Actualizar estado local con la nueva venta
       const saleWithId = { id: saleId, ...sale };
-      setSales([saleWithId, ...sales]);
-      setShiftSales([saleWithId, ...shiftSales]);
-      setShiftTotal(shiftTotal + cartTotal);
+      setSales(prevSales => [saleWithId, ...prevSales]);
+      setShiftSales(prevShiftSales => [saleWithId, ...prevShiftSales]);
+      setShiftTotal(prevTotal => prevTotal + cartTotal);
+      
+      // Limpiar carrito y resetear valores
       setCart([]);
       setCashAmount(0);
       setPaymentMethod('cash');
+      setSelectedProduct('');
+      setQuantity(1);
+      setSearchTerm('');
 
       // Mensaje de éxito según método de pago
       const methodNames = {
@@ -632,13 +648,41 @@ const CashRegister = () => {
                 <button
                   key={shift}
                   onClick={() => openCashRegister(shift)}
-                  className="shift-card"
+                  className={`relative overflow-hidden rounded-3xl p-6 border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl ${
+                    shift === 'morning' 
+                      ? 'bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-200 hover:border-orange-300 hover:from-orange-100 hover:to-yellow-100' 
+                      : 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200 hover:border-blue-300 hover:from-blue-100 hover:to-purple-100'
+                  }`}
                 >
-                  <div className="shift-icon">
-                    <Clock className="h-6 w-6" />
+                  <div className={`absolute top-0 right-0 w-20 h-20 opacity-10 ${
+                    shift === 'morning' ? 'bg-orange-400' : 'bg-blue-400'
+                  } rounded-full -translate-y-10 translate-x-10`}></div>
+                  <div className="relative z-10 text-center">
+                    <div className={`p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center ${
+                      shift === 'morning' 
+                        ? 'bg-orange-100 text-orange-600' 
+                        : 'bg-blue-100 text-blue-600'
+                    }`}>
+                      <Clock className="h-8 w-8" />
+                    </div>
+                    <h3 className={`text-xl font-bold mb-2 ${
+                      shift === 'morning' ? 'text-orange-800' : 'text-blue-800'
+                    }`}>
+                      {getShiftName(shift)}
+                    </h3>
+                    <p className={`text-sm font-medium ${
+                      shift === 'morning' ? 'text-orange-600' : 'text-blue-600'
+                    }`}>
+                      {getShiftTime(shift)}
+                    </p>
+                    <div className={`mt-3 text-xs px-3 py-1 rounded-full ${
+                      shift === 'morning' 
+                        ? 'bg-orange-200 text-orange-700' 
+                        : 'bg-blue-200 text-blue-700'
+                    }`}>
+                      Toca para abrir
+                    </div>
                   </div>
-                  <h3 className="shift-title">{getShiftName(shift)}</h3>
-                  <p className="shift-time">{getShiftTime(shift)}</p>
                 </button>
               ))}
             </div>
