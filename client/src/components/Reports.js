@@ -1,56 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { products } from '../data/products';
 import { customers } from '../data/customers';
 import { suppliers } from '../data/suppliers';
 import { inventoryItems } from '../data/inventory';
-import { BarChart3, TrendingUp, DollarSign, Users, Package, Download } from 'lucide-react';
+import { 
+  BarChart3, 
+  TrendingUp, 
+  DollarSign, 
+  Users, 
+  Package, 
+  Download, 
+  Calendar,
+  Filter,
+  PieChart,
+  Activity,
+  Target,
+  AlertTriangle,
+  TrendingDown,
+  Eye,
+  FileText,
+  Share2,
+  Printer
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
   const [dateRange, setDateRange] = useState('month');
   
-  // Nuevos estados para filtros
-  const [periodFilter, setPeriodFilter] = useState('month'); // day, week, month, quarter, year
+  // Estados mejorados para filtros
+  const [periodFilter, setPeriodFilter] = useState('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [showCustomDateRange, setShowCustomDateRange] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Datos de ejemplo para reportes
+  // Estados para funcionalidades avanzadas
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportHistory, setReportHistory] = useState([]);
+  const [showInsights, setShowInsights] = useState(false);
+  const [selectedInsight, setSelectedInsight] = useState(null);
+
+  // Datos de ejemplo mejorados para reportes
   const salesData = [
-    { month: 'Ene', sales: 450000, profit: 120000 },
-    { month: 'Feb', sales: 520000, profit: 140000 },
-    { month: 'Mar', sales: 480000, profit: 130000 },
-    { month: 'Abr', sales: 610000, profit: 160000 },
-    { month: 'May', sales: 550000, profit: 150000 },
-    { month: 'Jun', sales: 680000, profit: 180000 }
+    { month: 'Ene', sales: 450000, profit: 120000, growth: 5.2 },
+    { month: 'Feb', sales: 520000, profit: 140000, growth: 15.6 },
+    { month: 'Mar', sales: 480000, profit: 130000, growth: -7.7 },
+    { month: 'Abr', sales: 610000, profit: 160000, growth: 27.1 },
+    { month: 'May', sales: 550000, profit: 150000, growth: -9.8 },
+    { month: 'Jun', sales: 680000, profit: 180000, growth: 23.6 }
   ];
 
   const topProducts = [
-    { name: 'Asado de Tira', sales: 125000, units: 45 },
-    { name: 'Vacío', sales: 96000, units: 30 },
-    { name: 'Pollo Entero', sales: 63000, units: 35 },
-    { name: 'Chorizo Parrillero', sales: 42000, units: 35 },
-    { name: 'Bife de Chorizo', sales: 42000, units: 12 }
+    { name: 'Asado de Tira', sales: 125000, units: 45, growth: 12.5, category: 'carne' },
+    { name: 'Vacío', sales: 96000, units: 30, growth: 8.3, category: 'carne' },
+    { name: 'Pollo Entero', sales: 63000, units: 35, growth: -2.1, category: 'pollo' },
+    { name: 'Chorizo Parrillero', sales: 42000, units: 35, growth: 15.7, category: 'embutidos' },
+    { name: 'Bife de Chorizo', sales: 42000, units: 12, growth: 5.2, category: 'carne' }
   ];
 
   const customerStats = [
-    { name: 'María González', totalSpent: 45000, visits: 12 },
-    { name: 'Carlos Rodríguez', totalSpent: 38000, visits: 8 },
-    { name: 'Ana Martínez', totalSpent: 32000, visits: 10 },
-    { name: 'Roberto Silva', totalSpent: 28000, visits: 6 },
-    { name: 'Lucía Fernández', totalSpent: 25000, visits: 5 }
+    { name: 'María González', totalSpent: 45000, visits: 12, lastVisit: '2024-01-15', loyalty: 'gold' },
+    { name: 'Carlos Rodríguez', totalSpent: 38000, visits: 8, lastVisit: '2024-01-10', loyalty: 'silver' },
+    { name: 'Ana Martínez', totalSpent: 32000, visits: 10, lastVisit: '2024-01-12', loyalty: 'silver' },
+    { name: 'Roberto Silva', totalSpent: 28000, visits: 6, lastVisit: '2024-01-08', loyalty: 'bronze' },
+    { name: 'Lucía Fernández', totalSpent: 25000, visits: 5, lastVisit: '2024-01-05', loyalty: 'bronze' }
   ];
 
   const supplierStats = [
-    { name: 'Frigorífico Tucumán S.A.', totalOrdered: 2500000, totalPaid: 2300000 },
-    { name: 'Granja Avícola Monteros', totalOrdered: 800000, totalPaid: 750000 },
-    { name: 'Embutidos del Norte', totalOrdered: 600000, totalPaid: 600000 },
-    { name: 'Carnes Premium del Valle', totalOrdered: 1200000, totalPaid: 1100000 },
-    { name: 'Frigorífico Regional', totalOrdered: 1800000, totalPaid: 1600000 }
+    { name: 'Frigorífico Tucumán S.A.', totalOrdered: 2500000, totalPaid: 2300000, reliability: 92, lastOrder: '2024-01-10' },
+    { name: 'Granja Avícola Monteros', totalOrdered: 800000, totalPaid: 750000, reliability: 94, lastOrder: '2024-01-08' },
+    { name: 'Embutidos del Norte', totalOrdered: 600000, totalPaid: 600000, reliability: 100, lastOrder: '2024-01-12' },
+    { name: 'Carnes Premium del Valle', totalOrdered: 1200000, totalPaid: 1100000, reliability: 92, lastOrder: '2024-01-05' },
+    { name: 'Frigorífico Regional', totalOrdered: 1800000, totalPaid: 1600000, reliability: 89, lastOrder: '2024-01-15' }
   ];
 
-  // Estadísticas generales
+  // Estadísticas generales mejoradas
   const generalStats = {
     totalSales: salesData.reduce((sum, item) => sum + item.sales, 0),
     totalProfit: salesData.reduce((sum, item) => sum + item.profit, 0),
@@ -59,15 +84,86 @@ const Reports = () => {
     totalSuppliers: suppliers.length,
     totalInventory: inventoryItems.reduce((sum, item) => sum + item.currentStock, 0),
     averageSale: salesData.reduce((sum, item) => sum + item.sales, 0) / salesData.length,
-    growthRate: ((salesData[5].sales - salesData[0].sales) / salesData[0].sales * 100).toFixed(1)
+    growthRate: ((salesData[5].sales - salesData[0].sales) / salesData[0].sales * 100).toFixed(1),
+    profitMargin: ((salesData.reduce((sum, item) => sum + item.profit, 0) / salesData.reduce((sum, item) => sum + item.sales, 0)) * 100).toFixed(1)
   };
 
-  const handleDownloadReport = (type) => {
-    toast.success(`Descargando reporte de ${type}...`);
-    // Aquí iría la lógica real de descarga
+  // Insights inteligentes
+  const insights = [
+    {
+      id: 1,
+      type: 'positive',
+      title: 'Crecimiento Sostenido',
+      description: 'Las ventas han crecido un 23.6% este mes',
+      icon: TrendingUp,
+      value: '+23.6%',
+      category: 'sales'
+    },
+    {
+      id: 2,
+      type: 'warning',
+      title: 'Stock Bajo',
+      description: '3 productos están por agotarse',
+      icon: AlertTriangle,
+      value: '3',
+      category: 'inventory'
+    },
+    {
+      id: 3,
+      type: 'positive',
+      title: 'Cliente Frecuente',
+      description: 'María González es tu mejor cliente',
+      icon: Users,
+      value: '12 visitas',
+      category: 'customers'
+    },
+    {
+      id: 4,
+      type: 'info',
+      title: 'Margen de Ganancia',
+      description: 'El margen promedio es del 26.8%',
+      icon: DollarSign,
+      value: '26.8%',
+      category: 'profit'
+    }
+  ];
+
+  // Simular historial de reportes
+  useEffect(() => {
+    const history = [
+      { id: 1, type: 'Ventas', date: '2024-01-15', size: '2.3MB', status: 'completed' },
+      { id: 2, type: 'Inventario', date: '2024-01-14', size: '1.8MB', status: 'completed' },
+      { id: 3, type: 'Clientes', date: '2024-01-13', size: '1.5MB', status: 'completed' }
+    ];
+    setReportHistory(history);
+  }, []);
+
+  const handleDownloadReport = async (type) => {
+    setIsGeneratingReport(true);
+    
+    try {
+      // Simular generación de reporte
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast.success(`Reporte de ${type} generado exitosamente`);
+      
+      // Agregar al historial
+      const newReport = {
+        id: Date.now(),
+        type: type,
+        date: new Date().toISOString().split('T')[0],
+        size: `${(Math.random() * 3 + 1).toFixed(1)}MB`,
+        status: 'completed'
+      };
+      setReportHistory([newReport, ...reportHistory]);
+      
+    } catch (error) {
+      toast.error('Error al generar el reporte');
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
 
-  // Función para obtener el nombre del período
   const getPeriodName = (period) => {
     switch (period) {
       case 'day': return 'Diario';
@@ -80,7 +176,6 @@ const Reports = () => {
     }
   };
 
-  // Función para exportar reporte real
   const exportRealReport = (reportType) => {
     const reportData = {
       type: reportType,
@@ -96,197 +191,133 @@ const Reports = () => {
       }
     };
 
-    // Crear archivo JSON para descarga
     const dataStr = JSON.stringify(reportData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `reporte_${reportType}_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
     URL.revokeObjectURL(url);
-
-    toast.success(`Reporte ${reportType} exportado exitosamente`);
   };
 
   const renderSalesReport = () => (
     <div className="space-y-6">
-      {/* Filtros de período */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Filtros de Período</h3>
-          <button
-            onClick={() => setShowCustomDateRange(!showCustomDateRange)}
-            className="btn btn-secondary text-sm"
-          >
-            {showCustomDateRange ? 'Ocultar' : 'Rango Personalizado'}
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-          <button
-            onClick={() => setPeriodFilter('day')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              periodFilter === 'day'
-                ? 'bg-primary-100 text-primary-700 border border-primary-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Diario
-          </button>
-          <button
-            onClick={() => setPeriodFilter('week')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              periodFilter === 'week'
-                ? 'bg-primary-100 text-primary-700 border border-primary-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Semanal
-          </button>
-          <button
-            onClick={() => setPeriodFilter('month')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              periodFilter === 'month'
-                ? 'bg-primary-100 text-primary-700 border border-primary-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Mensual
-          </button>
-          <button
-            onClick={() => setPeriodFilter('quarter')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              periodFilter === 'quarter'
-                ? 'bg-primary-100 text-primary-700 border border-primary-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Trimestral
-          </button>
-          <button
-            onClick={() => setPeriodFilter('year')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              periodFilter === 'year'
-                ? 'bg-primary-100 text-primary-700 border border-primary-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Anual
-          </button>
-          <button
-            onClick={() => setPeriodFilter('custom')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              periodFilter === 'custom'
-                ? 'bg-primary-100 text-primary-700 border border-primary-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Personalizado
-          </button>
-        </div>
-
-        {showCustomDateRange && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+      {/* Estadísticas Principales */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
+              <p className="stats-label">Ventas Totales</p>
+              <p className="stats-value">${generalStats.totalSales.toLocaleString()}</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
+            <div className="stats-icon">
+              <DollarSign className="h-6 w-6" />
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Sales Chart - Mejorado */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Ventas {getPeriodName(periodFilter)}</h3>
-          <button
-            onClick={() => exportRealReport('ventas')}
-            className="btn btn-primary flex items-center text-sm"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </button>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico de ventas */}
-          <div className="space-y-3">
-            {salesData.map((item, index) => (
-              <div key={index} className="flex items-center space-x-4">
-                <div className="w-16 text-sm font-medium text-gray-900">{item.month}</div>
-                <div className="flex-1 bg-gray-200 rounded-full h-3">
-                  <div 
-                    className="bg-blue-600 h-3 rounded-full transition-all duration-300" 
-                    style={{ width: `${(item.sales / 700000) * 100}%` }}
-                  ></div>
-                </div>
-                <div className="text-right min-w-[120px]">
-                  <div className="text-sm font-medium text-gray-900">${item.sales.toLocaleString()}</div>
-                  <div className="text-xs text-green-600">+${item.profit.toLocaleString()}</div>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Resumen estadístico */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-3">Resumen del Período</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Ventas:</span>
-                <span className="text-sm font-medium">${generalStats.totalSales.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Ganancia:</span>
-                <span className="text-sm font-medium text-green-600">${generalStats.totalProfit.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Promedio por Período:</span>
-                <span className="text-sm font-medium">${generalStats.averageSale.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Crecimiento:</span>
-                <span className="text-sm font-medium text-blue-600">+{generalStats.growthRate}%</span>
-              </div>
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Ganancias</p>
+              <p className="stats-value">${generalStats.totalProfit.toLocaleString()}</p>
+            </div>
+            <div className="stats-icon">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Promedio</p>
+              <p className="stats-value">${generalStats.averageSale.toLocaleString()}</p>
+            </div>
+            <div className="stats-icon">
+              <BarChart3 className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Crecimiento</p>
+              <p className="stats-value">{generalStats.growthRate}%</p>
+            </div>
+            <div className="stats-icon">
+              <Activity className="h-6 w-6" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Top Products */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Productos Más Vendidos</h3>
+      {/* Gráfico de Ventas */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Evolución de Ventas</h3>
+          <div className="flex space-x-2">
+            <button className="btn btn-secondary">
+              <Eye className="h-4 w-4 mr-2" />
+              Ver Detalles
+            </button>
+            <button className="btn btn-primary">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </button>
+          </div>
+        </div>
+        
         <div className="space-y-4">
-          {topProducts.map((product, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-blue-600">{index + 1}</span>
+          {salesData.map((item, index) => (
+            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-primary-100 rounded-2xl flex items-center justify-center">
+                  <span className="text-lg font-bold text-primary-600">{item.month}</span>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                  <div className="text-xs text-gray-500">{product.units} unidades</div>
+                  <p className="font-medium text-gray-900">Ventas: ${item.sales.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Ganancia: ${item.profit.toLocaleString()}</p>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">${product.sales.toLocaleString()}</div>
+                <div className={`flex items-center space-x-1 ${item.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {item.growth >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                  <span className="text-sm font-medium">{item.growth}%</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Productos Más Vendidos */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Productos Más Vendidos</h3>
+          <button className="text-primary-600 hover:text-primary-700 font-medium">Ver todos</button>
+        </div>
+        
+        <div className="space-y-3">
+          {topProducts.map((product, index) => (
+            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary-600">{index + 1}</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{product.name}</p>
+                  <p className="text-sm text-gray-600">{product.units} unidades</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-900">${product.sales.toLocaleString()}</p>
+                <div className={`flex items-center space-x-1 ${product.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {product.growth >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  <span className="text-xs">{product.growth}%</span>
+                </div>
               </div>
             </div>
           ))}
@@ -297,51 +328,75 @@ const Reports = () => {
 
   const renderCustomerReport = () => (
     <div className="space-y-6">
-      {/* Customer Stats */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Mejores Clientes</h3>
-        <div className="space-y-4">
-          {customerStats.map((customer, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-green-600">{index + 1}</span>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-                  <div className="text-xs text-gray-500">{customer.visits} visitas</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">${customer.totalSpent.toLocaleString()}</div>
-              </div>
+      {/* Estadísticas de Clientes */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Total Clientes</p>
+              <p className="stats-value">{generalStats.totalCustomers}</p>
             </div>
-          ))}
+            <div className="stats-icon">
+              <Users className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Clientes Activos</p>
+              <p className="stats-value">{customerStats.filter(c => c.visits > 3).length}</p>
+            </div>
+            <div className="stats-icon">
+              <Activity className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Promedio Visitas</p>
+              <p className="stats-value">{(customerStats.reduce((sum, c) => sum + c.visits, 0) / customerStats.length).toFixed(1)}</p>
+            </div>
+            <div className="stats-icon">
+              <Target className="h-6 w-6" />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Customer Credit Analysis */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Análisis de Crédito</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
-              {customers.filter(c => c.status === 'active').length}
+      {/* Lista de Mejores Clientes */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Mejores Clientes</h3>
+          <button className="btn btn-primary">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Lista
+          </button>
+        </div>
+        
+        <div className="space-y-3">
+          {customerStats.map((customer, index) => (
+            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary-600">{index + 1}</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{customer.name}</p>
+                  <p className="text-sm text-gray-600">{customer.visits} visitas</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-900">${customer.totalSpent.toLocaleString()}</p>
+                <div className={`badge ${customer.loyalty === 'gold' ? 'badge-success' : customer.loyalty === 'silver' ? 'badge-info' : 'badge-warning'}`}>
+                  {customer.loyalty}
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-gray-600">Clientes Activos</div>
-          </div>
-          <div className="text-center p-4 bg-red-50 rounded-lg">
-            <div className="text-2xl font-bold text-red-600">
-              {customers.filter(c => c.status === 'overdue').length}
-            </div>
-            <div className="text-sm text-gray-600">Clientes Atrasados</div>
-          </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
-              ${customers.reduce((sum, c) => sum + c.currentBalance, 0).toLocaleString()}
-            </div>
-            <div className="text-sm text-gray-600">Deuda Total</div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -349,90 +404,24 @@ const Reports = () => {
 
   const renderInventoryReport = () => (
     <div className="space-y-6">
-      {/* Inventory Status */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado del Inventario</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
-              {inventoryItems.filter(i => i.status === 'normal').length}
-            </div>
-            <div className="text-sm text-gray-600">Stock Normal</div>
-          </div>
-          <div className="text-center p-4 bg-yellow-50 rounded-lg">
-            <div className="text-2xl font-bold text-yellow-600">
-              {inventoryItems.filter(i => i.status === 'low').length}
-            </div>
-            <div className="text-sm text-gray-600">Stock Bajo</div>
-          </div>
-          <div className="text-center p-4 bg-red-50 rounded-lg">
-            <div className="text-2xl font-bold text-red-600">
-              {inventoryItems.filter(i => i.status === 'critical').length}
-            </div>
-            <div className="text-sm text-gray-600">Stock Crítico</div>
-          </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
-              ${inventoryItems.reduce((sum, i) => sum + (i.currentStock * i.cost), 0).toLocaleString()}
-            </div>
-            <div className="text-sm text-gray-600">Valor Total</div>
-          </div>
+      {/* Alertas de Inventario */}
+      <div className="bg-red-50 border border-red-200 rounded-3xl p-4">
+        <div className="flex items-center mb-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+          <h3 className="text-lg font-semibold text-red-800">Alertas de Stock</h3>
         </div>
-      </div>
-
-      {/* Low Stock Alert */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Alertas de Stock Bajo</h3>
-        <div className="space-y-3">
-          {inventoryItems
-            .filter(item => item.status === 'low' || item.status === 'critical')
-            .map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-4 h-4 rounded-full ${
-                    item.status === 'critical' ? 'bg-red-500' : 'bg-yellow-500'
-                  }`}></div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{item.productName}</div>
-                    <div className="text-xs text-gray-500">{item.category}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-sm font-medium ${
-                    item.status === 'critical' ? 'text-red-600' : 'text-yellow-600'
-                  }`}>
-                    {item.currentStock} {item.unit}
-                  </div>
-                  <div className="text-xs text-gray-500">Mín: {item.minStock}</div>
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderSupplierReport = () => (
-    <div className="space-y-6">
-      {/* Supplier Analysis */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Análisis de Proveedores</h3>
-        <div className="space-y-4">
-          {supplierStats.map((supplier, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-purple-600">{index + 1}</span>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {products.filter(p => p.stock <= p.minStock).slice(0, 6).map(product => (
+            <div key={product.id} className="bg-white rounded-2xl p-3 border border-red-200">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-                  <div className="text-xs text-gray-500">Pedido: ${supplier.totalOrdered.toLocaleString()}</div>
+                  <p className="font-medium text-gray-900">{product.name}</p>
+                  <p className="text-sm text-red-600">
+                    Stock: {product.stock} (Mín: {product.minStock})
+                  </p>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">${supplier.totalPaid.toLocaleString()}</div>
-                <div className="text-xs text-red-600">
-                  Deuda: ${(supplier.totalOrdered - supplier.totalPaid).toLocaleString()}
+                <div className="badge badge-danger">
+                  {product.stock === 0 ? 'Agotado' : 'Bajo Stock'}
                 </div>
               </div>
             </div>
@@ -440,144 +429,384 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Payment Status */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de Pagos</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
-              {suppliers.filter(s => s.status === 'active').length}
+      {/* Estadísticas de Inventario */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Total Productos</p>
+              <p className="stats-value">{generalStats.totalProducts}</p>
             </div>
-            <div className="text-sm text-gray-600">Proveedores Activos</div>
-          </div>
-          <div className="text-center p-4 bg-red-50 rounded-lg">
-            <div className="text-2xl font-bold text-red-600">
-              {suppliers.filter(s => s.status === 'overdue').length}
+            <div className="stats-icon">
+              <Package className="h-6 w-6" />
             </div>
-            <div className="text-sm text-gray-600">Pagos Atrasados</div>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
-              ${suppliers.reduce((sum, s) => sum + s.totalOwed, 0).toLocaleString()}
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Stock Total</p>
+              <p className="stats-value">{generalStats.totalInventory}</p>
             </div>
-            <div className="text-sm text-gray-600">Deuda Total</div>
+            <div className="stats-icon">
+              <BarChart3 className="h-6 w-6" />
+            </div>
           </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Bajo Stock</p>
+              <p className="stats-value">{products.filter(p => p.stock <= p.minStock).length}</p>
+            </div>
+            <div className="stats-icon">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Agotados</p>
+              <p className="stats-value">{products.filter(p => p.stock === 0).length}</p>
+            </div>
+            <div className="stats-icon">
+              <TrendingDown className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Productos por Categoría */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Productos por Categoría</h3>
+          <button className="btn btn-primary">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </button>
+        </div>
+        
+        <div className="space-y-3">
+          {['carne', 'pollo', 'embutidos'].map(category => {
+            const categoryProducts = products.filter(p => p.category === category);
+            const totalStock = categoryProducts.reduce((sum, p) => sum + p.stock, 0);
+            const lowStock = categoryProducts.filter(p => p.stock <= p.minStock).length;
+            
+            return (
+              <div key={category} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary-600">{category.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{category.charAt(0).toUpperCase() + category.slice(1)}</p>
+                    <p className="text-sm text-gray-600">{categoryProducts.length} productos</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">{totalStock} unidades</p>
+                  {lowStock > 0 && (
+                    <div className="badge badge-warning">{lowStock} bajo stock</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSupplierReport = () => (
+    <div className="space-y-6">
+      {/* Estadísticas de Proveedores */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Total Proveedores</p>
+              <p className="stats-value">{generalStats.totalSuppliers}</p>
+            </div>
+            <div className="stats-icon">
+              <Users className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Total Pedidos</p>
+              <p className="stats-value">${supplierStats.reduce((sum, s) => sum + s.totalOrdered, 0).toLocaleString()}</p>
+            </div>
+            <div className="stats-icon">
+              <Package className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Total Pagado</p>
+              <p className="stats-value">${supplierStats.reduce((sum, s) => sum + s.totalPaid, 0).toLocaleString()}</p>
+            </div>
+            <div className="stats-icon">
+              <DollarSign className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Promedio Confiabilidad</p>
+              <p className="stats-value">{(supplierStats.reduce((sum, s) => sum + s.reliability, 0) / supplierStats.length).toFixed(1)}%</p>
+            </div>
+            <div className="stats-icon">
+              <Target className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Proveedores */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Proveedores</h3>
+          <button className="btn btn-primary">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </button>
+        </div>
+        
+        <div className="space-y-3">
+          {supplierStats.map((supplier, index) => (
+            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary-600">{index + 1}</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{supplier.name}</p>
+                  <p className="text-sm text-gray-600">Último pedido: {supplier.lastOrder}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-900">${supplier.totalPaid.toLocaleString()}</p>
+                <div className={`badge ${supplier.reliability >= 95 ? 'badge-success' : supplier.reliability >= 90 ? 'badge-warning' : 'badge-danger'}`}>
+                  {supplier.reliability}% confiable
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Reportes</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Análisis y estadísticas del negocio
-          </p>
+    <div className="p-4 lg:p-6 w-full">
+      {/* Header Mejorado */}
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Reportes Avanzados</h1>
+            <p className="text-gray-600">Análisis detallado y insights inteligentes</p>
+          </div>
+          <div className="mt-4 sm:mt-0 flex space-x-2">
+            <button 
+              onClick={() => setShowInsights(!showInsights)}
+              className="btn btn-secondary"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Insights
+            </button>
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className="btn btn-primary"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+            </button>
+          </div>
         </div>
-        <div className="flex space-x-3">
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="week">Esta Semana</option>
-            <option value="month">Este Mes</option>
-            <option value="quarter">Este Trimestre</option>
-            <option value="year">Este Año</option>
-          </select>
-          <button
-            onClick={() => handleDownloadReport(selectedReport)}
-            className="btn btn-secondary flex items-center"
-          >
+      </div>
+
+      {/* Insights Inteligentes */}
+      {showInsights && (
+        <div className="mb-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl p-4">
+            <div className="flex items-center mb-3">
+              <Target className="h-5 w-5 text-blue-600 mr-2" />
+              <h3 className="text-lg font-semibold text-blue-800">Insights Inteligentes</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {insights.map(insight => (
+                <button
+                  key={insight.id}
+                  onClick={() => setSelectedInsight(insight)}
+                  className="bg-white rounded-2xl p-3 border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 transform hover:scale-105"
+                >
+                  <div className="flex items-center space-x-2">
+                    <insight.icon className={`h-5 w-5 ${insight.type === 'positive' ? 'text-green-600' : insight.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'}`} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900">{insight.title}</p>
+                      <p className="text-xs text-gray-600">{insight.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right mt-2">
+                    <span className={`text-sm font-bold ${insight.type === 'positive' ? 'text-green-600' : insight.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'}`}>
+                      {insight.value}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filtros Avanzados */}
+      {showFilters && (
+        <div className="mb-6">
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Filtros Avanzados</h3>
+              <button 
+                onClick={() => setShowCustomDateRange(!showCustomDateRange)}
+                className="btn btn-secondary"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Fecha Personalizada
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="form-label">Período</label>
+                <select
+                  value={periodFilter}
+                  onChange={(e) => setPeriodFilter(e.target.value)}
+                  className="form-select"
+                >
+                  <option value="day">Diario</option>
+                  <option value="week">Semanal</option>
+                  <option value="month">Mensual</option>
+                  <option value="quarter">Trimestral</option>
+                  <option value="year">Anual</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </div>
+              
+              {showCustomDateRange && (
+                <>
+                  <div>
+                    <label className="form-label">Fecha Inicio</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Fecha Fin</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navegación de Reportes */}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'sales', label: 'Ventas', icon: DollarSign },
+            { id: 'customers', label: 'Clientes', icon: Users },
+            { id: 'inventory', label: 'Inventario', icon: Package },
+            { id: 'suppliers', label: 'Proveedores', icon: Users }
+          ].map(report => (
+            <button
+              key={report.id}
+              onClick={() => setSelectedReport(report.id)}
+              className={`btn ${selectedReport === report.id ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              <report.icon className="h-4 w-4 mr-2" />
+              {report.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Contenido del Reporte */}
+      <div className="mb-6">
+        {selectedReport === 'sales' && renderSalesReport()}
+        {selectedReport === 'customers' && renderCustomerReport()}
+        {selectedReport === 'inventory' && renderInventoryReport()}
+        {selectedReport === 'suppliers' && renderSupplierReport()}
+      </div>
+
+      {/* Historial de Reportes */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Historial de Reportes</h3>
+          <button className="btn btn-primary">
             <Download className="h-4 w-4 mr-2" />
-            Descargar
+            Generar Nuevo
           </button>
         </div>
-      </div>
-
-      {/* General Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Ventas Totales</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                ${generalStats.totalSales.toLocaleString()}
-              </p>
-              <p className="text-sm text-green-600">+{generalStats.growthRate}% vs mes anterior</p>
+        
+        <div className="space-y-3">
+          {reportHistory.map(report => (
+            <div key={report.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-primary-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Reporte de {report.type}</p>
+                  <p className="text-sm text-gray-600">{report.date} - {report.size}</p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <button className="btn btn-secondary">
+                  <Download className="h-4 w-4" />
+                </button>
+                <button className="btn btn-secondary">
+                  <Share2 className="h-4 w-4" />
+                </button>
+                <button className="btn btn-secondary">
+                  <Printer className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <TrendingUp className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Ganancia Total</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                ${generalStats.totalProfit.toLocaleString()}
-              </p>
-              <p className="text-sm text-blue-600">{(generalStats.totalProfit / generalStats.totalSales * 100).toFixed(1)}% margen</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Clientes Activos</p>
-              <p className="text-2xl font-semibold text-gray-900">{generalStats.totalCustomers}</p>
-              <p className="text-sm text-purple-600">Promedio: ${Math.round(generalStats.totalSales / generalStats.totalCustomers).toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Package className="h-8 w-8 text-orange-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Productos</p>
-              <p className="text-2xl font-semibold text-gray-900">{generalStats.totalProducts}</p>
-              <p className="text-sm text-orange-600">{generalStats.totalInventory} unidades en stock</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Report Tabs */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6">
-            {[
-              { id: 'sales', name: 'Ventas', icon: TrendingUp },
-              { id: 'customers', name: 'Clientes', icon: Users },
-              { id: 'inventory', name: 'Inventario', icon: Package },
-              { id: 'suppliers', name: 'Proveedores', icon: BarChart3 }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedReport(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                  selectedReport === tab.id
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <tab.icon className="h-4 w-4 mr-2" />
-                {tab.name}
-              </button>
-            ))}
-          </nav>
+      {/* Overlay de Generación */}
+      {isGeneratingReport && (
+        <div className="processing-overlay">
+          <div className="processing-content">
+            <div className="processing-spinner"></div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Generando Reporte</h3>
+            <p className="text-gray-600">Por favor espera...</p>
+          </div>
         </div>
-        <div className="p-6">
-          {selectedReport === 'sales' && renderSalesReport()}
-          {selectedReport === 'customers' && renderCustomerReport()}
-          {selectedReport === 'inventory' && renderInventoryReport()}
-          {selectedReport === 'suppliers' && renderSupplierReport()}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
