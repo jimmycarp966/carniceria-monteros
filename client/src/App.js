@@ -232,7 +232,7 @@ function App() {
   }
 
   if (!user) {
-    return <FirebaseAuth />;
+    return <FirebaseAuth onLogin={setUser} />;
   }
 
   return (
