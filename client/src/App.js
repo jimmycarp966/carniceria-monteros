@@ -61,7 +61,7 @@ const Layout = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
@@ -77,7 +77,7 @@ const Layout = ({ children }) => {
         fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center">
@@ -96,7 +96,7 @@ const Layout = ({ children }) => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className="px-4 py-6 space-y-2">
             {navigation.map((item) => (
               <NavItem
                 key={item.to}
