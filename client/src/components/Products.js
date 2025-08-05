@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { products, categories } from '../data/products';
 import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { productService } from '../services/firebaseService';
 
 const Products = () => {
-  const [productList, setProductList] = useState(products);
+  const [productList, setProductList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [loading, setLoading] = useState(true);
+
+  // Cargar productos desde Firebase
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        console.log('🔄 Cargando productos en componente Products...');
+        const productsFromFirebase = await productService.getAllProducts();
+        console.log('📦 Productos cargados en Products:', productsFromFirebase.length);
+        setProductList(productsFromFirebase);
+      } catch (error) {
+        console.error('❌ Error cargando productos en Products:', error);
+        // Fallback a datos locales solo si hay error
+        setProductList(products);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
 
   // Filtrar productos
   const filteredProducts = productList.filter(product => {
@@ -28,16 +49,28 @@ const Products = () => {
     totalValue: productList.reduce((sum, p) => sum + (p.price * p.stock), 0)
   };
 
-  const handleAddProduct = (newProduct) => {
-    const product = {
-      ...newProduct,
-      id: Date.now(),
-      stock: parseInt(newProduct.stock),
-      price: parseFloat(newProduct.price)
-    };
-    setProductList([product, ...productList]);
-    setShowAddModal(false);
-    toast.success('Producto agregado exitosamente');
+  const handleAddProduct = async (newProduct) => {
+    try {
+      console.log('🔄 Agregando producto desde componente Products...');
+      const productData = {
+        ...newProduct,
+        stock: parseInt(newProduct.stock),
+        price: parseFloat(newProduct.price),
+        minStock: 10 // Stock mínimo por defecto
+      };
+      
+      const productId = await productService.addProduct(productData);
+      console.log('✅ Producto agregado a Firebase con ID:', productId);
+      
+      // Actualizar el estado local con el nuevo producto
+      const productWithId = { ...productData, id: productId };
+      setProductList([productWithId, ...productList]);
+      setShowAddModal(false);
+      toast.success('Producto agregado exitosamente');
+    } catch (error) {
+      console.error('❌ Error agregando producto desde Products:', error);
+      toast.error('Error al agregar producto');
+    }
   };
 
   const handleEditProduct = (updatedProduct) => {

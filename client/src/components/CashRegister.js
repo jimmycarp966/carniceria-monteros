@@ -84,15 +84,17 @@ const CashRegister = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
+        console.log('🔄 Cargando productos desde Firebase...');
         const productsFromFirebase = await productService.getAllProducts();
-        if (productsFromFirebase.length > 0) {
-          setAllProducts(productsFromFirebase);
-        } else {
-          // Si no hay productos en Firebase, usar los datos locales
-          setAllProducts(products);
-        }
+        console.log('📦 Productos cargados de Firebase:', productsFromFirebase.length);
+        
+        // Siempre usar Firebase si hay datos, incluso si está vacío
+        setAllProducts(productsFromFirebase);
+        
+        // Solo usar datos locales si Firebase está completamente vacío Y hay un error
       } catch (error) {
-        console.error('Error cargando productos:', error);
+        console.error('❌ Error cargando productos de Firebase:', error);
+        console.log('🔄 Usando datos locales como fallback...');
         setAllProducts(products);
       }
     };
