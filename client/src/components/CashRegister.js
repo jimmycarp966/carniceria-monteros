@@ -9,7 +9,9 @@ import {
   CreditCard, 
   Calculator,
   X,
-  Check
+  Check,
+  Calendar,
+  Filter
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -23,6 +25,13 @@ const CashRegister = () => {
   const [showSalesHistory, setShowSalesHistory] = useState(false);
   const [dailyTotal, setDailyTotal] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
+  
+  // Nuevos estados para filtros
+  const [periodFilter, setPeriodFilter] = useState('today'); // today, week, month, quarter, custom
+  const [customDate, setCustomDate] = useState('');
+  const [filteredSales, setFilteredSales] = useState([]);
+  const [periodTotal, setPeriodTotal] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -37,6 +46,71 @@ const CashRegister = () => {
     const total = todaySales.reduce((sum, sale) => sum + sale.total, 0);
     setDailyTotal(total);
   }, [sales]);
+
+  // Función para filtrar ventas por período
+  const filterSalesByPeriod = (period, customDateValue = null) => {
+    const now = new Date();
+    let startDate, endDate;
+
+    switch (period) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        break;
+      case 'week':
+        const dayOfWeek = now.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToSubtract);
+        endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        break;
+      case 'quarter':
+        const quarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), quarter * 3, 1);
+        endDate = new Date(now.getFullYear(), (quarter + 1) * 3, 1);
+        break;
+      case 'custom':
+        if (customDateValue) {
+          const selectedDate = new Date(customDateValue);
+          startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+          endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 1);
+        } else {
+          return;
+        }
+        break;
+      default:
+        return;
+    }
+
+    const filtered = sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate >= startDate && saleDate < endDate;
+    });
+
+    setFilteredSales(filtered);
+    const total = filtered.reduce((sum, sale) => sum + sale.total, 0);
+    setPeriodTotal(total);
+  };
+
+  // Aplicar filtro cuando cambie el período
+  useEffect(() => {
+    filterSalesByPeriod(periodFilter, customDate);
+  }, [periodFilter, customDate, sales]);
+
+  // Función para obtener el nombre del período
+  const getPeriodName = (period) => {
+    switch (period) {
+      case 'today': return 'Hoy';
+      case 'week': return 'Esta Semana';
+      case 'month': return 'Este Mes';
+      case 'quarter': return 'Este Trimestre';
+      case 'custom': return customDate ? new Date(customDate).toLocaleDateString('es-ES') : 'Fecha Específica';
+      default: return 'Hoy';
+    }
+  };
 
   const addToCart = () => {
     if (!selectedProduct) {
@@ -118,7 +192,15 @@ const CashRegister = () => {
       const today = new Date().toDateString();
       const saleDate = new Date(sale.date).toDateString();
       return today === saleDate;
-    }).length
+    }).length,
+    // Estadísticas del período seleccionado
+    periodSales: filteredSales.length,
+    periodRevenue: periodTotal,
+    periodAverage: filteredSales.length > 0 ? periodTotal / filteredSales.length : 0,
+    periodPaymentMethods: filteredSales.reduce((acc, sale) => {
+      acc[sale.paymentMethod] = (acc[sale.paymentMethod] || 0) + 1;
+      return acc;
+    }, {})
   };
 
   const paymentMethods = [
@@ -170,9 +252,11 @@ const CashRegister = () => {
           <div className="flex items-center">
             <DollarSign className="h-6 w-6 text-primary-600" />
             <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Caja Hoy</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">
+                {showSalesHistory ? getPeriodName(periodFilter) : 'Caja Hoy'}
+              </p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
-                ${dailyTotal.toLocaleString()}
+                ${showSalesHistory ? periodTotal.toLocaleString() : dailyTotal.toLocaleString()}
               </p>
             </div>
           </div>
@@ -181,8 +265,12 @@ const CashRegister = () => {
           <div className="flex items-center">
             <Receipt className="h-6 w-6 text-green-600" />
             <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Ventas Hoy</p>
-              <p className="text-lg lg:text-2xl font-bold text-gray-900">{stats.todaySales}</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">
+                {showSalesHistory ? 'Ventas del Período' : 'Ventas Hoy'}
+              </p>
+              <p className="text-lg lg:text-2xl font-bold text-gray-900">
+                {showSalesHistory ? stats.periodSales : stats.todaySales}
+              </p>
             </div>
           </div>
         </div>
@@ -190,8 +278,12 @@ const CashRegister = () => {
           <div className="flex items-center">
             <CreditCard className="h-6 w-6 text-blue-600" />
             <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Total Ventas</p>
-              <p className="text-lg lg:text-2xl font-bold text-gray-900">{stats.totalSales}</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">
+                {showSalesHistory ? 'Promedio del Período' : 'Total Ventas'}
+              </p>
+              <p className="text-lg lg:text-2xl font-bold text-gray-900">
+                ${showSalesHistory ? stats.periodAverage.toFixed(0) : stats.totalSales}
+              </p>
             </div>
           </div>
         </div>
@@ -199,9 +291,11 @@ const CashRegister = () => {
           <div className="flex items-center">
             <Calculator className="h-6 w-6 text-purple-600" />
             <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Promedio</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">
+                {showSalesHistory ? 'Promedio por Venta' : 'Promedio'}
+              </p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
-                ${stats.averageSale.toFixed(0)}
+                ${showSalesHistory ? (stats.periodRevenue / Math.max(stats.periodSales, 1)).toFixed(0) : stats.averageSale.toFixed(0)}
               </p>
             </div>
           </div>
@@ -397,23 +491,126 @@ const CashRegister = () => {
       {/* Sales History */}
       {showSalesHistory && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Historial de Ventas</h3>
-          {sales.length === 0 ? (
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Historial de Ventas</h3>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="btn btn-secondary flex items-center justify-center"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+            </button>
+          </div>
+
+          {/* Filtros */}
+          {showFilters && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Filtrar por Período</h4>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <button
+                  onClick={() => setPeriodFilter('today')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    periodFilter === 'today'
+                      ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Hoy
+                </button>
+                <button
+                  onClick={() => setPeriodFilter('week')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    periodFilter === 'week'
+                      ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Esta Semana
+                </button>
+                <button
+                  onClick={() => setPeriodFilter('month')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    periodFilter === 'month'
+                      ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Este Mes
+                </button>
+                <button
+                  onClick={() => setPeriodFilter('quarter')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    periodFilter === 'quarter'
+                      ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Este Trimestre
+                </button>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => {
+                      setCustomDate(e.target.value);
+                      setPeriodFilter('custom');
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Fecha específica"
+                  />
+                  <Calendar className="h-4 w-4 text-gray-400 absolute right-3 top-2.5" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resumen del período */}
+          <div className="bg-primary-50 rounded-lg p-4 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+              <div>
+                <h4 className="text-lg font-semibold text-primary-900">
+                  {getPeriodName(periodFilter)}
+                </h4>
+                <p className="text-sm text-primary-600">
+                  {filteredSales.length} ventas registradas
+                </p>
+              </div>
+              <div className="text-right mt-2 sm:mt-0">
+                <p className="text-2xl font-bold text-primary-900">
+                  ${periodTotal.toLocaleString()}
+                </p>
+                <p className="text-sm text-primary-600">Total del período</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de ventas */}
+          {filteredSales.length === 0 ? (
             <div className="text-center py-8">
               <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No hay ventas registradas</p>
+              <p className="text-gray-500">
+                No hay ventas registradas para {getPeriodName(periodFilter).toLowerCase()}
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {sales.map(sale => (
-                <div key={sale.id} className="border border-gray-200 rounded-lg p-4">
+              {filteredSales.map(sale => (
+                <div key={sale.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3">
                     <div>
                       <h4 className="font-medium text-gray-900">
                         Venta #{sale.id}
                       </h4>
                       <p className="text-sm text-gray-500">
-                        {new Date(sale.date).toLocaleDateString()} - {new Date(sale.date).toLocaleTimeString()}
+                        {new Date(sale.date).toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })} - {new Date(sale.date).toLocaleTimeString('es-ES', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </p>
                       <div className="flex items-center mt-1">
                         {(() => {
