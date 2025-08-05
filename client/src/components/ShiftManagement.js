@@ -213,22 +213,34 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
 
   // Formatear fecha
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   // Formatear hora
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   // Obtener estado del turno
@@ -284,9 +296,9 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
                   Turno {currentShift.type === 'morning' ? 'Mañana' : 'Tarde'} Activo
                 </h3>
                 <p className="text-sm text-blue-700">
-                  Empleado: {currentShift.employeeName} | 
-                  Apertura: ${currentShift.openingAmount.toFixed(2)} | 
-                  Total: ${currentShift.total.toFixed(2)}
+                                      Empleado: {currentShift.employeeName || 'N/A'} | 
+                                      Apertura: ${(currentShift.openingAmount || 0).toFixed(2)} |
+                    Total: ${(currentShift.total || 0).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -340,9 +352,9 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
                       {formatDate(shift.date)} | {formatTime(shift.startTime)}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Empleado: {shift.employeeName} | 
-                      Apertura: ${shift.openingAmount.toFixed(2)} | 
-                      Total: ${shift.total.toFixed(2)}
+                      Empleado: {shift.employeeName || 'N/A'} | 
+                      Apertura: ${(shift.openingAmount || 0).toFixed(2)} | 
+                      Total: ${(shift.total || 0).toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -545,13 +557,13 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
                     <strong>Turno:</strong> {selectedShift.type === 'morning' ? 'Mañana' : 'Tarde'}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <strong>Empleado:</strong> {selectedShift.employeeName}
+                    <strong>Empleado:</strong> {selectedShift.employeeName || 'N/A'}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <strong>Total de Ventas:</strong> ${selectedShift.total.toFixed(2)}
+                    <strong>Total de Ventas:</strong> ${(selectedShift.total || 0).toFixed(2)}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <strong>Cantidad de Ventas:</strong> {selectedShift.salesCount}
+                    <strong>Cantidad de Ventas:</strong> {selectedShift.salesCount || 0}
                   </p>
                 </div>
 
