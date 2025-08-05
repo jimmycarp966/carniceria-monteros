@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { products, categories } from '../data/products';
-import { Package, Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Products = () => {
@@ -9,6 +9,7 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
 
   // Filtrar productos
   const filteredProducts = productList.filter(product => {
@@ -65,13 +66,22 @@ const Products = () => {
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Productos</h1>
           <p className="mt-2 text-gray-600">Gestiona el catálogo de productos de la carnicería</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn btn-primary flex items-center w-full sm:w-auto justify-center"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar Producto
-        </button>
+        <div className="flex space-x-2 w-full sm:w-auto">
+          <button
+            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            className="btn btn-secondary flex items-center justify-center"
+          >
+            {viewMode === 'grid' ? <List className="h-4 w-4 mr-2" /> : <Grid className="h-4 w-4 mr-2" />}
+            {viewMode === 'grid' ? 'Lista' : 'Grid'}
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary flex items-center w-full sm:w-auto justify-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Producto
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -184,62 +194,137 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-        {filteredProducts.map(product => (
-          <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-            <div className="p-4 lg:p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
-                    {product.category}
-                  </span>
+      {/* Products Display */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+          {filteredProducts.map(product => (
+            <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="p-4 lg:p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
+                      {product.category}
+                    </span>
+                  </div>
+                  <div className="text-2xl">{product.image}</div>
                 </div>
-                <div className="text-2xl">{product.image}</div>
-              </div>
-              
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Precio:</span>
-                  <span className="text-lg font-bold text-gray-900">${product.price.toLocaleString()}</span>
+                
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Precio:</span>
+                    <span className="text-lg font-bold text-gray-900">${product.price.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Stock:</span>
+                    <span className={`text-sm font-medium ${
+                      product.stock === 0 ? 'text-red-600' : 
+                      product.stock <= 10 ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {product.stock} {product.unit}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Origen:</span>
+                    <span className="text-sm text-gray-700">{product.origin}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Stock:</span>
-                  <span className={`text-sm font-medium ${
-                    product.stock === 0 ? 'text-red-600' : 
-                    product.stock <= 10 ? 'text-yellow-600' : 'text-green-600'
-                  }`}>
-                    {product.stock} {product.unit}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Origen:</span>
-                  <span className="text-sm text-gray-700">{product.origin}</span>
-                </div>
-              </div>
 
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setEditingProduct(product)}
-                  className="flex-1 btn btn-secondary text-xs py-2 flex items-center justify-center"
-                >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDeleteProduct(product.id)}
-                  className="flex-1 btn btn-danger text-xs py-2 flex items-center justify-center"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Eliminar
-                </button>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setEditingProduct(product)}
+                    className="flex-1 btn btn-secondary text-xs py-2 flex items-center justify-center"
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProduct(product.id)}
+                    className="flex-1 btn btn-danger text-xs py-2 flex items-center justify-center"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Eliminar
+                  </button>
+                </div>
               </div>
             </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Producto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Categoría
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Precio
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredProducts.map(product => (
+                  <tr key={product.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="text-2xl mr-3">{product.image}</div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                          <div className="text-sm text-gray-500">{product.description}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
+                        {product.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-gray-900">${product.price.toLocaleString()}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`text-sm font-medium ${
+                        product.stock === 0 ? 'text-red-600' : 
+                        product.stock <= 10 ? 'text-yellow-600' : 'text-green-600'
+                      }`}>
+                        {product.stock} {product.unit}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setEditingProduct(product)}
+                          className="text-primary-600 hover:text-primary-900"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Empty State */}
       {filteredProducts.length === 0 && (

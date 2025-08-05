@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X } from 'lucide-react';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign } from 'lucide-react';
 import Products from './components/Products';
 import Sales from './components/Sales';
+import CashRegister from './components/CashRegister';
 import Customers from './components/Customers';
 import Employees from './components/Employees';
 import Suppliers from './components/Suppliers';
@@ -50,6 +51,7 @@ const Layout = ({ children }) => {
 
   const navigation = [
     { icon: Home, label: 'Dashboard', to: '/' },
+    { icon: DollarSign, label: 'Caja', to: '/caja' },
     { icon: Package, label: 'Productos', to: '/productos' },
     { icon: ShoppingCart, label: 'Ventas', to: '/ventas' },
     { icon: Building, label: 'Inventario', to: '/inventario' },
@@ -235,32 +237,32 @@ const Dashboard = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
           <div className="grid grid-cols-2 gap-4">
             <Link
-              to="/ventas"
+              to="/caja"
               className="flex flex-col items-center p-4 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
             >
-              <ShoppingCart className="h-8 w-8 text-primary-600 mb-2" />
-              <span className="text-sm font-medium text-primary-700">Nueva Venta</span>
+              <DollarSign className="h-8 w-8 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-primary-700">Abrir Caja</span>
+            </Link>
+            <Link
+              to="/ventas"
+              className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+            >
+              <ShoppingCart className="h-8 w-8 text-green-600 mb-2" />
+              <span className="text-sm font-medium text-green-700">Nueva Venta</span>
             </Link>
             <Link
               to="/productos"
-              className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+              className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
             >
-              <Package className="h-8 w-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-green-700">Gestionar Productos</span>
+              <Package className="h-8 w-8 text-blue-600 mb-2" />
+              <span className="text-sm font-medium text-blue-700">Gestionar Productos</span>
             </Link>
             <Link
               to="/inventario"
-              className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <Building className="h-8 w-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-700">Ver Inventario</span>
-            </Link>
-            <Link
-              to="/reportes"
               className="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
             >
-              <BarChart3 className="h-8 w-8 text-purple-600 mb-2" />
-              <span className="text-sm font-medium text-purple-700">Ver Reportes</span>
+              <Building className="h-8 w-8 text-purple-600 mb-2" />
+              <span className="text-sm font-medium text-purple-700">Ver Inventario</span>
             </Link>
           </div>
         </div>
@@ -300,6 +302,7 @@ function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/caja" element={<CashRegister />} />
               <Route path="/productos" element={<Products />} />
               <Route path="/ventas" element={<Sales />} />
               <Route path="/inventario" element={<Inventory />} />
