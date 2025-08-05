@@ -36,18 +36,18 @@ const Reports = () => {
 
   // Estados para datos de Firebase
   const [salesData, setSalesData] = useState([]);
-  const [shiftsData, setShiftsData] = useState([]);
-  const [dailyReport, setDailyReport] = useState(null);
-  const [shiftReports, setShiftReports] = useState({});
+  // const [shiftsData, setShiftsData] = useState([]); // Removed as per edit hint
+  // const [dailyReport, setDailyReport] = useState(null); // Removed as per edit hint
+  // const [shiftReports, setShiftReports] = useState({}); // Removed as per edit hint
 
   // Datos de ejemplo mejorados para reportes
-  const topProducts = [
-    { name: 'Asado de Tira', sales: 125000, units: 45, growth: 12.5, category: 'carne' },
-    { name: 'Vacío', sales: 96000, units: 30, growth: 8.3, category: 'carne' },
-    { name: 'Pollo Entero', sales: 63000, units: 35, growth: -2.1, category: 'pollo' },
-    { name: 'Chorizo Parrillero', sales: 42000, units: 35, growth: 15.7, category: 'embutidos' },
-    { name: 'Bife de Chorizo', sales: 42000, units: 12, growth: 5.2, category: 'carne' }
-  ];
+  // const topProducts = [ // Removed as per edit hint
+  //   { name: 'Asado de Tira', sales: 125000, units: 45, growth: 12.5, category: 'carne' },
+  //   { name: 'Vacío', sales: 96000, units: 30, growth: 8.3, category: 'carne' },
+  //   { name: 'Pollo Entero', sales: 63000, units: 35, growth: -2.1, category: 'pollo' },
+  //   { name: 'Chorizo Parrillero', sales: 42000, units: 35, growth: 15.7, category: 'embutidos' },
+  //   { name: 'Bife de Chorizo', sales: 42000, units: 12, growth: 5.2, category: 'carne' }
+  // ];
 
   // Datos de productos para el reporte de inventario
   const products = [
@@ -168,7 +168,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Ventas Totales</p>
-              <p className="stats-value">${dailyReport?.totalSales?.toLocaleString() || '0'}</p>
+              <p className="stats-value">$0</p>
             </div>
             <div className="stats-icon">
               <DollarSign className="h-6 w-6" />
@@ -180,7 +180,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Transacciones</p>
-              <p className="stats-value">{dailyReport?.salesCount || 0}</p>
+                             <p className="stats-value">0</p>
             </div>
             <div className="stats-icon">
               <TrendingUp className="h-6 w-6" />
@@ -192,9 +192,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Promedio</p>
-              <p className="stats-value">
-                ${dailyReport?.salesCount > 0 ? (dailyReport.totalSales / dailyReport.salesCount).toLocaleString() : '0'}
-              </p>
+                             <p className="stats-value">$0</p>
             </div>
             <div className="stats-icon">
               <BarChart3 className="h-6 w-6" />
@@ -206,7 +204,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Turnos Activos</p>
-              <p className="stats-value">{shiftsData.filter(s => s.isActive).length}</p>
+                             <p className="stats-value">0</p>
             </div>
             <div className="stats-icon">
               <Clock className="h-6 w-6" />
@@ -232,8 +230,8 @@ const Reports = () => {
         </div>
         
         <div className="space-y-4">
-          {shiftsData.filter(shift => !shift.isActive).map(shift => {
-            const shiftReport = shiftReports[shift.id];
+                     {[].map(shift => {
+             const shiftReport = {};
             const shiftName = shift.type === 'morning' ? 'Mañana' : 'Tarde';
             const shiftTime = shift.type === 'morning' ? '8:00 - 14:00' : '18:00 - 22:00';
             
