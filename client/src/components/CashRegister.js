@@ -7,18 +7,14 @@ import {
   Trash2, 
   Receipt, 
   CreditCard, 
-  Calculator,
-  X,
-  Check,
-  Filter,
-  ShoppingCart,
-  Clock,
-  TrendingUp,
   AlertTriangle,
   Zap,
   Target,
   BarChart3,
-  Smartphone
+  Clock,
+  ShoppingCart,
+  Check,
+  Filter
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -46,7 +42,6 @@ const CashRegister = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   // Estados para mejor UX
-  const [showShiftModal, setShowShiftModal] = useState(false);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   
   // Estados para inventario inteligente
@@ -154,7 +149,6 @@ const CashRegister = () => {
     setCurrentShift(shift);
     setShiftStartTime(new Date());
     setIsOpen(true);
-    setShowShiftModal(false);
     toast.success(`Caja abierta - Turno ${getShiftName(shift)}`);
   };
 

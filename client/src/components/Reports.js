@@ -12,7 +12,6 @@ import {
   Download, 
   Calendar,
   Filter,
-  PieChart,
   Activity,
   Target,
   AlertTriangle,
@@ -26,7 +25,6 @@ import toast from 'react-hot-toast';
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
-  const [dateRange, setDateRange] = useState('month');
   
   // Estados mejorados para filtros
   const [periodFilter, setPeriodFilter] = useState('month');
@@ -39,7 +37,6 @@ const Reports = () => {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportHistory, setReportHistory] = useState([]);
   const [showInsights, setShowInsights] = useState(false);
-  const [selectedInsight, setSelectedInsight] = useState(null);
 
   // Datos de ejemplo mejorados para reportes
   const salesData = [
@@ -138,32 +135,6 @@ const Reports = () => {
     setReportHistory(history);
   }, []);
 
-  const handleDownloadReport = async (type) => {
-    setIsGeneratingReport(true);
-    
-    try {
-      // Simular generación de reporte
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success(`Reporte de ${type} generado exitosamente`);
-      
-      // Agregar al historial
-      const newReport = {
-        id: Date.now(),
-        type: type,
-        date: new Date().toISOString().split('T')[0],
-        size: `${(Math.random() * 3 + 1).toFixed(1)}MB`,
-        status: 'completed'
-      };
-      setReportHistory([newReport, ...reportHistory]);
-      
-    } catch (error) {
-      toast.error('Error al generar el reporte');
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-
   const getPeriodName = (period) => {
     switch (period) {
       case 'day': return 'Diario';
@@ -174,31 +145,6 @@ const Reports = () => {
       case 'custom': return 'Personalizado';
       default: return 'Mensual';
     }
-  };
-
-  const exportRealReport = (reportType) => {
-    const reportData = {
-      type: reportType,
-      period: getPeriodName(periodFilter),
-      dateRange: periodFilter === 'custom' ? `${customStartDate} - ${customEndDate}` : new Date().toLocaleDateString(),
-      generatedAt: new Date().toISOString(),
-      data: {
-        sales: salesData,
-        products: topProducts,
-        customers: customerStats,
-        suppliers: supplierStats,
-        general: generalStats
-      }
-    };
-
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `reporte_${reportType}_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   const renderSalesReport = () => (
@@ -649,7 +595,6 @@ const Reports = () => {
               {insights.map(insight => (
                 <button
                   key={insight.id}
-                  onClick={() => setSelectedInsight(insight)}
                   className="bg-white rounded-2xl p-3 border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 transform hover:scale-105"
                 >
                   <div className="flex items-center space-x-2">

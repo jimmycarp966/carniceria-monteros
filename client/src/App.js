@@ -41,8 +41,8 @@ const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [activeRoute, setActiveRoute] = useState('/');
-  const [lowStockAlerts, setLowStockAlerts] = useState(3); // Simulación de alertas de inventario
-  const [notifications, setNotifications] = useState(2); // Simulación de notificaciones
+  const [lowStockAlerts] = useState(3); // Simulación de alertas de inventario
+  const [notifications] = useState(2); // Simulación de notificaciones
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -182,20 +182,20 @@ const Layout = ({ children }) => {
 };
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     ventasHoy: 125000,
     productosVendidos: 45,
     clientesNuevos: 8,
     inventarioBajo: 3
   });
 
-  const [recentSales, setRecentSales] = useState([
+  const [recentSales] = useState([
     { id: 1, cliente: 'Juan Pérez', monto: 25000, hora: '14:30' },
     { id: 2, cliente: 'María García', monto: 18000, hora: '14:15' },
     { id: 3, cliente: 'Carlos López', monto: 32000, hora: '13:45' }
   ]);
 
-  const [lowStockItems, setLowStockItems] = useState([
+  const [lowStockItems] = useState([
     { id: 1, nombre: 'Carne Molida', stock: 2, minimo: 5 },
     { id: 2, nombre: 'Pollo Entero', stock: 1, minimo: 3 },
     { id: 3, nombre: 'Chorizo', stock: 0, minimo: 4 }
