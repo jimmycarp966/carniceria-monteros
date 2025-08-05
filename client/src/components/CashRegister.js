@@ -817,12 +817,7 @@ const CashRegister = () => {
                       className="form-input pr-10"
                       onFocus={() => setShowProductDropdown(true)}
                     />
-                    <button
-                      onClick={() => setShowProductDropdown(!showProductDropdown)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showProductDropdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   </div>
                   
                   {/* Dropdown de productos */}
