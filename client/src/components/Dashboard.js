@@ -5,18 +5,14 @@ import {
   Users, 
   TrendingUp, 
   Activity, 
-  Clock, 
   AlertTriangle,
-  BarChart3,
-  PieChart,
-  Target,
   Zap
 } from 'lucide-react';
 import { checkConnectionStatus, forceSync } from '../services/firebaseService';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     ventasHoy: 125000,
     productosVendidos: 45,
     clientesNuevos: 8,

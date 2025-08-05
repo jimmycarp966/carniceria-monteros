@@ -1,5 +1,4 @@
 import { 
-  getFirestore, 
   collection, 
   doc, 
   getDocs, 
@@ -9,10 +8,7 @@ import {
   deleteDoc, 
   query, 
   where, 
-  serverTimestamp,
-  enableNetwork,
-  disableNetwork,
-  onSnapshot
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
@@ -53,10 +49,10 @@ const syncPendingOperations = async () => {
 };
 
 // Función para agregar operación pendiente
-const addPendingOperation = (operation) => {
-  pendingOperations.push(operation);
-  localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
-};
+// const addPendingOperation = (operation) => {
+//   pendingOperations.push(operation);
+//   localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
+// };
 
 // Función para cargar operaciones pendientes al iniciar
 const loadPendingOperations = () => {
@@ -70,35 +66,35 @@ const loadPendingOperations = () => {
 loadPendingOperations();
 
 // Función para backup automático
-const autoBackup = async (data, collectionName) => {
-  try {
-    const backup = {
-      data,
-      timestamp: new Date().toISOString(),
-      collection: collectionName,
-      version: '1.0'
-    };
-    
-    localStorage.setItem(`backup_${collectionName}`, JSON.stringify(backup));
-    console.log(`Backup automático creado para ${collectionName}`);
-  } catch (error) {
-    console.error('Error en backup automático:', error);
-  }
-};
+// const autoBackup = async (data, collectionName) => {
+//   try {
+//     const backup = {
+//       data,
+//       timestamp: new Date().toISOString(),
+//       collection: collectionName,
+//       version: '1.0'
+//     };
+//     
+//     localStorage.setItem(`backup_${collectionName}`, JSON.stringify(backup));
+//     console.log(`Backup automático creado para ${collectionName}`);
+//   } catch (error) {
+//     console.error('Error en backup automático:', error);
+//   }
+// };
 
 // Función para restaurar desde backup
-const restoreFromBackup = (collectionName) => {
-  try {
-    const backup = localStorage.getItem(`backup_${collectionName}`);
-    if (backup) {
-      return JSON.parse(backup).data;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error restaurando backup:', error);
-    return null;
-  }
-};
+// const restoreFromBackup = (collectionName) => {
+//   try {
+//     const backup = localStorage.getItem(`backup_${collectionName}`);
+//     if (backup) {
+//       return JSON.parse(backup).data;
+//     }
+//     return null;
+//   } catch (error) {
+//     console.error('Error restaurando backup:', error);
+//     return null;
+//   }
+// };
 
 // Función para verificar estado de conexión
 export const checkConnectionStatus = () => {

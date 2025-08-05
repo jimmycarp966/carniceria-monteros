@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, AlertTriangle, TrendingUp, Activity, Bell, Moon, Sun } from 'lucide-react';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Bell, Moon, Sun } from 'lucide-react';
 import Products from './components/Products';
 import Sales from './components/Sales';
 import CashRegister from './components/CashRegister';
