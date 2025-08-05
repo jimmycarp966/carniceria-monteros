@@ -7,20 +7,11 @@ import {
   Search, 
   Clock, 
   DollarSign, 
-  Package, 
-  TrendingUp, 
-  Users, 
   CreditCard,
   Banknote,
-  ArrowRight,
-  CheckCircle,
-  AlertCircle,
   AlertTriangle,
-  FileText,
   BarChart3,
-  Calendar,
   Receipt,
-  Calculator,
   X,
   Zap,
   Target,
@@ -90,7 +81,6 @@ const CashRegister = () => {
   const [showDateModal, setShowDateModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [pendingShift, setPendingShift] = useState(null);
-  const [morningShiftExists, setMorningShiftExists] = useState(false);
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
