@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { products } from '../data/products';
 import { 
   DollarSign, 
@@ -23,7 +23,6 @@ const CashRegister = () => {
   const [cashAmount, setCashAmount] = useState(0);
   const [sales, setSales] = useState([]);
   const [showSalesHistory, setShowSalesHistory] = useState(false);
-  const [dailyTotal, setDailyTotal] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
   
   // Estados para turnos
@@ -43,18 +42,10 @@ const CashRegister = () => {
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const change = cashAmount - cartTotal;
 
-  // Calcular totales diarios
-  useEffect(() => {
-    const today = new Date().toDateString();
-    const todaySales = sales.filter(sale => 
-      new Date(sale.date).toDateString() === today
-    );
-    const total = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-    setDailyTotal(total);
-  }, [sales]);
+
 
   // Función para filtrar ventas por período
-  const filterSalesByPeriod = (period, customDateValue = null) => {
+  const filterSalesByPeriod = useCallback((period, customDateValue = null) => {
     const now = new Date();
     let startDate, endDate;
 
@@ -99,12 +90,12 @@ const CashRegister = () => {
     setFilteredSales(filtered);
     const total = filtered.reduce((sum, sale) => sum + sale.total, 0);
     setPeriodTotal(total);
-  };
+  }, [sales]);
 
   // Aplicar filtro cuando cambie el período
   useEffect(() => {
     filterSalesByPeriod(periodFilter, customDate);
-  }, [periodFilter, customDate, sales]);
+  }, [periodFilter, customDate, filterSalesByPeriod]);
 
   // Función para obtener el nombre del período
   const getPeriodName = (period) => {
