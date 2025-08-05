@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "carniceria-monteros",
   "builds": [
     {
       "src": "client/package.json",
@@ -14,5 +15,10 @@
       "src": "/(.*)",
       "dest": "/client/build/index.html"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/build"
 } 
