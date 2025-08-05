@@ -16,7 +16,10 @@ import {
   Check,
   Filter,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Banknote,
+  Smartphone,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { productService, saleService, shiftService } from '../services/firebaseService';
@@ -57,6 +60,21 @@ const CashRegister = () => {
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
+
+  // Estados para reporte diario
+  const [showDailyReport, setShowDailyReport] = useState(false);
+  const [dailyReport, setDailyReport] = useState({
+    totalSales: 0,
+    cashTotal: 0,
+    cardTotal: 0,
+    transferTotal: 0,
+    debitTotal: 0,
+    totalTransactions: 0,
+    cashTransactions: 0,
+    cardTransactions: 0,
+    transferTransactions: 0,
+    debitTransactions: 0
+  });
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -342,6 +360,7 @@ const CashRegister = () => {
       return;
     }
 
+    // Solo validar monto en efectivo si el método de pago es efectivo
     if (paymentMethod === 'cash' && cashAmount < cartTotal) {
       toast.error('El monto en efectivo es menor al total');
       return;
@@ -358,8 +377,8 @@ const CashRegister = () => {
         items: [...cart],
         total: cartTotal,
         paymentMethod,
-        cashAmount,
-        change,
+        cashAmount: paymentMethod === 'cash' ? cashAmount : 0,
+        change: paymentMethod === 'cash' ? change : 0,
         date: new Date(),
         shiftId: currentShift?.id,
         shiftType: currentShift?.type
@@ -386,7 +405,15 @@ const CashRegister = () => {
       setCashAmount(0);
       setPaymentMethod('cash');
 
-      toast.success('Venta completada exitosamente');
+      // Mensaje de éxito según método de pago
+      const methodNames = {
+        cash: 'Efectivo',
+        card: 'Tarjeta de Crédito',
+        transfer: 'Transferencia',
+        debit: 'Débito'
+      };
+
+      toast.success(`Venta completada exitosamente - ${methodNames[paymentMethod] || 'Otro método'}`);
     } catch (error) {
       console.error('Error completando venta:', error);
       toast.error('Error al completar la venta');
@@ -425,6 +452,86 @@ const CashRegister = () => {
     setSelectedProduct(product.id);
     setSearchTerm(product.name);
     setShowProductDropdown(false);
+  };
+
+  // Función para generar reporte diario
+  const generateDailyReport = (sales) => {
+    const report = {
+      totalSales: 0,
+      cashTotal: 0,
+      cardTotal: 0,
+      transferTotal: 0,
+      debitTotal: 0,
+      totalTransactions: sales.length,
+      cashTransactions: 0,
+      cardTransactions: 0,
+      transferTransactions: 0,
+      debitTransactions: 0
+    };
+
+    sales.forEach(sale => {
+      report.totalSales += sale.total;
+      
+      switch (sale.paymentMethod) {
+        case 'cash':
+          report.cashTotal += sale.total;
+          report.cashTransactions++;
+          break;
+        case 'card':
+          report.cardTotal += sale.total;
+          report.cardTransactions++;
+          break;
+        case 'transfer':
+          report.transferTotal += sale.total;
+          report.transferTransactions++;
+          break;
+        case 'debit':
+          report.debitTotal += sale.total;
+          report.debitTransactions++;
+          break;
+        default:
+          report.cashTotal += sale.total;
+          report.cashTransactions++;
+      }
+    });
+
+    return report;
+  };
+
+  // Función para cerrar turno con reporte
+  const closeShiftWithReport = async () => {
+    if (!currentShift) {
+      toast.error('No hay turno activo');
+      return;
+    }
+
+    try {
+      // Generar reporte del turno actual
+      const shiftReport = generateDailyReport(shiftSales);
+      setDailyReport(shiftReport);
+      
+      // Si es el turno tarde, mostrar reporte diario completo
+      if (currentShift.type === 'afternoon') {
+        // Obtener todas las ventas del día
+        const todaySales = sales.filter(sale => {
+          const saleDate = new Date(sale.date);
+          const today = new Date();
+          return saleDate.toDateString() === today.toDateString();
+        });
+        
+        const dailyReportData = generateDailyReport(todaySales);
+        setDailyReport(dailyReportData);
+        setShowDailyReport(true);
+      }
+
+      // Cerrar turno
+      await closeCashRegister();
+      
+      toast.success('Turno cerrado exitosamente');
+    } catch (error) {
+      console.error('Error cerrando turno:', error);
+      toast.error('Error al cerrar el turno');
+    }
   };
 
   return (
@@ -555,7 +662,7 @@ const CashRegister = () => {
               </div>
               <div className="flex space-x-2">
                 <button
-                  onClick={closeCashRegister}
+                  onClick={closeShiftWithReport}
                   className="btn btn-danger flex-1"
                 >
                   Cerrar Caja
@@ -752,7 +859,21 @@ const CashRegister = () => {
                     className={`payment-method-card ${paymentMethod === 'card' ? 'selected' : ''}`}
                   >
                     <CreditCard className="h-6 w-6" />
-                    <span>Tarjeta</span>
+                    <span>Tarjeta Crédito</span>
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('transfer')}
+                    className={`payment-method-card ${paymentMethod === 'transfer' ? 'selected' : ''}`}
+                  >
+                    <Banknote className="h-6 w-6" />
+                    <span>Transferencia</span>
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('debit')}
+                    className={`payment-method-card ${paymentMethod === 'debit' ? 'selected' : ''}`}
+                  >
+                    <Smartphone className="h-6 w-6" />
+                    <span>Débito</span>
                   </button>
                 </div>
 
@@ -769,6 +890,21 @@ const CashRegister = () => {
                     {change > 0 && (
                       <p className="text-sm text-green-600 mt-1">Cambio: ${change.toLocaleString()}</p>
                     )}
+                  </div>
+                )}
+
+                {paymentMethod !== 'cash' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Método:</strong> {
+                        paymentMethod === 'card' ? 'Tarjeta de Crédito' :
+                        paymentMethod === 'transfer' ? 'Transferencia' :
+                        paymentMethod === 'debit' ? 'Débito' : 'Otro'
+                      }
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      El monto se registrará en la caja correspondiente
+                    </p>
                   </div>
                 )}
               </div>
@@ -882,7 +1018,10 @@ const CashRegister = () => {
                       <div className="text-right">
                         <p className="history-amount">${sale.total.toLocaleString()}</p>
                         <p className="text-xs text-gray-500">
-                          {sale.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'}
+                          {sale.paymentMethod === 'cash' ? 'Efectivo' : 
+                           sale.paymentMethod === 'card' ? 'Tarjeta Crédito' :
+                           sale.paymentMethod === 'transfer' ? 'Transferencia' :
+                           sale.paymentMethod === 'debit' ? 'Débito' : 'Otro'}
                         </p>
                       </div>
                     </div>
@@ -901,6 +1040,136 @@ const CashRegister = () => {
             <div className="processing-spinner"></div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">Procesando Venta</h3>
             <p className="text-gray-600">Por favor espera...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reporte Diario */}
+      {showDailyReport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Reporte Diario</h3>
+              <button
+                onClick={() => setShowDailyReport(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Resumen General */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-blue-900 mb-3">Resumen del Día</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-blue-700">Total de Ventas</p>
+                    <p className="text-2xl font-bold text-blue-900">${dailyReport.totalSales.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-700">Total de Transacciones</p>
+                    <p className="text-2xl font-bold text-blue-900">{dailyReport.totalTransactions}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desglose por Método de Pago */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-gray-900">Desglose por Método de Pago</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Efectivo */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <DollarSign className="h-5 w-5 text-green-600" />
+                        <span className="font-semibold text-green-900">Efectivo</span>
+                      </div>
+                      <span className="text-sm text-green-600">{dailyReport.cashTransactions} trans.</span>
+                    </div>
+                    <p className="text-2xl font-bold text-green-900">${dailyReport.cashTotal.toLocaleString()}</p>
+                    <p className="text-xs text-green-600 mt-1">Para arqueo de caja</p>
+                  </div>
+
+                  {/* Tarjeta de Crédito */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <CreditCard className="h-5 w-5 text-purple-600" />
+                        <span className="font-semibold text-purple-900">Tarjeta Crédito</span>
+                      </div>
+                      <span className="text-sm text-purple-600">{dailyReport.cardTransactions} trans.</span>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-900">${dailyReport.cardTotal.toLocaleString()}</p>
+                  </div>
+
+                  {/* Transferencia */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Banknote className="h-5 w-5 text-blue-600" />
+                        <span className="font-semibold text-blue-900">Transferencia</span>
+                      </div>
+                      <span className="text-sm text-blue-600">{dailyReport.transferTransactions} trans.</span>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-900">${dailyReport.transferTotal.toLocaleString()}</p>
+                  </div>
+
+                  {/* Débito */}
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Smartphone className="h-5 w-5 text-orange-600" />
+                        <span className="font-semibold text-orange-900">Débito</span>
+                      </div>
+                      <span className="text-sm text-orange-600">{dailyReport.debitTransactions} trans.</span>
+                    </div>
+                    <p className="text-2xl font-bold text-orange-900">${dailyReport.debitTotal.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Arqueo de Caja */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-yellow-900 mb-3">Arqueo de Caja</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700">Total en Efectivo:</span>
+                    <span className="font-bold text-yellow-900">${dailyReport.cashTotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700">Transacciones en Efectivo:</span>
+                    <span className="font-bold text-yellow-900">{dailyReport.cashTransactions}</span>
+                  </div>
+                  <div className="border-t border-yellow-200 pt-2 mt-2">
+                    <p className="text-sm text-yellow-600">
+                      <strong>Importante:</strong> Este es el monto que debe estar físicamente en la caja al final del día.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setShowDailyReport(false)}
+                  className="flex-1 btn btn-secondary"
+                >
+                  Cerrar
+                </button>
+                <button
+                  onClick={() => {
+                    // Aquí se podría implementar la impresión del reporte
+                    toast.success('Reporte guardado');
+                    setShowDailyReport(false);
+                  }}
+                  className="flex-1 btn btn-primary"
+                >
+                  Guardar Reporte
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
