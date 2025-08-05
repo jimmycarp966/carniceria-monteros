@@ -11,7 +11,6 @@ const Products = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [loading, setLoading] = useState(true);
 
   // Cargar productos desde Firebase
   useEffect(() => {
@@ -25,8 +24,6 @@ const Products = () => {
         console.error('❌ Error cargando productos en Products:', error);
         // Fallback a datos locales solo si hay error
         setProductList(products);
-      } finally {
-        setLoading(false);
       }
     };
     loadProducts();
