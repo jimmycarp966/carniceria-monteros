@@ -21,13 +21,22 @@ const Products = () => {
       console.log('🔄 Cargando productos optimizado...');
       
       // Cargar datos simulados si Firebase está vacío
+      console.log('📦 Verificando datos de muestra...');
       await loadSampleData();
       
       const productsFromFirebase = await productService.getAllProducts();
-      console.log('📦 Productos cargados:', productsFromFirebase.length);
-      setProductList(productsFromFirebase);
+      console.log('📦 Productos cargados desde Firebase:', productsFromFirebase.length);
+      console.log('📦 Detalles de productos:', productsFromFirebase);
+      
+      if (productsFromFirebase.length === 0) {
+        console.log('⚠️ No se encontraron productos en Firebase, usando datos locales');
+        setProductList(products);
+      } else {
+        setProductList(productsFromFirebase);
+      }
     } catch (error) {
       console.error('❌ Error cargando productos:', error);
+      console.log('📦 Usando datos locales como fallback');
       setProductList(products);
     } finally {
       setLoading(false);
@@ -146,6 +155,33 @@ const Products = () => {
     toast.success('Productos actualizados');
   };
 
+  // Función para forzar recarga de datos de muestra
+  const handleForceReload = async () => {
+    try {
+      setSyncing(true);
+      console.log('🔄 Forzando recarga de datos de muestra...');
+      
+      // Limpiar productos existentes
+      const existingProducts = await productService.getAllProducts();
+      for (const product of existingProducts) {
+        await productService.deleteProduct(product.id);
+        console.log(`🗑️ Producto eliminado: ${product.name}`);
+      }
+      
+      // Recargar datos de muestra
+      await loadSampleData();
+      await loadProducts();
+      
+      toast.success('Datos de muestra recargados exitosamente');
+      console.log('✅ Datos de muestra recargados');
+    } catch (error) {
+      console.error('❌ Error recargando datos:', error);
+      toast.error('Error recargando datos');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const getCategoryColor = (categoryName) => {
     const category = categories.find(c => c.name === categoryName);
     return category?.color || 'gray';
@@ -188,6 +224,14 @@ const Products = () => {
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
             Actualizar
+          </button>
+          <button
+            onClick={handleForceReload}
+            disabled={syncing}
+            className="btn btn-secondary flex items-center justify-center"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            Recargar Datos
           </button>
           <button
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
