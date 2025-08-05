@@ -51,12 +51,27 @@ const Layout = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
+  // Debug: Log cuando cambia el estado del sidebar
+  useEffect(() => {
+    console.log('Sidebar state:', sidebarOpen);
+  }, [sidebarOpen]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
+  };
+
+  const toggleSidebar = () => {
+    console.log('Toggle sidebar clicked, current state:', sidebarOpen);
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    console.log('Closing sidebar');
+    setSidebarOpen(false);
   };
 
   const navigation = [
@@ -77,8 +92,9 @@ const Layout = ({ children }) => {
       {/* Mobile menu button mejorado */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+          onClick={toggleSidebar}
           className="p-3 rounded-2xl bg-white shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+          aria-label="Toggle menu"
         >
           {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
@@ -98,7 +114,7 @@ const Layout = ({ children }) => {
 
       {/* Sidebar Mejorado */}
       <div className={`
-        fixed left-0 z-40 w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static
+        fixed left-0 top-0 z-40 w-80 h-full bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:w-72
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
@@ -114,8 +130,9 @@ const Layout = ({ children }) => {
               </div>
             </div>
             <button
-              onClick={() => setSidebarOpen(false)}
+              onClick={closeSidebar}
               className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+              aria-label="Close menu"
             >
               <X className="h-5 w-5" />
             </button>
@@ -131,7 +148,7 @@ const Layout = ({ children }) => {
                 to={item.to}
                 onClick={() => {
                   setActiveRoute(item.to);
-                  setSidebarOpen(false);
+                  closeSidebar();
                 }}
                 isActive={activeRoute === item.to}
                 badge={item.badge}
@@ -174,7 +191,7 @@ const Layout = ({ children }) => {
       {sidebarOpen && (
         <div 
           className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeSidebar}
         />
       )}
     </div>
