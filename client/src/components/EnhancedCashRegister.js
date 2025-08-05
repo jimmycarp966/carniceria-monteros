@@ -13,10 +13,13 @@ import {
   Calculator,
   RotateCcw,
   Percent,
-  Hash as BarcodeIcon
+  Hash as BarcodeIcon,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
-import { productService } from '../services/firebaseService';
+import { productService, shiftService } from '../services/firebaseService';
+import ShiftManagement from './ShiftManagement';
 import toast from 'react-hot-toast';
 
 const EnhancedCashRegister = () => {
@@ -29,9 +32,10 @@ const EnhancedCashRegister = () => {
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   
   // Estados para turnos
-  const [currentShift] = useState(null);
+  const [currentShift, setCurrentShift] = useState(null);
   const [shiftSales, setShiftSales] = useState([]);
   const [shiftTotal, setShiftTotal] = useState(0);
+  const [showShiftManagement, setShowShiftManagement] = useState(false);
   
   // Estados para búsqueda y productos
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,6 +127,37 @@ const EnhancedCashRegister = () => {
     loadProducts();
   }, [loadProducts]);
 
+  // Manejar cambio de turno
+  const handleShiftChange = (newShift) => {
+    setCurrentShift(newShift);
+    if (newShift) {
+      setShiftSales([]);
+      setShiftTotal(0);
+    }
+  };
+
+  // Cargar turno activo
+  const loadActiveShift = useCallback(async () => {
+    try {
+      const activeShift = await shiftService.getActiveShift();
+      setCurrentShift(activeShift);
+      
+      if (activeShift) {
+        // Cargar ventas del turno
+        const shiftSalesData = await shiftService.getSalesByShift(activeShift.id);
+        setShiftSales(shiftSalesData);
+        setShiftTotal(shiftSalesData.reduce((sum, sale) => sum + sale.finalTotal, 0));
+      }
+    } catch (error) {
+      console.error('Error cargando turno activo:', error);
+    }
+  }, []);
+
+  // Cargar turno activo
+  useEffect(() => {
+    loadActiveShift();
+  }, [loadActiveShift]);
+
   // Búsqueda de productos
   const handleProductSearch = (term) => {
     setSearchTerm(term);
@@ -207,6 +242,11 @@ const EnhancedCashRegister = () => {
       return;
     }
 
+    if (!currentShift) {
+      toast.error('Debe abrir un turno antes de realizar ventas');
+      return;
+    }
+
     if (paymentMethod === 'cash' && cashAmount < finalTotal) {
       toast.error('Monto insuficiente');
       return;
@@ -230,12 +270,16 @@ const EnhancedCashRegister = () => {
         cashAmount: cashAmount,
         change: change,
         customer: selectedCustomer,
-        shiftId: currentShift?.id,
+        shiftId: currentShift.id,
         timestamp: new Date().toISOString()
       };
 
       // Sincronizar venta
       const saleId = await dataSyncService.syncSale(saleData);
+      
+      // Actualizar total del turno
+      const newShiftTotal = shiftTotal + finalTotal;
+      await shiftService.updateShiftTotal(currentShift.id, newShiftTotal);
       
       // Notificar venta completada
       await notificationService.notifySaleCompleted({
@@ -251,10 +295,8 @@ const EnhancedCashRegister = () => {
       setSelectedCustomer(null);
       
       // Actualizar estadísticas del turno
-      if (currentShift) {
-        setShiftSales(prev => [...prev, saleData]);
-        setShiftTotal(prev => prev + finalTotal);
-      }
+      setShiftSales(prev => [...prev, saleData]);
+      setShiftTotal(newShiftTotal);
 
       playSound('sale');
       toast.success(`Venta completada - $${finalTotal.toLocaleString()}`);
@@ -461,6 +503,35 @@ const EnhancedCashRegister = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-gray-800">Caja Registradora</h2>
               <div className="flex items-center space-x-2">
+                {/* Estado del turno */}
+                {currentShift ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                      <Clock className="w-4 h-4 inline mr-1" />
+                      Turno {currentShift.type === 'morning' ? 'Mañana' : 'Tarde'} Activo
+                    </div>
+                    <button
+                      onClick={() => setShowShiftManagement(true)}
+                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors"
+                    >
+                      Gestionar Turnos
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <div className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                      <AlertTriangle className="w-4 h-4 inline mr-1" />
+                      Sin Turno Activo
+                    </div>
+                    <button
+                      onClick={() => setShowShiftManagement(true)}
+                      className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium hover:bg-orange-200 transition-colors"
+                    >
+                      Abrir Turno
+                    </button>
+                  </div>
+                )}
+                
                 <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                   {realtimeService.getSyncState().isOnline ? '🟢 En línea' : '🔴 Offline'}
                 </div>
@@ -742,6 +813,28 @@ const EnhancedCashRegister = () => {
       {/* Modales */}
       {showNumericKeypad && <NumericKeypad />}
       {showBarcodeScanner && <BarcodeScanner />}
+      
+      {/* Modal de gestión de turnos */}
+      {showShiftManagement && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Gestión de Turnos</h3>
+              <button
+                onClick={() => setShowShiftManagement(false)}
+                className="p-2 hover:bg-gray-100 rounded-xl"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <ShiftManagement 
+              onShiftChange={handleShiftChange}
+              currentShift={currentShift}
+            />
+          </div>
+        </div>
+      )}
       
       {/* Modal de descuento */}
       {showDiscountModal && (

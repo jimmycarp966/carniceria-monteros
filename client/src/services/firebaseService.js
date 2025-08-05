@@ -463,6 +463,8 @@ export const shiftService = {
   }
 };
 
+
+
 // Servicio de inventario optimizado
 export const inventoryService = {
   async getAllInventory() {
@@ -1085,6 +1087,66 @@ const sampleCustomers = [
   }
 ];
 
+// Datos simulados para turnos
+const sampleShifts = [
+  {
+    type: "morning",
+    date: "2025-01-15",
+    openingAmount: 50000,
+    employeeName: "Pedro Martínez",
+    notes: "Turno mañana - Apertura normal",
+    status: "closed",
+    startTime: new Date("2025-01-15T08:00:00"),
+    endTime: new Date("2025-01-15T14:00:00"),
+    total: 125000,
+    salesCount: 15,
+    closingAmount: 175000,
+    closingNotes: "Cierre normal - Todo en orden"
+  },
+  {
+    type: "afternoon",
+    date: "2025-01-15",
+    openingAmount: 175000,
+    employeeName: "Laura Fernández",
+    notes: "Turno tarde - Continuación del día",
+    status: "closed",
+    startTime: new Date("2025-01-15T14:00:00"),
+    endTime: new Date("2025-01-15T20:00:00"),
+    total: 89000,
+    salesCount: 12,
+    closingAmount: 264000,
+    closingNotes: "Cierre tarde - Ventas moderadas"
+  },
+  {
+    type: "morning",
+    date: "2025-01-16",
+    openingAmount: 50000,
+    employeeName: "Carlos Rodríguez",
+    notes: "Turno mañana - Día siguiente",
+    status: "closed",
+    startTime: new Date("2025-01-16T08:00:00"),
+    endTime: new Date("2025-01-16T14:00:00"),
+    total: 98000,
+    salesCount: 18,
+    closingAmount: 148000,
+    closingNotes: "Buen día de ventas"
+  },
+  {
+    type: "afternoon",
+    date: "2025-01-16",
+    openingAmount: 148000,
+    employeeName: "Ana López",
+    notes: "Turno tarde - Continuación",
+    status: "closed",
+    startTime: new Date("2025-01-16T14:00:00"),
+    endTime: new Date("2025-01-16T20:00:00"),
+    total: 75000,
+    salesCount: 10,
+    closingAmount: 223000,
+    closingNotes: "Cierre tarde - Ventas regulares"
+  }
+];
+
 // Datos simulados para empleados
 const sampleEmployees = [
   {
@@ -1146,6 +1208,7 @@ export const loadSampleData = async () => {
     const existingProducts = await productService.getAllProducts();
     const existingCustomers = await customerService.getAllCustomers();
     const existingEmployees = await employeeService.getAllEmployees();
+    const existingShifts = await shiftService.getAllShifts();
     
     if (existingProducts.length === 0) {
       console.log('📦 Firebase está vacío, cargando productos simulados...');
@@ -1184,6 +1247,19 @@ export const loadSampleData = async () => {
       console.log('🎉 Empleados simulados cargados exitosamente');
     } else {
       console.log('👨‍💼 Firebase ya tiene empleados, no se cargan simulados');
+    }
+
+    if (existingShifts.length === 0) {
+      console.log('⏰ Cargando turnos simulados...');
+      
+      for (const shift of sampleShifts) {
+        await shiftService.addShift(shift);
+        console.log(`✅ Turno simulado agregado: ${shift.type} - ${shift.date}`);
+      }
+      
+      console.log('🎉 Turnos simulados cargados exitosamente');
+    } else {
+      console.log('⏰ Firebase ya tiene turnos, no se cargan simulados');
     }
 
     return true;
