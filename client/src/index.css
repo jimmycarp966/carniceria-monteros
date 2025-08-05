@@ -26,6 +26,8 @@
   background-color: #f9fafb;
   width: 100%;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .App {
@@ -33,6 +35,9 @@
   background-color: #f9fafb;
   width: 100%;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 html {

@@ -264,7 +264,7 @@ const CashRegister = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 lg:p-6 w-full">
+    <div className="p-4 lg:p-6 w-full">
       {/* Header Mejorado */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">

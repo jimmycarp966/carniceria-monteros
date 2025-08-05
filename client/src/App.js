@@ -66,7 +66,7 @@ const Layout = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
@@ -150,7 +150,7 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Main content mejorado */}
-      <div className="lg:pl-72 w-full">
+      <div className="lg:pl-72 w-full flex-1">
         <div className="min-h-screen w-full">
           {children}
         </div>
@@ -182,7 +182,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 lg:p-6">
+    <div className="p-4 lg:p-6">
       {/* Header Mejorado */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
         <div className="flex items-center gap-4 mb-4">
