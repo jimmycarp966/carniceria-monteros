@@ -43,14 +43,9 @@ export const processCustomerPayment = async (customer, paymentAmount, currentShi
 
 // Función para obtener historial de pagos de un cliente
 export const getCustomerPaymentHistory = async (customerId) => {
-  try {
-    // Aquí se implementaría la lógica para obtener el historial
-    // Por ahora retornamos un array vacío
-    return [];
-  } catch (error) {
-    console.error('Error obteniendo historial de pagos:', error);
-    return [];
-  }
+  // Aquí se implementaría la lógica para obtener el historial
+  // Por ahora retornamos un array vacío
+  return [];
 };
 
 // Función para validar si un cliente puede hacer un pago
