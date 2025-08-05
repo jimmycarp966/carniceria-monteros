@@ -79,7 +79,10 @@ const Dashboard = () => {
     });
     
     // Cargar datos iniciales
-    loadInitialData();
+    const loadData = async () => {
+      await loadInitialData();
+    };
+    loadData();
     
     // Actualizar estado de conexión cada 30 segundos
     const connectionInterval = setInterval(() => {

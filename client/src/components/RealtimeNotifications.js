@@ -20,7 +20,31 @@ const RealtimeNotifications = () => {
   useEffect(() => {
     // Escuchar notificaciones en tiempo real
     const handleNotification = (notification) => {
-      addNotification(notification);
+      setNotifications(prev => [notification, ...prev.slice(0, 19)]);
+      setUnreadCount(prev => prev + 1);
+      
+      // Mostrar toast
+      const icon = getNotificationIcon(notification.type);
+      const color = getNotificationColor(notification.priority);
+      
+      toast.success(
+        <div className="flex items-center">
+          {icon}
+          <div className="ml-2">
+            <div className="font-medium">{notification.title}</div>
+            <div className="text-sm text-gray-600">{notification.message}</div>
+          </div>
+        </div>,
+        {
+          duration: 4000,
+          style: {
+            background: color.background,
+            color: color.text,
+            borderRadius: '12px',
+            border: `1px solid ${color.border}`,
+          },
+        }
+      );
     };
     
     realtimeService.on('notification_received', handleNotification);
@@ -37,7 +61,7 @@ const RealtimeNotifications = () => {
           timestamp: new Date(),
           data: data.items
         };
-        addNotification(stockNotification);
+        handleNotification(stockNotification);
       }
     });
 
@@ -52,7 +76,7 @@ const RealtimeNotifications = () => {
         timestamp: new Date(),
         data: data.saleData
       };
-      addNotification(saleNotification);
+      handleNotification(saleNotification);
     });
 
     return () => {
@@ -60,7 +84,7 @@ const RealtimeNotifications = () => {
       realtimeService.off('stock_alert');
       realtimeService.off('sale_synced');
     };
-  }, [addNotification]);
+  }, []);
 
   const addNotification = (notification) => {
     setNotifications(prev => [notification, ...prev.slice(0, 19)]); // Máximo 20 notificaciones
