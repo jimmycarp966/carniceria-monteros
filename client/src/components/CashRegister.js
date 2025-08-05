@@ -425,10 +425,23 @@ const CashRegister = () => {
 
       // Actualizar estado local con la nueva venta
       const saleWithId = { id: saleId, ...sale };
+      
+      // Actualizar ventas generales
       setSales(prevSales => [saleWithId, ...prevSales]);
+      
+      // Actualizar ventas del turno actual
       setShiftSales(prevShiftSales => [saleWithId, ...prevShiftSales]);
       setShiftTotal(prevTotal => prevTotal + cartTotal);
-      
+
+      // Actualizar el turno en Firebase con el nuevo total
+      if (currentShift) {
+        try {
+          await shiftService.updateShiftTotal(currentShift.id, shiftTotal + cartTotal);
+        } catch (error) {
+          console.error('Error actualizando total del turno:', error);
+        }
+      }
+
       // Limpiar carrito y resetear valores
       setCart([]);
       setCashAmount(0);
@@ -436,6 +449,7 @@ const CashRegister = () => {
       setSelectedProduct('');
       setQuantity(1);
       setSearchTerm('');
+      setShowProductDropdown(false);
 
       // Mensaje de éxito según método de pago
       const methodNames = {

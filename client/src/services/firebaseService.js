@@ -369,13 +369,24 @@ export const shiftService = {
       await updateDoc(docRef, {
         ...closingData,
         isActive: false,
-        closedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        closedAt: serverTimestamp()
       });
-      toast.success('Turno cerrado exitosamente');
     } catch (error) {
       console.error('Error cerrando turno:', error);
-      toast.error('Error al cerrar turno');
+      throw error;
+    }
+  },
+
+  // Actualizar total del turno
+  async updateShiftTotal(shiftId, newTotal) {
+    try {
+      const docRef = doc(db, 'shifts', shiftId);
+      await updateDoc(docRef, {
+        totalSales: newTotal,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error actualizando total del turno:', error);
       throw error;
     }
   }
