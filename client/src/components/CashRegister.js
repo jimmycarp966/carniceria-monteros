@@ -4,7 +4,6 @@ import {
   Plus, 
   Minus, 
   Trash2, 
-  Search, 
   Clock, 
   DollarSign, 
   CreditCard,
@@ -19,7 +18,8 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
-  Smartphone
+  Smartphone,
+  Search
 } from 'lucide-react';
 import { products } from '../data/products';
 import { productService, saleService, shiftService, loadSampleData } from '../services/firebaseService';
