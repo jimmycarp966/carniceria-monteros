@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback, memo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Bell, Settings, Sun, Moon } from 'lucide-react';
@@ -6,7 +6,7 @@ import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
 
-// Lazy loading para mejorar el rendimiento
+// Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
 const Sales = lazy(() => import('./components/Sales'));
 const CashRegister = lazy(() => import('./components/CashRegister'));
@@ -18,8 +18,8 @@ const Categories = lazy(() => import('./components/Categories'));
 const Reports = lazy(() => import('./components/Reports'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
 
-// Componente de carga optimizado
-const LoadingSpinner = () => (
+// Componente de carga optimizado con memo
+const LoadingSpinner = memo(() => (
   <div className="flex items-center justify-center min-h-[400px]">
     <div className="text-center">
       <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-red-100 rounded-3xl mb-6 shadow-lg">
@@ -32,13 +32,18 @@ const LoadingSpinner = () => (
       <p className="text-gray-600">Preparando módulo</p>
     </div>
   </div>
-);
+));
 
-const NavItem = ({ icon: Icon, label, to, onClick, isActive, badge }) => {
+// NavItem optimizado con memo y useCallback
+const NavItem = memo(({ icon: Icon, label, to, onClick, isActive, badge }) => {
+  const handleClick = useCallback((e) => {
+    if (onClick) onClick(e);
+  }, [onClick]);
+
   return (
     <Link
       to={to}
-      onClick={onClick}
+      onClick={handleClick}
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 relative group ${
         isActive 
           ? 'text-orange-700 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50 shadow-lg transform scale-105 backdrop-blur-sm' 
@@ -54,16 +59,18 @@ const NavItem = ({ icon: Icon, label, to, onClick, isActive, badge }) => {
       )}
     </Link>
   );
-};
+});
 
-const Layout = ({ children }) => {
+// Layout optimizado con memo y useMemo
+const Layout = memo(({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [activeRoute, setActiveRoute] = useState('/');
-  const [lowStockAlerts] = useState(3); // Simulación de alertas de inventario
-  const [notifications] = useState(2); // Simulación de notificaciones
+  const [lowStockAlerts] = useState(3);
+  const [notifications] = useState(2);
   const [darkMode, setDarkMode] = useState(false);
 
+  // Optimizar useEffect para auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
@@ -71,30 +78,29 @@ const Layout = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Debug: Log cuando cambia el estado del sidebar
-  useEffect(() => {
-    console.log('Sidebar state:', sidebarOpen);
-  }, [sidebarOpen]);
-
-  const handleLogout = async () => {
+  // Optimizar handlers con useCallback
+  const handleLogout = useCallback(async () => {
     try {
       await signOut(auth);
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
-  };
+  }, []);
 
-  const toggleSidebar = () => {
-    console.log('Toggle sidebar clicked, current state:', sidebarOpen);
-    setSidebarOpen(!sidebarOpen);
-  };
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, []);
 
-  const closeSidebar = () => {
-    console.log('Closing sidebar');
+  const closeSidebar = useCallback(() => {
     setSidebarOpen(false);
-  };
+  }, []);
 
-  const navigation = [
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode(prev => !prev);
+  }, []);
+
+  // Optimizar navigation con useMemo
+  const navigation = useMemo(() => [
     { icon: Home, label: 'Menú Principal', to: '/' },
     { icon: DollarSign, label: 'Caja', to: '/caja' },
     { icon: Package, label: 'Productos', to: '/productos' },
@@ -105,7 +111,13 @@ const Layout = ({ children }) => {
     { icon: Truck, label: 'Proveedores', to: '/proveedores' },
     { icon: Tag, label: 'Categorías', to: '/categorias' },
     { icon: BarChart3, label: 'Reportes', to: '/reportes' },
-  ];
+  ], [lowStockAlerts]);
+
+  // Optimizar handlers de navegación
+  const handleNavClick = useCallback((route) => {
+    setActiveRoute(route);
+    closeSidebar();
+  }, [closeSidebar]);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex ${darkMode ? 'dark' : ''}`}>
@@ -132,14 +144,14 @@ const Layout = ({ children }) => {
           )}
         </button>
         <button 
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={toggleDarkMode}
           className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
         >
           {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
       </div>
 
-      {/* Overlay para móvil - DEBE IR ANTES DEL SIDEBAR */}
+      {/* Overlay para móvil optimizado */}
       {sidebarOpen && (
         <div 
           className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
@@ -147,14 +159,14 @@ const Layout = ({ children }) => {
         />
       )}
 
-      {/* Sidebar Mejorado */}
+      {/* Sidebar optimizado */}
       <div className={`
         fixed left-0 top-0 z-50 w-80 h-full bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200/50
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:w-72 lg:z-auto lg:bg-white/95
       `}>
         <div className="flex flex-col h-full">
-          {/* Header Mejorado */}
+          {/* Header optimizado */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-orange-50/80 to-red-50/80 backdrop-blur-sm">
             <div className="flex items-center">
               <div className="relative p-3 bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl shadow-lg">
@@ -168,7 +180,7 @@ const Layout = ({ children }) => {
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={toggleDarkMode}
                 className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
                 aria-label="Toggle dark mode"
               >
@@ -184,7 +196,7 @@ const Layout = ({ children }) => {
             </div>
           </div>
 
-          {/* Navegación Mejorada */}
+          {/* Navegación optimizada */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {navigation.map((item) => (
               <NavItem
@@ -192,17 +204,14 @@ const Layout = ({ children }) => {
                 icon={item.icon}
                 label={item.label}
                 to={item.to}
-                onClick={() => {
-                  setActiveRoute(item.to);
-                  closeSidebar();
-                }}
+                onClick={() => handleNavClick(item.to)}
                 isActive={activeRoute === item.to}
                 badge={item.badge}
               />
             ))}
           </nav>
 
-          {/* Footer Mejorado */}
+          {/* Footer optimizado */}
           <div className="p-4 border-t border-gray-200/50 bg-gradient-to-r from-gray-50/80 to-orange-50/80 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
@@ -229,7 +238,7 @@ const Layout = ({ children }) => {
         </div>
       </div>
 
-      {/* Main content mejorado */}
+      {/* Main content optimizado */}
       <div className="lg:pl-72 w-full flex-1">
         <div className="min-h-screen w-full">
           <Suspense fallback={<LoadingSpinner />}>
@@ -239,8 +248,9 @@ const Layout = ({ children }) => {
       </div>
     </div>
   );
-};
+});
 
+// App principal optimizado
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -253,6 +263,7 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // Optimizar loading screen
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 flex items-center justify-center">

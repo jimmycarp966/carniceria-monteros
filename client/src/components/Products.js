@@ -1,8 +1,265 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { products, categories } from '../data/products';
 import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List, RefreshCw, AlertTriangle, TrendingUp, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { productService, loadSampleData } from '../services/firebaseService';
+
+// Componente de producto optimizado con memo
+const ProductCard = memo(({ product, onEdit, onDelete, getCategoryColor, getStockStatus }) => {
+  const stockStatus = getStockStatus(product.stock, product.minStock);
+  
+  return (
+    <div className="card hover:transform hover:scale-105 transition-all duration-300">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
+          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
+            {product.category}
+          </span>
+        </div>
+        <div className="text-2xl">{product.image}</div>
+      </div>
+      
+      <div className="space-y-2 mb-4">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-500">Precio:</span>
+          <span className="text-lg font-bold text-gray-900">${product.price.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-500">Stock:</span>
+          <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
+            {product.stock} {product.unit}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-500">Origen:</span>
+          <span className="text-sm text-gray-700">{product.origin}</span>
+        </div>
+        {product.salesCount > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-500">Ventas:</span>
+            <span className="text-sm text-blue-600 font-medium">{product.salesCount}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex space-x-2">
+        <button
+          onClick={() => onEdit(product)}
+          className="flex-1 btn btn-secondary text-xs py-2 flex items-center justify-center"
+        >
+          <Edit className="h-3 w-3 mr-1" />
+          Editar
+        </button>
+        <button
+          onClick={() => onDelete(product.id)}
+          className="flex-1 btn btn-danger text-xs py-2 flex items-center justify-center"
+        >
+          <Trash2 className="h-3 w-3 mr-1" />
+          Eliminar
+        </button>
+      </div>
+    </div>
+  );
+});
+
+// Componente de tabla optimizado con memo
+const ProductTable = memo(({ products, onEdit, onDelete, getCategoryColor, getStockStatus }) => {
+  return (
+    <div className="table-container">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Producto
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Categoría
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Precio
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Stock
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ventas
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {products.map(product => {
+              const stockStatus = getStockStatus(product.stock, product.minStock);
+              return (
+                <tr key={product.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="text-2xl mr-3">{product.image}</div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                        <div className="text-sm text-gray-500">{product.description}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
+                      {product.category}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-bold text-gray-900">${product.price.toLocaleString()}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
+                      {product.stock} {product.unit}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-blue-600 font-medium">
+                      {product.salesCount || 0}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => onEdit(product)}
+                        className="text-orange-600 hover:text-orange-900"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(product.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+});
+
+// Componente de estadísticas optimizado con memo
+const StatsCards = memo(({ stats }) => {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="stats-card">
+        <div className="flex items-center">
+          <Package className="h-6 w-6 text-orange-600" />
+          <div className="ml-3">
+            <p className="stats-label">Total</p>
+            <p className="stats-value">{stats.total}</p>
+          </div>
+        </div>
+      </div>
+      <div className="stats-card">
+        <div className="flex items-center">
+          <TrendingUp className="h-6 w-6 text-green-600" />
+          <div className="ml-3">
+            <p className="stats-label">En Stock</p>
+            <p className="stats-value">{stats.inStock}</p>
+          </div>
+        </div>
+      </div>
+      <div className="stats-card">
+        <div className="flex items-center">
+          <AlertTriangle className="h-6 w-6 text-yellow-600" />
+          <div className="ml-3">
+            <p className="stats-label">Stock Bajo</p>
+            <p className="stats-value">{stats.lowStock}</p>
+          </div>
+        </div>
+      </div>
+      <div className="stats-card">
+        <div className="flex items-center">
+          <Package className="h-6 w-6 text-red-600" />
+          <div className="ml-3">
+            <p className="stats-label">Sin Stock</p>
+            <p className="stats-value">{stats.outOfStock}</p>
+          </div>
+        </div>
+      </div>
+      <div className="stats-card">
+        <div className="flex items-center">
+          <Filter className="h-6 w-6 text-purple-600" />
+          <div className="ml-3">
+            <p className="stats-label">Categorías</p>
+            <p className="stats-value">{stats.categories}</p>
+          </div>
+        </div>
+      </div>
+      <div className="stats-card">
+        <div className="flex items-center">
+          <DollarSign className="h-6 w-6 text-blue-600" />
+          <div className="ml-3">
+            <p className="stats-label">Valor Total</p>
+            <p className="stats-value">
+              ${(stats.totalValue / 1000).toFixed(0)}k
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Componente de filtros optimizado con memo
+const Filters = memo(({ searchTerm, setSearchTerm, categoryFilter, setCategoryFilter, categories, onClearFilters }) => {
+  return (
+    <div className="card">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <label className="form-label">Buscar Producto</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o descripción..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input pl-10"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="form-label">Filtrar por Categoría</label>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="form-select"
+          >
+            <option value="">Todas las categorías</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.name}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-end">
+          <button
+            onClick={onClearFilters}
+            className="btn btn-secondary w-full flex items-center justify-center"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Limpiar Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 const Products = () => {
   const [productList, setProductList] = useState([]);
@@ -74,7 +331,8 @@ const Products = () => {
     };
   }, [productList]);
 
-  const handleAddProduct = async (newProduct) => {
+  // Handlers optimizados con useCallback
+  const handleAddProduct = useCallback(async (newProduct) => {
     try {
       setSyncing(true);
       console.log('🔄 Agregando producto...');
@@ -101,9 +359,9 @@ const Products = () => {
     } finally {
       setSyncing(false);
     }
-  };
+  }, []);
 
-  const handleEditProduct = async (updatedProduct) => {
+  const handleEditProduct = useCallback(async (updatedProduct) => {
     try {
       setSyncing(true);
       console.log('🔄 Actualizando producto...');
@@ -130,9 +388,9 @@ const Products = () => {
     } finally {
       setSyncing(false);
     }
-  };
+  }, []);
 
-  const handleDeleteProduct = async (id) => {
+  const handleDeleteProduct = useCallback(async (id) => {
     try {
       setSyncing(true);
       console.log('🔄 Eliminando producto...');
@@ -148,15 +406,15 @@ const Products = () => {
     } finally {
       setSyncing(false);
     }
-  };
+  }, []);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await loadProducts();
     toast.success('Productos actualizados');
-  };
+  }, [loadProducts]);
 
   // Función para forzar recarga de datos de muestra
-  const handleForceReload = async () => {
+  const handleForceReload = useCallback(async () => {
     try {
       setSyncing(true);
       console.log('🔄 Forzando recarga de datos de muestra...');
@@ -180,18 +438,40 @@ const Products = () => {
     } finally {
       setSyncing(false);
     }
-  };
+  }, [loadProducts]);
 
-  const getCategoryColor = (categoryName) => {
+  // Funciones helper optimizadas
+  const getCategoryColor = useCallback((categoryName) => {
     const category = categories.find(c => c.name === categoryName);
     return category?.color || 'gray';
-  };
+  }, [categories]);
 
-  const getStockStatus = (stock, minStock = 10) => {
+  const getStockStatus = useCallback((stock, minStock = 10) => {
     if (stock === 0) return { color: 'red', text: 'Sin Stock' };
     if (stock <= minStock) return { color: 'yellow', text: 'Stock Bajo' };
     return { color: 'green', text: 'En Stock' };
-  };
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm('');
+    setCategoryFilter('');
+  }, []);
+
+  const handleViewModeToggle = useCallback(() => {
+    setViewMode(prev => prev === 'grid' ? 'list' : 'grid');
+  }, []);
+
+  const handleShowAddModal = useCallback(() => {
+    setShowAddModal(true);
+  }, []);
+
+  const handleEditClick = useCallback((product) => {
+    setEditingProduct(product);
+  }, []);
+
+  const handleDeleteClick = useCallback((id) => {
+    handleDeleteProduct(id);
+  }, [handleDeleteProduct]);
 
   if (loading) {
     return (
@@ -234,14 +514,14 @@ const Products = () => {
             Recargar Datos
           </button>
           <button
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            onClick={handleViewModeToggle}
             className="btn btn-secondary flex items-center justify-center"
           >
             {viewMode === 'grid' ? <List className="h-4 w-4 mr-2" /> : <Grid className="h-4 w-4 mr-2" />}
             {viewMode === 'grid' ? 'Lista' : 'Grid'}
           </button>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={handleShowAddModal}
             className="btn btn-primary flex items-center w-full sm:w-auto justify-center"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -250,254 +530,41 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Stats Cards Mejoradas */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="stats-card">
-          <div className="flex items-center">
-            <Package className="h-6 w-6 text-orange-600" />
-            <div className="ml-3">
-              <p className="stats-label">Total</p>
-              <p className="stats-value">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stats-card">
-          <div className="flex items-center">
-            <TrendingUp className="h-6 w-6 text-green-600" />
-            <div className="ml-3">
-              <p className="stats-label">En Stock</p>
-              <p className="stats-value">{stats.inStock}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stats-card">
-          <div className="flex items-center">
-            <AlertTriangle className="h-6 w-6 text-yellow-600" />
-            <div className="ml-3">
-              <p className="stats-label">Stock Bajo</p>
-              <p className="stats-value">{stats.lowStock}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stats-card">
-          <div className="flex items-center">
-            <Package className="h-6 w-6 text-red-600" />
-            <div className="ml-3">
-              <p className="stats-label">Sin Stock</p>
-              <p className="stats-value">{stats.outOfStock}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stats-card">
-          <div className="flex items-center">
-            <Filter className="h-6 w-6 text-purple-600" />
-            <div className="ml-3">
-              <p className="stats-label">Categorías</p>
-              <p className="stats-value">{stats.categories}</p>
-            </div>
-          </div>
-        </div>
-        <div className="stats-card">
-          <div className="flex items-center">
-            <DollarSign className="h-6 w-6 text-blue-600" />
-            <div className="ml-3">
-              <p className="stats-label">Valor Total</p>
-              <p className="stats-value">
-                ${(stats.totalValue / 1000).toFixed(0)}k
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Stats Cards Optimizadas */}
+      <StatsCards stats={stats} />
 
-      {/* Filters Mejorados */}
-      <div className="card">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="form-label">Buscar Producto</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre o descripción..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="form-input pl-10"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="form-label">Filtrar por Categoría</label>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="form-select"
-            >
-              <option value="">Todas las categorías</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.name}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setCategoryFilter('');
-              }}
-              className="btn btn-secondary w-full flex items-center justify-center"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Limpiar Filtros
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Filters Optimizados */}
+      <Filters 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        categories={categories}
+        onClearFilters={handleClearFilters}
+      />
 
       {/* Products Display Optimizado */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-          {filteredProducts.map(product => {
-            const stockStatus = getStockStatus(product.stock, product.minStock);
-            return (
-              <div key={product.id} className="card hover:transform hover:scale-105 transition-all duration-300">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
-                      {product.category}
-                    </span>
-                  </div>
-                  <div className="text-2xl">{product.image}</div>
-                </div>
-                
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Precio:</span>
-                    <span className="text-lg font-bold text-gray-900">${product.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Stock:</span>
-                    <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
-                      {product.stock} {product.unit}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Origen:</span>
-                    <span className="text-sm text-gray-700">{product.origin}</span>
-                  </div>
-                  {product.salesCount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Ventas:</span>
-                      <span className="text-sm text-blue-600 font-medium">{product.salesCount}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setEditingProduct(product)}
-                    className="flex-1 btn btn-secondary text-xs py-2 flex items-center justify-center"
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDeleteProduct(product.id)}
-                    className="flex-1 btn btn-danger text-xs py-2 flex items-center justify-center"
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          {filteredProducts.map(product => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onEdit={handleEditClick}
+              onDelete={handleDeleteClick}
+              getCategoryColor={getCategoryColor}
+              getStockStatus={getStockStatus}
+            />
+          ))}
         </div>
       ) : (
-        <div className="table-container">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Producto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Categoría
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Precio
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ventas
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map(product => {
-                  const stockStatus = getStockStatus(product.stock, product.minStock);
-                  return (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="text-2xl mr-3">{product.image}</div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                            <div className="text-sm text-gray-500">{product.description}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
-                          {product.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-bold text-gray-900">${product.price.toLocaleString()}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
-                          {product.stock} {product.unit}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-blue-600 font-medium">
-                          {product.salesCount || 0}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => setEditingProduct(product)}
-                            className="text-orange-600 hover:text-orange-900"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ProductTable
+          products={filteredProducts}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
+          getCategoryColor={getCategoryColor}
+          getStockStatus={getStockStatus}
+        />
       )}
 
       {/* Empty State Mejorado */}
@@ -507,7 +574,7 @@ const Products = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron productos</h3>
           <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda</p>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={handleShowAddModal}
             className="btn btn-primary"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -533,7 +600,8 @@ const Products = () => {
   );
 };
 
-const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
+// ProductModal optimizado con memo
+const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) => {
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -546,10 +614,14 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
     image: product?.image || '🥩'
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = useCallback((e) => {
     e.preventDefault();
     onSave(formData);
-  };
+  }, [formData, onSave]);
+
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   return (
     <div className="modal-overlay">
@@ -576,7 +648,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
                 type="text"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => handleInputChange('name', e.target.value)}
                 className="form-input"
                 placeholder="Ej: Asado de Tira"
               />
@@ -586,7 +658,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
               <select
                 required
                 value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                onChange={(e) => handleInputChange('category', e.target.value)}
                 className="form-select"
               >
                 <option value="">Seleccionar categoría</option>
@@ -603,7 +675,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
             <label className="form-label">Descripción</label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              onChange={(e) => handleInputChange('description', e.target.value)}
               rows="3"
               className="form-input"
               placeholder="Descripción del producto..."
@@ -617,7 +689,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
                 type="number"
                 required
                 value={formData.price}
-                onChange={(e) => setFormData({...formData, price: e.target.value})}
+                onChange={(e) => handleInputChange('price', e.target.value)}
                 className="form-input"
                 placeholder="0"
                 min="0"
@@ -630,7 +702,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
                 type="number"
                 required
                 value={formData.stock}
-                onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                onChange={(e) => handleInputChange('stock', e.target.value)}
                 className="form-input"
                 placeholder="0"
                 min="0"
@@ -642,7 +714,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
                 type="number"
                 required
                 value={formData.minStock}
-                onChange={(e) => setFormData({...formData, minStock: e.target.value})}
+                onChange={(e) => handleInputChange('minStock', e.target.value)}
                 className="form-input"
                 placeholder="10"
                 min="0"
@@ -656,7 +728,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
               <select
                 required
                 value={formData.unit}
-                onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                onChange={(e) => handleInputChange('unit', e.target.value)}
                 className="form-select"
               >
                 <option value="kg">kg</option>
@@ -670,7 +742,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
               <input
                 type="text"
                 value={formData.origin}
-                onChange={(e) => setFormData({...formData, origin: e.target.value})}
+                onChange={(e) => handleInputChange('origin', e.target.value)}
                 className="form-input"
                 placeholder="Tucumán"
               />
@@ -680,7 +752,7 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
               <input
                 type="text"
                 value={formData.image}
-                onChange={(e) => setFormData({...formData, image: e.target.value})}
+                onChange={(e) => handleInputChange('image', e.target.value)}
                 className="form-input"
                 placeholder="🥩"
               />
@@ -715,6 +787,6 @@ const ProductModal = ({ product, onSave, onCancel, categories, syncing }) => {
       </div>
     </div>
   );
-};
+});
 
 export default Products; 

@@ -13,6 +13,10 @@ import {
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
 
+// Cache para mejorar el rendimiento
+const cache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
 // Estado de conexión
 let isOnline = navigator.onLine;
 let pendingOperations = [];
@@ -48,12 +52,6 @@ const syncPendingOperations = async () => {
   console.log('Sincronización completada');
 };
 
-// Función para agregar operación pendiente
-// const addPendingOperation = (operation) => {
-//   pendingOperations.push(operation);
-//   localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
-// };
-
 // Función para cargar operaciones pendientes al iniciar
 const loadPendingOperations = () => {
   const saved = localStorage.getItem('pendingOperations');
@@ -65,37 +63,6 @@ const loadPendingOperations = () => {
 // Cargar operaciones pendientes al iniciar la app
 loadPendingOperations();
 
-// Función para backup automático
-// const autoBackup = async (data, collectionName) => {
-//   try {
-//     const backup = {
-//       data,
-//       timestamp: new Date().toISOString(),
-//       collection: collectionName,
-//       version: '1.0'
-//     };
-//     
-//     localStorage.setItem(`backup_${collectionName}`, JSON.stringify(backup));
-//     console.log(`Backup automático creado para ${collectionName}`);
-//   } catch (error) {
-//     console.error('Error en backup automático:', error);
-//   }
-// };
-
-// Función para restaurar desde backup
-// const restoreFromBackup = (collectionName) => {
-//   try {
-//     const backup = localStorage.getItem(`backup_${collectionName}`);
-//     if (backup) {
-//       return JSON.parse(backup).data;
-//     }
-//     return null;
-//   } catch (error) {
-//     console.error('Error restaurando backup:', error);
-//     return null;
-//   }
-// };
-
 // Función para verificar estado de conexión
 export const checkConnectionStatus = () => {
   return {
@@ -106,477 +73,564 @@ export const checkConnectionStatus = () => {
 
 // Función para forzar sincronización
 export const forceSync = async () => {
-  if (isOnline) {
+  if (isOnline && pendingOperations.length > 0) {
     await syncPendingOperations();
     return true;
   }
   return false;
 };
 
-// Servicios para Productos
+// Servicio de productos optimizado con cache
 export const productService = {
-  // Obtener todos los productos
   async getAllProducts() {
     try {
-      console.log('🔄 Intentando cargar productos desde Firebase...');
-      const querySnapshot = await getDocs(collection(db, 'products'));
-      const products = querySnapshot.docs.map(doc => ({
+      const cacheKey = 'products';
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        console.log('📦 Usando cache para productos');
+        return cached.data;
+      }
+
+      console.log('📦 Cargando productos desde Firebase...');
+      const productsRef = collection(db, 'products');
+      const snapshot = await getDocs(productsRef);
+      
+      const products = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      console.log('✅ Productos cargados desde Firebase:', products.length, 'productos');
+
+      // Guardar en cache
+      cache.set(cacheKey, {
+        data: products,
+        timestamp: Date.now()
+      });
+
+      console.log(`📦 ${products.length} productos cargados`);
       return products;
     } catch (error) {
-      console.error('❌ Error obteniendo productos:', error);
-      console.error('🔍 Detalles del error:', {
-        code: error.code,
-        message: error.message
-      });
-      toast.error('Error al cargar productos');
-      return [];
+      console.error('❌ Error cargando productos:', error);
+      throw error;
     }
   },
 
-  // Obtener producto por ID
   async getProductById(id) {
     try {
-      const docRef = doc(db, 'products', id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
+      const cacheKey = `product_${id}`;
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
+      const productRef = doc(db, 'products', id);
+      const snapshot = await getDoc(productRef);
+      
+      if (snapshot.exists()) {
+        const product = { id: snapshot.id, ...snapshot.data() };
+        
+        cache.set(cacheKey, {
+          data: product,
+          timestamp: Date.now()
+        });
+        
+        return product;
       }
       return null;
     } catch (error) {
-      console.error('Error obteniendo producto:', error);
-      toast.error('Error al cargar producto');
-      return null;
+      console.error('❌ Error cargando producto:', error);
+      throw error;
     }
   },
 
-  // Agregar producto
   async addProduct(productData) {
     try {
-      console.log('🔄 Intentando agregar producto a Firebase:', productData);
-      const docRef = await addDoc(collection(db, 'products'), {
+      const productsRef = collection(db, 'products');
+      const docRef = await addDoc(productsRef, {
         ...productData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      console.log('✅ Producto agregado exitosamente con ID:', docRef.id);
-      toast.success('Producto agregado exitosamente');
+
+      // Limpiar cache de productos
+      cache.delete('products');
+      
+      console.log('✅ Producto agregado:', docRef.id);
       return docRef.id;
     } catch (error) {
       console.error('❌ Error agregando producto:', error);
-      console.error('🔍 Detalles del error:', {
-        code: error.code,
-        message: error.message,
-        stack: error.stack
-      });
-      toast.error('Error al agregar producto');
       throw error;
     }
   },
 
-  // Actualizar producto
   async updateProduct(id, productData) {
     try {
-      const docRef = doc(db, 'products', id);
-      await updateDoc(docRef, {
+      const productRef = doc(db, 'products', id);
+      await updateDoc(productRef, {
         ...productData,
         updatedAt: serverTimestamp()
       });
-      toast.success('Producto actualizado exitosamente');
+
+      // Limpiar cache
+      cache.delete('products');
+      cache.delete(`product_${id}`);
+      
+      console.log('✅ Producto actualizado:', id);
     } catch (error) {
-      console.error('Error actualizando producto:', error);
-      toast.error('Error al actualizar producto');
+      console.error('❌ Error actualizando producto:', error);
       throw error;
     }
   },
 
-  // Actualizar stock de producto
   async updateProductStock(id, newStock) {
     try {
-      // Validar que el ID sea un string válido
-      if (!id || typeof id !== 'string') {
-        console.error('ID de producto inválido:', id);
-        throw new Error('ID de producto inválido');
-      }
-
-      const docRef = doc(db, 'products', id);
-      await updateDoc(docRef, {
+      const productRef = doc(db, 'products', id);
+      await updateDoc(productRef, {
         stock: newStock,
         updatedAt: serverTimestamp()
       });
+
+      // Limpiar cache
+      cache.delete('products');
+      cache.delete(`product_${id}`);
+      
+      console.log('✅ Stock actualizado:', id, newStock);
     } catch (error) {
-      console.error('Error actualizando stock:', error);
-      toast.error('Error al actualizar stock');
+      console.error('❌ Error actualizando stock:', error);
       throw error;
     }
   },
 
-  // Eliminar producto
   async deleteProduct(id) {
     try {
-      await deleteDoc(doc(db, 'products', id));
-      toast.success('Producto eliminado exitosamente');
+      const productRef = doc(db, 'products', id);
+      await deleteDoc(productRef);
+
+      // Limpiar cache
+      cache.delete('products');
+      cache.delete(`product_${id}`);
+      
+      console.log('✅ Producto eliminado:', id);
     } catch (error) {
-      console.error('Error eliminando producto:', error);
-      toast.error('Error al eliminar producto');
+      console.error('❌ Error eliminando producto:', error);
       throw error;
     }
   }
 };
 
-// Servicios para Ventas
+// Servicio de ventas optimizado
 export const saleService = {
-  // Obtener todas las ventas
   async getAllSales() {
     try {
-      const querySnapshot = await getDocs(collection(db, 'sales'));
-      return querySnapshot.docs.map(doc => ({
+      const cacheKey = 'sales';
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
+      const salesRef = collection(db, 'sales');
+      const snapshot = await getDocs(salesRef);
+      
+      const sales = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      cache.set(cacheKey, {
+        data: sales,
+        timestamp: Date.now()
+      });
+
+      return sales;
     } catch (error) {
-      console.error('Error obteniendo ventas:', error);
-      toast.error('Error al cargar ventas');
-      return [];
+      console.error('❌ Error cargando ventas:', error);
+      throw error;
     }
   },
 
-  // Obtener ventas por turno
   async getSalesByShift(shiftId) {
     try {
-      const q = query(
-        collection(db, 'sales'),
-        where('shiftId', '==', shiftId)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
+      const salesRef = collection(db, 'sales');
+      const q = query(salesRef, where('shiftId', '==', shiftId));
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error obteniendo ventas por turno:', error);
-      toast.error('Error al cargar ventas del turno');
-      return [];
+      console.error('❌ Error cargando ventas por turno:', error);
+      throw error;
     }
   },
 
-  // Obtener ventas por fecha
   async getSalesByDate(date) {
     try {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
+      
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
-
+      
+      const salesRef = collection(db, 'sales');
       const q = query(
-        collection(db, 'sales'),
-        where('date', '>=', startOfDay),
-        where('date', '<=', endOfDay)
+        salesRef, 
+        where('createdAt', '>=', startOfDay),
+        where('createdAt', '<=', endOfDay)
       );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error obteniendo ventas por fecha:', error);
-      toast.error('Error al cargar ventas del día');
-      return [];
-    }
-  },
-
-  // Agregar venta
-  async addSale(saleData) {
-    try {
-      console.log('🔄 Intentando agregar venta a Firebase:', saleData);
-      const docRef = await addDoc(collection(db, 'sales'), {
-        ...saleData,
-        date: serverTimestamp(),
-        createdAt: serverTimestamp()
-      });
-      console.log('✅ Venta agregada exitosamente con ID:', docRef.id);
-      toast.success('Venta registrada exitosamente');
-      return docRef.id;
-    } catch (error) {
-      console.error('❌ Error agregando venta:', error);
-      console.error('🔍 Detalles del error:', {
-        code: error.code,
-        message: error.message,
-        stack: error.stack
-      });
-      toast.error('Error al registrar venta');
+      console.error('❌ Error cargando ventas por fecha:', error);
       throw error;
     }
   },
 
-  // Actualizar venta
+  async addSale(saleData) {
+    try {
+      const salesRef = collection(db, 'sales');
+      const docRef = await addDoc(salesRef, {
+        ...saleData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Limpiar cache
+      cache.delete('sales');
+      
+      console.log('✅ Venta agregada:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error agregando venta:', error);
+      throw error;
+    }
+  },
+
   async updateSale(id, saleData) {
     try {
-      const docRef = doc(db, 'sales', id);
-      await updateDoc(docRef, {
+      const saleRef = doc(db, 'sales', id);
+      await updateDoc(saleRef, {
         ...saleData,
         updatedAt: serverTimestamp()
       });
-      toast.success('Venta actualizada exitosamente');
+
+      // Limpiar cache
+      cache.delete('sales');
+      
+      console.log('✅ Venta actualizada:', id);
     } catch (error) {
-      console.error('Error actualizando venta:', error);
-      toast.error('Error al actualizar venta');
+      console.error('❌ Error actualizando venta:', error);
       throw error;
     }
   }
 };
 
-// Servicios para Turnos
+// Servicio de turnos optimizado
 export const shiftService = {
   async getAllShifts() {
     try {
-      const querySnapshot = await getDocs(collection(db, 'shifts'));
-      return querySnapshot.docs.map(doc => ({
+      const cacheKey = 'shifts';
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
+      const shiftsRef = collection(db, 'shifts');
+      const snapshot = await getDocs(shiftsRef);
+      
+      const shifts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      cache.set(cacheKey, {
+        data: shifts,
+        timestamp: Date.now()
+      });
+
+      return shifts;
     } catch (error) {
-      console.error('Error obteniendo turnos:', error);
+      console.error('❌ Error cargando turnos:', error);
       throw error;
     }
   },
 
   async getActiveShift() {
     try {
-      const querySnapshot = await getDocs(
-        query(collection(db, 'shifts'), where('endTime', '==', null))
-      );
-      return querySnapshot.docs.length > 0 ? {
-        id: querySnapshot.docs[0].id,
-        ...querySnapshot.docs[0].data()
-      } : null;
+      const shiftsRef = collection(db, 'shifts');
+      const q = query(shiftsRef, where('status', '==', 'active'));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.docs.length > 0) {
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
     } catch (error) {
-      console.error('Error obteniendo turno activo:', error);
+      console.error('❌ Error cargando turno activo:', error);
       throw error;
     }
   },
 
   async getShiftsByDate(date) {
     try {
-      console.log('🔄 Obteniendo turnos para la fecha:', date);
-      const querySnapshot = await getDocs(
-        query(collection(db, 'shifts'), where('date', '==', date))
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const shiftsRef = collection(db, 'shifts');
+      const q = query(
+        shiftsRef, 
+        where('startTime', '>=', startOfDay),
+        where('startTime', '<=', endOfDay)
       );
-      const shifts = querySnapshot.docs.map(doc => ({
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      console.log('✅ Turnos obtenidos para la fecha:', shifts.length);
-      return shifts;
     } catch (error) {
-      console.error('❌ Error obteniendo turnos por fecha:', error);
+      console.error('❌ Error cargando turnos por fecha:', error);
       throw error;
     }
   },
 
   async addShift(shiftData) {
     try {
-      const docRef = await addDoc(collection(db, 'shifts'), {
+      const shiftsRef = collection(db, 'shifts');
+      const docRef = await addDoc(shiftsRef, {
         ...shiftData,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
+
+      // Limpiar cache
+      cache.delete('shifts');
+      
+      console.log('✅ Turno agregado:', docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error('Error agregando turno:', error);
+      console.error('❌ Error agregando turno:', error);
       throw error;
     }
   },
 
   async closeShift(shiftId, closingData) {
     try {
-      await updateDoc(doc(db, 'shifts', shiftId), {
+      const shiftRef = doc(db, 'shifts', shiftId);
+      await updateDoc(shiftRef, {
         ...closingData,
-        endTime: serverTimestamp()
+        status: 'closed',
+        endTime: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
+
+      // Limpiar cache
+      cache.delete('shifts');
+      
+      console.log('✅ Turno cerrado:', shiftId);
     } catch (error) {
-      console.error('Error cerrando turno:', error);
+      console.error('❌ Error cerrando turno:', error);
       throw error;
     }
   },
 
   async updateShiftTotal(shiftId, total) {
     try {
-      await updateDoc(doc(db, 'shifts', shiftId), {
-        totalSales: total
+      const shiftRef = doc(db, 'shifts', shiftId);
+      await updateDoc(shiftRef, {
+        total,
+        updatedAt: serverTimestamp()
       });
+
+      // Limpiar cache
+      cache.delete('shifts');
+      
+      console.log('✅ Total del turno actualizado:', shiftId, total);
     } catch (error) {
-      console.error('Error actualizando total del turno:', error);
+      console.error('❌ Error actualizando total del turno:', error);
       throw error;
     }
   }
 };
 
-// Servicios para Inventario
+// Servicio de inventario optimizado
 export const inventoryService = {
-  // Obtener todo el inventario
   async getAllInventory() {
     try {
-      const querySnapshot = await getDocs(collection(db, 'inventory'));
-      return querySnapshot.docs.map(doc => ({
+      const cacheKey = 'inventory';
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
+      const inventoryRef = collection(db, 'inventory');
+      const snapshot = await getDocs(inventoryRef);
+      
+      const inventory = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      cache.set(cacheKey, {
+        data: inventory,
+        timestamp: Date.now()
+      });
+
+      return inventory;
     } catch (error) {
-      console.error('Error obteniendo inventario:', error);
-      toast.error('Error al cargar inventario');
-      return [];
+      console.error('❌ Error cargando inventario:', error);
+      throw error;
     }
   },
 
-  // Actualizar item de inventario
   async updateInventoryItem(id, itemData) {
     try {
-      const docRef = doc(db, 'inventory', id);
-      await updateDoc(docRef, {
+      const itemRef = doc(db, 'inventory', id);
+      await updateDoc(itemRef, {
         ...itemData,
         updatedAt: serverTimestamp()
       });
-      toast.success('Inventario actualizado exitosamente');
-    } catch (error) {
-      console.error('Error actualizando inventario:', error);
-      toast.error('Error al actualizar inventario');
-      throw error;
-    }
-  }
-};
 
-// Servicios para Reportes
-export const reportService = {
-  // Generar reporte de ventas por turno
-  async generateShiftReport(shiftId) {
-    try {
-      const sales = await saleService.getSalesByShift(shiftId);
-      const shift = await getDoc(doc(db, 'shifts', shiftId));
+      // Limpiar cache
+      cache.delete('inventory');
       
-      if (!shift.exists()) {
-        throw new Error('Turno no encontrado');
-      }
-
-      const shiftData = shift.data();
-      const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
-      const totalItems = sales.reduce((sum, sale) => sum + sale.items.length, 0);
-
-      return {
-        shiftId,
-        shiftData,
-        sales,
-        totalSales,
-        totalItems,
-        salesCount: sales.length,
-        generatedAt: new Date()
-      };
+      console.log('✅ Item de inventario actualizado:', id);
     } catch (error) {
-      console.error('Error generando reporte de turno:', error);
-      toast.error('Error al generar reporte');
-      throw error;
-    }
-  },
-
-  // Generar reporte diario
-  async generateDailyReport(date) {
-    try {
-      const sales = await saleService.getSalesByDate(date);
-      const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
-      const totalItems = sales.reduce((sum, sale) => sum + sale.items.length, 0);
-
-      // Agrupar por turno
-      const salesByShift = sales.reduce((acc, sale) => {
-        const shiftId = sale.shiftId || 'unknown';
-        if (!acc[shiftId]) {
-          acc[shiftId] = [];
-        }
-        acc[shiftId].push(sale);
-        return acc;
-      }, {});
-
-      return {
-        date,
-        sales,
-        salesByShift,
-        totalSales,
-        totalItems,
-        salesCount: sales.length,
-        generatedAt: new Date()
-      };
-    } catch (error) {
-      console.error('Error generando reporte diario:', error);
-      toast.error('Error al generar reporte');
+      console.error('❌ Error actualizando item de inventario:', error);
       throw error;
     }
   }
 };
 
-// Función para sincronizar datos locales con Firebase
+// Funciones de reportes optimizadas
+export const generateShiftReport = async (shiftId) => {
+  try {
+    const shift = await shiftService.getActiveShift();
+    const sales = await saleService.getSalesByShift(shiftId);
+    
+    const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalItems = sales.reduce((sum, sale) => sum + sale.items.length, 0);
+    
+    return {
+      shiftId,
+      shift,
+      sales,
+      totalSales,
+      totalItems,
+      salesCount: sales.length,
+      averageTicket: sales.length > 0 ? totalSales / sales.length : 0
+    };
+  } catch (error) {
+    console.error('❌ Error generando reporte de turno:', error);
+    throw error;
+  }
+};
+
+export const generateDailyReport = async (date) => {
+  try {
+    const sales = await saleService.getSalesByDate(date);
+    const shifts = await shiftService.getShiftsByDate(date);
+    
+    const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalItems = sales.reduce((sum, sale) => sum + sale.items.length, 0);
+    
+    return {
+      date,
+      sales,
+      shifts,
+      totalSales,
+      totalItems,
+      salesCount: sales.length,
+      shiftsCount: shifts.length,
+      averageTicket: sales.length > 0 ? totalSales / sales.length : 0
+    };
+  } catch (error) {
+    console.error('❌ Error generando reporte diario:', error);
+    throw error;
+  }
+};
+
+// Función para sincronizar datos con Firebase
 export const syncDataWithFirebase = async () => {
   try {
     console.log('🔄 Iniciando sincronización con Firebase...');
     
     // Sincronizar productos
-    const products = await productService.getAllProducts();
-    console.log(`📦 Productos sincronizados: ${products.length}`);
+    await productService.getAllProducts();
     
     // Sincronizar ventas
-    const sales = await saleService.getAllSales();
-    console.log(`💰 Ventas sincronizadas: ${sales.length}`);
+    await saleService.getAllSales();
     
     // Sincronizar turnos
-    const shifts = await shiftService.getAllShifts();
-    console.log(`🕐 Turnos sincronizados: ${shifts.length}`);
+    await shiftService.getAllShifts();
     
     // Sincronizar inventario
-    const inventory = await inventoryService.getAllInventory();
-    console.log(`�� Inventario sincronizado: ${inventory.length}`);
+    await inventoryService.getAllInventory();
     
     console.log('✅ Sincronización completada');
-    toast.success('Datos sincronizados correctamente');
-    
-    return {
-      products,
-      sales,
-      shifts,
-      inventory
-    };
+    return true;
   } catch (error) {
     console.error('❌ Error en sincronización:', error);
-    toast.error('Error al sincronizar datos');
-    throw error;
+    return false;
   }
-}; 
+};
 
-// Servicios para clientes
+// Servicio de clientes optimizado
 export const customerService = {
   async getAllCustomers() {
     try {
-      console.log('🔄 Obteniendo clientes desde Firebase...');
-      const querySnapshot = await getDocs(collection(db, 'customers'));
-      const customers = querySnapshot.docs.map(doc => ({
+      const cacheKey = 'customers';
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
+      const customersRef = collection(db, 'customers');
+      const snapshot = await getDocs(customersRef);
+      
+      const customers = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      console.log('✅ Clientes obtenidos:', customers.length);
+
+      cache.set(cacheKey, {
+        data: customers,
+        timestamp: Date.now()
+      });
+
       return customers;
     } catch (error) {
-      console.error('❌ Error obteniendo clientes:', error);
+      console.error('❌ Error cargando clientes:', error);
       throw error;
     }
   },
 
   async addCustomer(customerData) {
     try {
-      console.log('🔄 Agregando cliente a Firebase:', customerData);
-      const docRef = await addDoc(collection(db, 'customers'), {
+      const customersRef = collection(db, 'customers');
+      const docRef = await addDoc(customersRef, {
         ...customerData,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
-      console.log('✅ Cliente agregado con ID:', docRef.id);
+
+      // Limpiar cache
+      cache.delete('customers');
+      
+      console.log('✅ Cliente agregado:', docRef.id);
       return docRef.id;
     } catch (error) {
       console.error('❌ Error agregando cliente:', error);
@@ -586,12 +640,16 @@ export const customerService = {
 
   async updateCustomer(customerId, customerData) {
     try {
-      console.log('🔄 Actualizando cliente en Firebase:', customerId);
-      await updateDoc(doc(db, 'customers', customerId), {
+      const customerRef = doc(db, 'customers', customerId);
+      await updateDoc(customerRef, {
         ...customerData,
         updatedAt: serverTimestamp()
       });
-      console.log('✅ Cliente actualizado');
+
+      // Limpiar cache
+      cache.delete('customers');
+      
+      console.log('✅ Cliente actualizado:', customerId);
     } catch (error) {
       console.error('❌ Error actualizando cliente:', error);
       throw error;
@@ -600,9 +658,13 @@ export const customerService = {
 
   async deleteCustomer(customerId) {
     try {
-      console.log('🔄 Eliminando cliente de Firebase:', customerId);
-      await deleteDoc(doc(db, 'customers', customerId));
-      console.log('✅ Cliente eliminado');
+      const customerRef = doc(db, 'customers', customerId);
+      await deleteDoc(customerRef);
+
+      // Limpiar cache
+      cache.delete('customers');
+      
+      console.log('✅ Cliente eliminado:', customerId);
     } catch (error) {
       console.error('❌ Error eliminando cliente:', error);
       throw error;
@@ -610,138 +672,121 @@ export const customerService = {
   }
 };
 
-// Servicios para Empleados
+// Servicio de empleados optimizado
 export const employeeService = {
-  // Obtener todos los empleados
   async getAllEmployees() {
     try {
-      console.log('🔄 Obteniendo empleados desde Firebase...');
-      const querySnapshot = await getDocs(collection(db, 'employees'));
-      const employees = querySnapshot.docs.map(doc => ({
+      const cacheKey = 'employees';
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
+      const employeesRef = collection(db, 'employees');
+      const snapshot = await getDocs(employeesRef);
+      
+      const employees = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      console.log('✅ Empleados obtenidos:', employees.length);
+
+      cache.set(cacheKey, {
+        data: employees,
+        timestamp: Date.now()
+      });
+
       return employees;
     } catch (error) {
-      console.error('❌ Error obteniendo empleados:', error);
+      console.error('❌ Error cargando empleados:', error);
       throw error;
     }
   },
 
-  // Obtener empleado por ID
   async getEmployeeById(id) {
     try {
-      const docSnap = await getDoc(doc(db, 'employees', id));
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-      } else {
-        throw new Error('Empleado no encontrado');
+      const cacheKey = `employee_${id}`;
+      const cached = cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
       }
+
+      const employeeRef = doc(db, 'employees', id);
+      const snapshot = await getDoc(employeeRef);
+      
+      if (snapshot.exists()) {
+        const employee = { id: snapshot.id, ...snapshot.data() };
+        
+        cache.set(cacheKey, {
+          data: employee,
+          timestamp: Date.now()
+        });
+        
+        return employee;
+      }
+      return null;
     } catch (error) {
-      console.error('Error obteniendo empleado:', error);
+      console.error('❌ Error cargando empleado:', error);
       throw error;
     }
   },
 
-  // Agregar empleado
   async addEmployee(employeeData) {
     try {
-      console.log('🔄 Agregando empleado a Firebase:', employeeData);
-      const docRef = await addDoc(collection(db, 'employees'), {
+      const employeesRef = collection(db, 'employees');
+      const docRef = await addDoc(employeesRef, {
         ...employeeData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      console.log('✅ Empleado agregado con ID:', docRef.id);
+
+      // Limpiar cache
+      cache.delete('employees');
+      
+      console.log('✅ Empleado agregado:', docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error('Error agregando empleado:', error);
+      console.error('❌ Error agregando empleado:', error);
       throw error;
     }
   },
 
-  // Actualizar empleado
   async updateEmployee(employeeId, employeeData) {
     try {
-      console.log('🔄 Actualizando empleado en Firebase:', employeeId);
-      await updateDoc(doc(db, 'employees', employeeId), {
+      const employeeRef = doc(db, 'employees', employeeId);
+      await updateDoc(employeeRef, {
         ...employeeData,
         updatedAt: serverTimestamp()
       });
-      console.log('✅ Empleado actualizado exitosamente');
+
+      // Limpiar cache
+      cache.delete('employees');
+      cache.delete(`employee_${employeeId}`);
+      
+      console.log('✅ Empleado actualizado:', employeeId);
     } catch (error) {
-      console.error('Error actualizando empleado:', error);
+      console.error('❌ Error actualizando empleado:', error);
       throw error;
     }
   },
 
-  // Eliminar empleado
   async deleteEmployee(employeeId) {
     try {
-      console.log('🔄 Eliminando empleado de Firebase:', employeeId);
-      await deleteDoc(doc(db, 'employees', employeeId));
-      console.log('✅ Empleado eliminado exitosamente');
+      const employeeRef = doc(db, 'employees', employeeId);
+      await deleteDoc(employeeRef);
+
+      // Limpiar cache
+      cache.delete('employees');
+      cache.delete(`employee_${employeeId}`);
+      
+      console.log('✅ Empleado eliminado:', employeeId);
     } catch (error) {
-      console.error('Error eliminando empleado:', error);
+      console.error('❌ Error eliminando empleado:', error);
       throw error;
     }
   }
 };
-
-// Datos simulados para empleados
-const sampleEmployees = [
-  {
-    name: "Carlos Mendoza",
-    email: "carlos.mendoza@carniceria.com",
-    phone: "381-111-2222",
-    position: "Carnicero",
-    salary: 45000,
-    status: "active",
-    hireDate: "2024-01-15",
-    address: "Av. San Martín 100, Monteros"
-  },
-  {
-    name: "María Fernández",
-    email: "maria.fernandez@carniceria.com",
-    phone: "381-222-3333",
-    position: "Cajera",
-    salary: 38000,
-    status: "active",
-    hireDate: "2024-03-20",
-    address: "Belgrano 200, Monteros"
-  },
-  {
-    name: "Roberto Silva",
-    email: "roberto.silva@carniceria.com",
-    phone: "381-333-4444",
-    position: "Ayudante",
-    salary: 32000,
-    status: "active",
-    hireDate: "2024-06-10",
-    address: "Sarmiento 300, Monteros"
-  },
-  {
-    name: "Ana López",
-    email: "ana.lopez@carniceria.com",
-    phone: "381-444-5555",
-    position: "Carnicero",
-    salary: 42000,
-    status: "active",
-    hireDate: "2024-02-05",
-    address: "Mitre 400, Monteros"
-  },
-  {
-    name: "Luis Torres",
-    email: "luis.torres@carniceria.com",
-    phone: "381-555-6666",
-    position: "Ayudante",
-    salary: 30000,
-    status: "inactive",
-    hireDate: "2024-01-10",
-    address: "Independencia 500, Monteros"
-  }
-];
 
 // Datos simulados para demostración - PRODUCTOS MEJORADOS
 const sampleProducts = [
@@ -950,49 +995,50 @@ const sampleProducts = [
     salesCount: 15
   },
   {
-    name: "Salami",
-    description: "Salami italiano tradicional",
+    name: "Chorizo Criollo",
+    description: "Chorizo criollo tradicional",
+    category: "embutidos",
+    price: 1600,
+    stock: 28,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥓",
+    minStock: 10,
+    salesCount: 20
+  },
+  {
+    name: "Entraña",
+    description: "Entraña premium para parrilla",
+    category: "carne",
+    price: 12000,
+    stock: 6,
+    unit: "kg",
+    origin: "Tucumán",
+    image: "🥩",
+    minStock: 4,
+    salesCount: 3
+  },
+  {
+    name: "Pechuga Ahumada",
+    description: "Pechuga de pollo ahumada",
     category: "embutidos",
     price: 2800,
     stock: 15,
     unit: "kg",
     origin: "Tucumán",
-    image: "🥓",
-    minStock: 6,
-    salesCount: 10
-  },
-  {
-    name: "Carne Molida",
-    description: "Carne molida premium",
-    category: "carne",
-    price: 5800,
-    stock: 30,
-    unit: "kg",
-    origin: "Tucumán",
-    image: "🥩",
-    minStock: 12,
-    salesCount: 24
-  },
-  {
-    name: "Pollo a la Parrilla",
-    description: "Pollo entero para parrilla",
-    category: "pollo",
-    price: 3500,
-    stock: 12,
-    unit: "kg",
-    origin: "Tucumán",
     image: "🍗",
     minStock: 6,
-    salesCount: 8
+    salesCount: 12
   }
 ];
 
+// Datos simulados para clientes
 const sampleCustomers = [
   {
     name: "Juan Pérez",
     email: "juan.perez@email.com",
     phone: "381-123-4567",
-    address: "Av. San Martín 123, Monteros",
+    address: "San Martín 123, Monteros",
     status: "active",
     currentBalance: 0,
     creditLimit: 50000,
@@ -1037,6 +1083,60 @@ const sampleCustomers = [
     currentBalance: 0,
     creditLimit: 60000,
     lastPurchase: "2025-08-02"
+  }
+];
+
+// Datos simulados para empleados
+const sampleEmployees = [
+  {
+    name: "Pedro Martínez",
+    email: "pedro.martinez@carniceria.com",
+    phone: "381-111-2222",
+    position: "Carnicero",
+    salary: 45000,
+    status: "active",
+    hireDate: "2024-01-15",
+    address: "Av. San Martín 100, Monteros"
+  },
+  {
+    name: "Laura Fernández",
+    email: "laura.fernandez@carniceria.com",
+    phone: "381-222-3333",
+    position: "Cajera",
+    salary: 38000,
+    status: "active",
+    hireDate: "2024-03-20",
+    address: "Belgrano 200, Monteros"
+  },
+  {
+    name: "Miguel Torres",
+    email: "miguel.torres@carniceria.com",
+    phone: "381-333-4444",
+    position: "Ayudante",
+    salary: 32000,
+    status: "active",
+    hireDate: "2024-06-10",
+    address: "Sarmiento 300, Monteros"
+  },
+  {
+    name: "Carmen Ruiz",
+    email: "carmen.ruiz@carniceria.com",
+    phone: "381-444-5555",
+    position: "Carnicero",
+    salary: 42000,
+    status: "active",
+    hireDate: "2024-02-05",
+    address: "Mitre 400, Monteros"
+  },
+  {
+    name: "Diego Morales",
+    email: "diego.morales@carniceria.com",
+    phone: "381-555-6666",
+    position: "Ayudante",
+    salary: 30000,
+    status: "inactive",
+    hireDate: "2024-01-10",
+    address: "Independencia 500, Monteros"
   }
 ];
 
