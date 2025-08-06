@@ -94,6 +94,27 @@ body {
   transition: background-color 0.3s ease;
 }
 
+/* Asegurar que el layout principal funcione correctamente */
+.flex-1 {
+  flex: 1 1 0%;
+  min-width: 0; /* Importante para evitar overflow */
+}
+
+.w-full {
+  width: 100%;
+}
+
+/* Mejorar el comportamiento del sidebar */
+@media (max-width: 1023px) {
+  .lg\\:pl-72 {
+    padding-left: 0 !important;
+  }
+  
+  .lg\\:w-72 {
+    width: 100% !important;
+  }
+}
+
 /* Scrollbar personalizada */
 ::-webkit-scrollbar {
   width: 6px;
@@ -456,6 +477,214 @@ body {
     }
   }
 
+  /* Optimizaciones específicas para netbooks del gobierno */
+  @media (min-width: 1024px) and (max-height: 768px) {
+    /* Reducir altura de componentes para pantallas bajas */
+    .card {
+      @apply p-3 rounded-2xl;
+    }
+    
+    .stats-card {
+      @apply p-3;
+    }
+    
+    .stats-value {
+      @apply text-lg;
+    }
+    
+    .btn {
+      @apply px-3 py-2 text-sm;
+    }
+    
+    .form-input, .form-select {
+      @apply px-3 py-2 text-sm;
+    }
+    
+    /* Reducir espaciado vertical */
+    .space-y-6 > * + * {
+      margin-top: 0.75rem;
+    }
+    
+    .space-y-4 > * + * {
+      margin-top: 0.5rem;
+    }
+    
+    .mb-6 {
+      margin-bottom: 0.75rem;
+    }
+    
+    .mb-4 {
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Sidebar más compacto */
+    .lg\\:w-72 {
+      width: 16rem; /* 256px en lugar de 288px */
+    }
+    
+    /* Header más compacto */
+    .text-2xl {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+    
+    .text-xl {
+      font-size: 1.125rem;
+      line-height: 1.75rem;
+    }
+    
+    /* Modal más pequeño */
+    .modal-content {
+      @apply max-w-md max-h-[80vh];
+    }
+    
+    /* Optimizar grids para altura limitada */
+    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+  }
+
+  /* Mejoras específicas para pantallas medianas */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .lg\\:pl-72 {
+      padding-left: 0; /* Remover padding en pantallas medianas */
+    }
+    
+    .lg\\:w-72 {
+      width: 16rem; /* 256px en lugar de 288px */
+    }
+    
+    /* Mejorar grids para pantallas medianas */
+    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    .grid-cols-1.lg\\:grid-cols-2 {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }
+
+  /* Optimizaciones para pantallas pequeñas */
+  @media (max-width: 767px) {
+    .lg\\:pl-72 {
+      padding-left: 0;
+    }
+    
+    /* Asegurar que el contenido no se desplace */
+    .w-full.flex-1 {
+      width: 100%;
+      padding-left: 0;
+    }
+    
+    /* Mejorar espaciado en móvil */
+    .p-4.lg\\:p-6 {
+      padding: 1rem;
+    }
+    
+    /* Asegurar que los grids funcionen correctamente en móvil */
+    .grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    
+    /* Mejorar el sidebar en móvil */
+    .lg\\:w-72 {
+      width: 100%;
+    }
+    
+    /* Asegurar que el contenido principal no tenga padding innecesario */
+    .lg\\:pl-72 {
+      padding-left: 0;
+    }
+  }
+
+  /* Mejoras específicas para tablets */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    /* Asegurar que el contenido no se desplace en tablets */
+    .lg\\:pl-72 {
+      padding-left: 0;
+    }
+    
+    /* Mejorar el sidebar en tablets */
+    .lg\\:w-72 {
+      width: 16rem;
+    }
+    
+    /* Asegurar que los grids funcionen correctamente */
+    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    .grid-cols-1.lg\\:grid-cols-2 {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }
+
+  /* Optimizaciones para netbooks con altura muy limitada (600px) */
+  @media (min-width: 1024px) and (max-height: 600px) {
+    .card {
+      @apply p-2 rounded-xl;
+    }
+    
+    .stats-card {
+      @apply p-2;
+    }
+    
+    .stats-value {
+      @apply text-base;
+    }
+    
+    .btn {
+      @apply px-2 py-1 text-xs;
+    }
+    
+    .form-input, .form-select {
+      @apply px-2 py-1 text-xs;
+    }
+    
+    /* Sidebar aún más compacto */
+    .lg\\:w-72 {
+      width: 14rem; /* 224px */
+    }
+    
+    /* Reducir aún más el espaciado */
+    .space-y-6 > * + * {
+      margin-top: 0.5rem;
+    }
+    
+    .space-y-4 > * + * {
+      margin-top: 0.25rem;
+    }
+    
+    .mb-6 {
+      margin-bottom: 0.5rem;
+    }
+    
+    .mb-4 {
+      margin-bottom: 0.25rem;
+    }
+    
+    /* Header minimalista */
+    .text-2xl {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+    
+    .text-xl {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+    
+    /* Grid más compacto */
+    .gap-6 {
+      gap: 0.5rem;
+    }
+    
+    .gap-4 {
+      gap: 0.25rem;
+    }
+  }
+
   /* Optimizaciones para pantallas grandes */
   @media (min-width: 1440px) {
     .modal-content {
@@ -581,5 +810,84 @@ body {
 
   .to-red-100 {
     --tw-gradient-to: #fee2e2;
+  }
+
+  /* Optimizaciones de rendimiento para netbooks */
+  @media (max-width: 1366px) and (max-height: 768px) {
+    /* Reducir animaciones para mejor rendimiento */
+    .animate-pulse {
+      animation: none;
+    }
+    
+    .animate-spin {
+      animation: spin 2s linear infinite; /* Más lento */
+    }
+    
+    .animate-blob {
+      animation: none; /* Desactivar animaciones complejas */
+    }
+    
+    /* Simplificar efectos visuales */
+    .backdrop-blur-sm {
+      backdrop-filter: none;
+      background-color: rgba(255, 255, 255, 0.95);
+    }
+    
+    .backdrop-blur-md {
+      backdrop-filter: none;
+      background-color: rgba(255, 255, 255, 0.98);
+    }
+    
+    /* Simplificar sombras */
+    .shadow-xl {
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+    
+    .shadow-2xl {
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    }
+    
+    /* Reducir transformaciones hover para mejor rendimiento */
+    .hover\\:scale-105:hover {
+      transform: none;
+    }
+    
+    .hover\\:scale-110:hover {
+      transform: none;
+    }
+    
+    /* Simplificar gradientes */
+    .bg-gradient-to-r {
+      background-image: none;
+      background-color: #f97316; /* Color sólido fallback */
+    }
+    
+    .bg-gradient-to-br {
+      background-image: none;
+      background-color: #ffedd5; /* Color sólido fallback */
+    }
+  }
+
+  /* Optimizaciones específicas para conexiones lentas */
+  @media (prefers-reduced-motion: reduce) {
+    .transition-all {
+      transition: none;
+    }
+    
+    .duration-200,
+    .duration-300 {
+      transition: none;
+    }
+    
+    .animate-pulse,
+    .animate-spin,
+    .animate-blob {
+      animation: none;
+    }
+    
+    .hover\\:scale-105:hover,
+    .hover\\:scale-110:hover {
+      transform: none;
+    }
   }
 } 

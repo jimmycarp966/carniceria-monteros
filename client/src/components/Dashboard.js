@@ -514,20 +514,20 @@ const Dashboard = () => {
       )}
 
       {/* Estadísticas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
         {statsCards.map((stat, index) => (
           <StatCard key={index} {...stat} />
         ))}
       </div>
 
       {/* Gráficos y análisis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
         <SalesChart salesChart={salesChart} />
         <ProductPerformance productPerformance={productPerformance} />
       </div>
 
       {/* Ventas recientes y alertas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <RecentSales ventasRecientes={realtimeStats.ventasRecientes} />
         <StockAlerts stockAlerts={stockAlerts} />
       </div>

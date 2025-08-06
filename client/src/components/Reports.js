@@ -16,7 +16,10 @@ import {
   TrendingDown,
   FileText,
   Share2,
-  Printer
+  Printer,
+  UserPlus,
+  ShoppingCart,
+  Repeat
 } from 'lucide-react';
 import { saleService } from '../services/firebaseService';
 
@@ -163,15 +166,39 @@ const Reports = () => {
   const renderSalesReport = () => (
     <div className="space-y-6">
       {/* Estadísticas Principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="stats-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="stats-label">Ventas Totales</p>
+              <p className="stats-label">Clientes Totales</p>
+              <p className="stats-value">0</p>
+            </div>
+            <div className="stats-icon">
+              <Users className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Clientes Nuevos</p>
+              <p className="stats-value">0</p>
+            </div>
+            <div className="stats-icon">
+              <UserPlus className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Compras Promedio</p>
               <p className="stats-value">$0</p>
             </div>
             <div className="stats-icon">
-              <DollarSign className="h-6 w-6" />
+              <ShoppingCart className="h-6 w-6" />
             </div>
           </div>
         </div>
@@ -179,35 +206,11 @@ const Reports = () => {
         <div className="stats-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="stats-label">Transacciones</p>
-                             <p className="stats-value">0</p>
+              <p className="stats-label">Frecuencia</p>
+              <p className="stats-value">0</p>
             </div>
             <div className="stats-icon">
-              <TrendingUp className="h-6 w-6" />
-            </div>
-          </div>
-        </div>
-
-        <div className="stats-card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="stats-label">Promedio</p>
-                             <p className="stats-value">$0</p>
-            </div>
-            <div className="stats-icon">
-              <BarChart3 className="h-6 w-6" />
-            </div>
-          </div>
-        </div>
-
-        <div className="stats-card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="stats-label">Turnos Activos</p>
-                             <p className="stats-value">0</p>
-            </div>
-            <div className="stats-icon">
-              <Clock className="h-6 w-6" />
+              <Repeat className="h-6 w-6" />
             </div>
           </div>
         </div>
@@ -401,7 +404,7 @@ const Reports = () => {
       </div>
 
       {/* Estadísticas de Inventario */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="stats-card">
           <div className="flex items-center justify-between">
             <div>
@@ -495,7 +498,7 @@ const Reports = () => {
   const renderSupplierReport = () => (
     <div className="space-y-6">
       {/* Estadísticas de Proveedores */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="stats-card">
           <div className="flex items-center justify-between">
             <div>
@@ -656,7 +659,7 @@ const Reports = () => {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               <div>
                 <label className="form-label">Período</label>
                 <select

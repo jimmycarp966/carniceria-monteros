@@ -157,6 +157,7 @@ const Layout = memo(({ children }) => {
         fixed left-0 top-0 z-50 w-full sm:w-80 h-full bg-white/95 shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200/50
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:w-72 lg:z-auto lg:bg-white/95
+        md:translate-x-0 md:static md:w-64 md:z-auto md:bg-white/95
       `}>
         <div className="flex flex-col h-full">
           {/* Header optimizado */}
@@ -233,8 +234,8 @@ const Layout = memo(({ children }) => {
       </div>
 
       {/* Main content optimizado */}
-      <div className="lg:pl-72 w-full flex-1">
-        <div className="min-h-screen w-full pt-20 lg:pt-0">
+      <div className="flex-1 w-full lg:pl-72">
+        <div className="min-h-screen w-full pt-20 lg:pt-0 px-4 lg:px-6">
           <Suspense fallback={<LoadingSpinner />}>
             {children}
           </Suspense>

@@ -207,7 +207,7 @@ const Sales = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
         {/* Product Selection */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Agregar Producto</h3>
