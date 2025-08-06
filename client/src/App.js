@@ -1,8 +1,9 @@
 import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback, memo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Settings, Sun, Moon } from 'lucide-react';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Settings, Sun, Moon, Bug } from 'lucide-react';
 import RealtimeNotifications from './components/RealtimeNotifications';
+import DebugPanel from './components/DebugPanel';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
@@ -69,6 +70,7 @@ const Layout = memo(({ children }) => {
   const [activeRoute, setActiveRoute] = useState('/');
   const [lowStockAlerts] = useState(3);
   const [darkMode, setDarkMode] = useState(false);
+  const [debugPanelOpen, setDebugPanelOpen] = useState(false);
 
   // Optimizar useEffect para auth
   useEffect(() => {
@@ -97,6 +99,10 @@ const Layout = memo(({ children }) => {
 
   const toggleDarkMode = useCallback(() => {
     setDarkMode(prev => !prev);
+  }, []);
+
+  const toggleDebugPanel = useCallback(() => {
+    setDebugPanelOpen(prev => !prev);
   }, []);
 
   // Optimizar navigation con useMemo
@@ -141,6 +147,12 @@ const Layout = memo(({ children }) => {
           className="p-3 rounded-2xl bg-white/90 shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
         >
           {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
+        <button 
+          onClick={toggleDebugPanel}
+          className="p-3 rounded-2xl bg-white/90 shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
+        >
+          <Bug className="h-5 w-5" />
         </button>
       </div>
 
@@ -218,9 +230,17 @@ const Layout = memo(({ children }) => {
                   <p className="text-xs text-gray-500">Administrador</p>
                 </div>
               </div>
-              <button className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200">
-                <Settings className="h-4 w-4" />
-              </button>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={toggleDebugPanel}
+                  className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
+                >
+                  <Bug className="h-4 w-4" />
+                </button>
+                <button className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200">
+                  <Settings className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <button
               onClick={handleLogout}
@@ -241,6 +261,12 @@ const Layout = memo(({ children }) => {
           </Suspense>
         </div>
       </div>
+
+      {/* Debug Panel */}
+      <DebugPanel 
+        isVisible={debugPanelOpen} 
+        onClose={() => setDebugPanelOpen(false)} 
+      />
     </div>
   );
 });

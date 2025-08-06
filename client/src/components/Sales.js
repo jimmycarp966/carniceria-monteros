@@ -3,6 +3,7 @@ import { products } from '../data/products';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { saleService, productService, loadSampleData } from '../services/firebaseService';
+import ErrorBoundary from './ErrorBoundary';
 
 const Sales = () => {
   const [cart, setCart] = useState([]);
@@ -145,7 +146,8 @@ const Sales = () => {
   };
 
   return (
-    <div className="p-4 lg:p-6 space-y-4">
+    <ErrorBoundary>
+      <div className="p-4 lg:p-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -383,7 +385,8 @@ const Sales = () => {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 
