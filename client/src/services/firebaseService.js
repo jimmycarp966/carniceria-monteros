@@ -8,19 +8,23 @@ import {
   deleteDoc, 
   query, 
   where, 
-  serverTimestamp
+  serverTimestamp,
+  orderBy,
+  limit,
+  startAfter
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
-// Cache para mejorar el rendimiento
+// Cache inteligente optimizado
 const cache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+const CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
+const MAX_CACHE_SIZE = 100;
 
-// Estado de conexión
+// Estado de conexión optimizado
 let isOnline = navigator.onLine;
 let pendingOperations = [];
 
-// Detectar cambios de conectividad
+// Detectar cambios de conectividad optimizado
 window.addEventListener('online', () => {
   isOnline = true;
   console.log('Conexión restaurada');
@@ -32,19 +36,26 @@ window.addEventListener('offline', () => {
   console.log('Sin conexión - Modo offline activado');
 });
 
-// Función para sincronizar operaciones pendientes
+// Función para sincronizar operaciones pendientes optimizada
 const syncPendingOperations = async () => {
   if (pendingOperations.length === 0) return;
   
   console.log(`Sincronizando ${pendingOperations.length} operaciones pendientes...`);
   
-  for (const operation of pendingOperations) {
-    try {
-      await operation();
-      console.log('Operación sincronizada exitosamente');
-    } catch (error) {
-      console.error('Error sincronizando operación:', error);
-    }
+  const batchSize = 5; // Procesar en lotes más pequeños
+  for (let i = 0; i < pendingOperations.length; i += batchSize) {
+    const batch = pendingOperations.slice(i, i + batchSize);
+    
+    await Promise.allSettled(
+      batch.map(async (operation) => {
+        try {
+          await operation();
+          console.log('Operación sincronizada exitosamente');
+        } catch (error) {
+          console.error('Error sincronizando operación:', error);
+        }
+      })
+    );
   }
   
   pendingOperations = [];
@@ -62,11 +73,45 @@ const loadPendingOperations = () => {
 // Cargar operaciones pendientes al iniciar la app
 loadPendingOperations();
 
+// Cache inteligente con invalidación automática
+const smartCache = {
+  get(key) {
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  },
+  
+  set(key, data) {
+    // Limpiar cache si está lleno
+    if (cache.size >= MAX_CACHE_SIZE) {
+      const oldestKey = cache.keys().next().value;
+      cache.delete(oldestKey);
+    }
+    
+    cache.set(key, { data, timestamp: Date.now() });
+  },
+  
+  invalidate(pattern) {
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) {
+        cache.delete(key);
+      }
+    }
+  },
+  
+  clear() {
+    cache.clear();
+  }
+};
+
 // Función para verificar estado de conexión
 export const checkConnectionStatus = () => {
   return {
     isOnline,
-    pendingOperations: pendingOperations.length
+    pendingOperations: pendingOperations.length,
+    cacheSize: cache.size
   };
 };
 
@@ -79,37 +124,49 @@ export const forceSync = async () => {
   return false;
 };
 
-// Servicio de productos optimizado con cache
+// Servicio de productos optimizado con cache y paginación
 export const productService = {
-  async getAllProducts() {
+  async getAllProducts(page = 1, pageSize = 20) {
     try {
-      const cacheKey = 'products';
-      const cached = cache.get(cacheKey);
+      const cacheKey = `products_page_${page}`;
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      if (cached) {
         console.log('📦 Usando cache para productos');
-        return cached.data;
+        return cached;
       }
 
       console.log('📦 Cargando productos desde Firebase...');
       const productsRef = collection(db, 'products');
-      const snapshot = await getDocs(productsRef);
+      
+      let q = query(
+        productsRef, 
+        orderBy('name'), 
+        limit(pageSize)
+      );
+      
+      // Si no es la primera página, usar startAfter
+      if (page > 1) {
+        // Aquí necesitarías el último documento de la página anterior
+        // Por simplicidad, cargamos todos y paginamos en memoria
+        q = query(productsRef, orderBy('name'));
+      }
+      
+      const snapshot = await getDocs(q);
       
       const products = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-
-      // Guardar en cache
-      cache.set(cacheKey, {
-        data: products,
-        timestamp: Date.now()
-      });
-
-      console.log(`📦 ${products.length} productos cargados`);
-      return products;
+      
+      // Paginación en memoria para simplificar
+      const startIndex = (page - 1) * pageSize;
+      const paginatedProducts = products.slice(startIndex, startIndex + pageSize);
+      
+      smartCache.set(cacheKey, paginatedProducts);
+      return paginatedProducts;
     } catch (error) {
-      console.error('❌ Error cargando productos:', error);
+      console.error('Error cargando productos:', error);
       throw error;
     }
   },
@@ -117,28 +174,24 @@ export const productService = {
   async getProductById(id) {
     try {
       const cacheKey = `product_${id}`;
-      const cached = cache.get(cacheKey);
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       const productRef = doc(db, 'products', id);
-      const snapshot = await getDoc(productRef);
+      const productSnap = await getDoc(productRef);
       
-      if (snapshot.exists()) {
-        const product = { id: snapshot.id, ...snapshot.data() };
-        
-        cache.set(cacheKey, {
-          data: product,
-          timestamp: Date.now()
-        });
-        
+      if (productSnap.exists()) {
+        const product = { id: productSnap.id, ...productSnap.data() };
+        smartCache.set(cacheKey, product);
         return product;
+      } else {
+        throw new Error('Producto no encontrado');
       }
-      return null;
     } catch (error) {
-      console.error('❌ Error cargando producto:', error);
+      console.error('Error obteniendo producto:', error);
       throw error;
     }
   },
@@ -151,14 +204,13 @@ export const productService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-
-      // Limpiar cache de productos
-      cache.delete('products');
       
-      console.log('✅ Producto agregado:', docRef.id);
+      // Invalidar cache de productos
+      smartCache.invalidate('products');
+      
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error agregando producto:', error);
+      console.error('Error agregando producto:', error);
       throw error;
     }
   },
@@ -170,14 +222,14 @@ export const productService = {
         ...productData,
         updatedAt: serverTimestamp()
       });
-
-      // Limpiar cache
-      cache.delete('products');
-      cache.delete(`product_${id}`);
       
-      console.log('✅ Producto actualizado:', id);
+      // Invalidar cache específico
+      smartCache.invalidate(`product_${id}`);
+      smartCache.invalidate('products');
+      
+      return id;
     } catch (error) {
-      console.error('❌ Error actualizando producto:', error);
+      console.error('Error actualizando producto:', error);
       throw error;
     }
   },
@@ -189,14 +241,14 @@ export const productService = {
         stock: newStock,
         updatedAt: serverTimestamp()
       });
-
-      // Limpiar cache
-      cache.delete('products');
-      cache.delete(`product_${id}`);
       
-      console.log('✅ Stock actualizado:', id, newStock);
+      // Invalidar cache
+      smartCache.invalidate(`product_${id}`);
+      smartCache.invalidate('products');
+      
+      return id;
     } catch (error) {
-      console.error('❌ Error actualizando stock:', error);
+      console.error('Error actualizando stock:', error);
       throw error;
     }
   },
@@ -205,14 +257,14 @@ export const productService = {
     try {
       const productRef = doc(db, 'products', id);
       await deleteDoc(productRef);
-
-      // Limpiar cache
-      cache.delete('products');
-      cache.delete(`product_${id}`);
       
-      console.log('✅ Producto eliminado:', id);
+      // Invalidar cache
+      smartCache.invalidate(`product_${id}`);
+      smartCache.invalidate('products');
+      
+      return id;
     } catch (error) {
-      console.error('❌ Error eliminando producto:', error);
+      console.error('Error eliminando producto:', error);
       throw error;
     }
   }
@@ -220,53 +272,75 @@ export const productService = {
 
 // Servicio de ventas optimizado
 export const saleService = {
-  async getAllSales() {
+  async getAllSales(page = 1, pageSize = 20) {
     try {
-      const cacheKey = 'sales';
-      const cached = cache.get(cacheKey);
+      const cacheKey = `sales_page_${page}`;
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       const salesRef = collection(db, 'sales');
-      const snapshot = await getDocs(salesRef);
+      const q = query(
+        salesRef, 
+        orderBy('createdAt', 'desc'), 
+        limit(pageSize)
+      );
       
+      const snapshot = await getDocs(q);
       const sales = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-
-      cache.set(cacheKey, {
-        data: sales,
-        timestamp: Date.now()
-      });
-
+      
+      smartCache.set(cacheKey, sales);
       return sales;
     } catch (error) {
-      console.error('❌ Error cargando ventas:', error);
+      console.error('Error cargando ventas:', error);
       throw error;
     }
   },
 
   async getSalesByShift(shiftId) {
     try {
-      const salesRef = collection(db, 'sales');
-      const q = query(salesRef, where('shiftId', '==', shiftId));
-      const snapshot = await getDocs(q);
+      const cacheKey = `sales_shift_${shiftId}`;
+      const cached = smartCache.get(cacheKey);
       
-      return snapshot.docs.map(doc => ({
+      if (cached) {
+        return cached;
+      }
+
+      const salesRef = collection(db, 'sales');
+      const q = query(
+        salesRef, 
+        where('shiftId', '==', shiftId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const sales = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      smartCache.set(cacheKey, sales);
+      return sales;
     } catch (error) {
-      console.error('❌ Error cargando ventas por turno:', error);
+      console.error('Error cargando ventas del turno:', error);
       throw error;
     }
   },
 
   async getSalesByDate(date) {
     try {
+      const cacheKey = `sales_date_${date.toISOString().split('T')[0]}`;
+      const cached = smartCache.get(cacheKey);
+      
+      if (cached) {
+        return cached;
+      }
+
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       
@@ -277,16 +351,20 @@ export const saleService = {
       const q = query(
         salesRef, 
         where('createdAt', '>=', startOfDay),
-        where('createdAt', '<=', endOfDay)
+        where('createdAt', '<=', endOfDay),
+        orderBy('createdAt', 'desc')
       );
-      const snapshot = await getDocs(q);
       
-      return snapshot.docs.map(doc => ({
+      const snapshot = await getDocs(q);
+      const sales = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      smartCache.set(cacheKey, sales);
+      return sales;
     } catch (error) {
-      console.error('❌ Error cargando ventas por fecha:', error);
+      console.error('Error cargando ventas por fecha:', error);
       throw error;
     }
   },
@@ -299,14 +377,13 @@ export const saleService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-
-      // Limpiar cache
-      cache.delete('sales');
       
-      console.log('✅ Venta agregada:', docRef.id);
+      // Invalidar cache de ventas
+      smartCache.invalidate('sales');
+      
       return docRef.id;
     } catch (error) {
-      console.error('❌ Error agregando venta:', error);
+      console.error('Error agregando venta:', error);
       throw error;
     }
   },
@@ -318,13 +395,13 @@ export const saleService = {
         ...saleData,
         updatedAt: serverTimestamp()
       });
-
-      // Limpiar cache
-      cache.delete('sales');
       
-      console.log('✅ Venta actualizada:', id);
+      // Invalidar cache
+      smartCache.invalidate('sales');
+      
+      return id;
     } catch (error) {
-      console.error('❌ Error actualizando venta:', error);
+      console.error('Error actualizando venta:', error);
       throw error;
     }
   }
@@ -335,10 +412,10 @@ export const shiftService = {
   async getAllShifts() {
     try {
       const cacheKey = 'shifts';
-      const cached = cache.get(cacheKey);
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       const shiftsRef = collection(db, 'shifts');
@@ -349,11 +426,7 @@ export const shiftService = {
         ...doc.data()
       }));
 
-      cache.set(cacheKey, {
-        data: shifts,
-        timestamp: Date.now()
-      });
-
+      smartCache.set(cacheKey, shifts);
       return shifts;
     } catch (error) {
       console.error('❌ Error cargando turnos:', error);
@@ -414,7 +487,7 @@ export const shiftService = {
       });
 
       // Limpiar cache
-      cache.delete('shifts');
+      smartCache.invalidate('shifts');
       
       console.log('✅ Turno agregado:', docRef.id);
       return docRef.id;
@@ -435,7 +508,7 @@ export const shiftService = {
       });
 
       // Limpiar cache
-      cache.delete('shifts');
+      smartCache.invalidate('shifts');
       
       console.log('✅ Turno cerrado:', shiftId);
     } catch (error) {
@@ -453,7 +526,7 @@ export const shiftService = {
       });
 
       // Limpiar cache
-      cache.delete('shifts');
+      smartCache.invalidate('shifts');
       
       console.log('✅ Total del turno actualizado:', shiftId, total);
     } catch (error) {
@@ -470,10 +543,10 @@ export const inventoryService = {
   async getAllInventory() {
     try {
       const cacheKey = 'inventory';
-      const cached = cache.get(cacheKey);
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       const inventoryRef = collection(db, 'inventory');
@@ -484,11 +557,7 @@ export const inventoryService = {
         ...doc.data()
       }));
 
-      cache.set(cacheKey, {
-        data: inventory,
-        timestamp: Date.now()
-      });
-
+      smartCache.set(cacheKey, inventory);
       return inventory;
     } catch (error) {
       console.error('❌ Error cargando inventario:', error);
@@ -505,7 +574,7 @@ export const inventoryService = {
       });
 
       // Limpiar cache
-      cache.delete('inventory');
+      smartCache.invalidate('inventory');
       
       console.log('✅ Item de inventario actualizado:', id);
     } catch (error) {
@@ -593,10 +662,10 @@ export const customerService = {
   async getAllCustomers() {
     try {
       const cacheKey = 'customers';
-      const cached = cache.get(cacheKey);
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       const customersRef = collection(db, 'customers');
@@ -607,11 +676,7 @@ export const customerService = {
         ...doc.data()
       }));
 
-      cache.set(cacheKey, {
-        data: customers,
-        timestamp: Date.now()
-      });
-
+      smartCache.set(cacheKey, customers);
       return customers;
     } catch (error) {
       console.error('❌ Error cargando clientes:', error);
@@ -629,7 +694,7 @@ export const customerService = {
       });
 
       // Limpiar cache
-      cache.delete('customers');
+      smartCache.invalidate('customers');
       
       console.log('✅ Cliente agregado:', docRef.id);
       return docRef.id;
@@ -648,7 +713,8 @@ export const customerService = {
       });
 
       // Limpiar cache
-      cache.delete('customers');
+      smartCache.invalidate(`customer_${customerId}`);
+      smartCache.invalidate('customers');
       
       console.log('✅ Cliente actualizado:', customerId);
     } catch (error) {
@@ -663,7 +729,8 @@ export const customerService = {
       await deleteDoc(customerRef);
 
       // Limpiar cache
-      cache.delete('customers');
+      smartCache.invalidate(`customer_${customerId}`);
+      smartCache.invalidate('customers');
       
       console.log('✅ Cliente eliminado:', customerId);
     } catch (error) {
@@ -678,10 +745,10 @@ export const employeeService = {
   async getAllEmployees() {
     try {
       const cacheKey = 'employees';
-      const cached = cache.get(cacheKey);
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       const employeesRef = collection(db, 'employees');
@@ -692,11 +759,7 @@ export const employeeService = {
         ...doc.data()
       }));
 
-      cache.set(cacheKey, {
-        data: employees,
-        timestamp: Date.now()
-      });
-
+      smartCache.set(cacheKey, employees);
       return employees;
     } catch (error) {
       console.error('❌ Error cargando empleados:', error);
@@ -707,10 +770,10 @@ export const employeeService = {
   async getEmployeeById(id) {
     try {
       const cacheKey = `employee_${id}`;
-      const cached = cache.get(cacheKey);
+      const cached = smartCache.get(cacheKey);
       
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       const employeeRef = doc(db, 'employees', id);
@@ -718,15 +781,11 @@ export const employeeService = {
       
       if (snapshot.exists()) {
         const employee = { id: snapshot.id, ...snapshot.data() };
-        
-        cache.set(cacheKey, {
-          data: employee,
-          timestamp: Date.now()
-        });
-        
+        smartCache.set(cacheKey, employee);
         return employee;
+      } else {
+        throw new Error('Empleado no encontrado');
       }
-      return null;
     } catch (error) {
       console.error('❌ Error cargando empleado:', error);
       throw error;
@@ -743,7 +802,7 @@ export const employeeService = {
       });
 
       // Limpiar cache
-      cache.delete('employees');
+      smartCache.invalidate('employees');
       
       console.log('✅ Empleado agregado:', docRef.id);
       return docRef.id;
@@ -762,8 +821,8 @@ export const employeeService = {
       });
 
       // Limpiar cache
-      cache.delete('employees');
-      cache.delete(`employee_${employeeId}`);
+      smartCache.invalidate(`employee_${employeeId}`);
+      smartCache.invalidate('employees');
       
       console.log('✅ Empleado actualizado:', employeeId);
     } catch (error) {
@@ -778,8 +837,8 @@ export const employeeService = {
       await deleteDoc(employeeRef);
 
       // Limpiar cache
-      cache.delete('employees');
-      cache.delete(`employee_${employeeId}`);
+      smartCache.invalidate(`employee_${employeeId}`);
+      smartCache.invalidate('employees');
       
       console.log('✅ Empleado eliminado:', employeeId);
     } catch (error) {

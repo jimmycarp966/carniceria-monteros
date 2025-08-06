@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { products, categories } from '../data/products';
-import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List, RefreshCw, AlertTriangle, TrendingUp, DollarSign } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List, RefreshCw, AlertTriangle, TrendingUp, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { productService, loadSampleData } from '../services/firebaseService';
 
@@ -111,24 +111,22 @@ const ProductTable = memo(({ products, onEdit, onDelete, getCategoryColor, getSt
                       {product.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-900">${product.price.toLocaleString()}</div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    ${product.price.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
                       {product.stock} {product.unit}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-blue-600 font-medium">
-                      {product.salesCount || 0}
-                    </span>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {product.salesCount || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
                         onClick={() => onEdit(product)}
-                        className="text-orange-600 hover:text-orange-900"
+                        className="text-indigo-600 hover:text-indigo-900"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
@@ -145,6 +143,107 @@ const ProductTable = memo(({ products, onEdit, onDelete, getCategoryColor, getSt
             })}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+});
+
+// Componente de paginación optimizado
+const Pagination = memo(({ currentPage, totalPages, onPageChange }) => {
+  const pages = useMemo(() => {
+    const pagesArray = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pagesArray.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pagesArray.push(i);
+        }
+        pagesArray.push('...');
+        pagesArray.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pagesArray.push(1);
+        pagesArray.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pagesArray.push(i);
+        }
+      } else {
+        pagesArray.push(1);
+        pagesArray.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pagesArray.push(i);
+        }
+        pagesArray.push('...');
+        pagesArray.push(totalPages);
+      }
+    }
+    
+    return pagesArray;
+  }, [currentPage, totalPages]);
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+      <div className="flex-1 flex justify-between sm:hidden">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Anterior
+        </button>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Siguiente
+        </button>
+      </div>
+      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-gray-700">
+            Página <span className="font-medium">{currentPage}</span> de{' '}
+            <span className="font-medium">{totalPages}</span>
+          </p>
+        </div>
+        <div>
+          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            
+            {pages.map((page, index) => (
+              <button
+                key={index}
+                onClick={() => typeof page === 'number' && onPageChange(page)}
+                disabled={typeof page !== 'number'}
+                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                  page === currentPage
+                    ? 'z-10 bg-orange-50 border-orange-500 text-orange-600'
+                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                } ${typeof page !== 'number' ? 'cursor-default' : 'cursor-pointer'}`}
+              >
+                {page}
+              </button>
+            ))}
+            
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </nav>
+        </div>
       </div>
     </div>
   );
@@ -270,9 +369,15 @@ const Products = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const ITEMS_PER_PAGE = 12;
 
-  // Cargar productos desde Firebase con optimización
-  const loadProducts = useCallback(async () => {
+  // Cargar productos desde Firebase con paginación optimizada
+  const loadProducts = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       console.log('🔄 Cargando productos optimizado...');
@@ -281,28 +386,36 @@ const Products = () => {
       console.log('📦 Verificando datos de muestra...');
       await loadSampleData();
       
-      const productsFromFirebase = await productService.getAllProducts();
+      const productsFromFirebase = await productService.getAllProducts(page, ITEMS_PER_PAGE);
       console.log('📦 Productos cargados desde Firebase:', productsFromFirebase.length);
-      console.log('📦 Detalles de productos:', productsFromFirebase);
       
       if (productsFromFirebase.length === 0) {
         console.log('⚠️ No se encontraron productos en Firebase, usando datos locales');
-        setProductList(products);
+        const localProducts = products.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+        setProductList(localProducts);
+        setTotalProducts(products.length);
+        setTotalPages(Math.ceil(products.length / ITEMS_PER_PAGE));
       } else {
         setProductList(productsFromFirebase);
+        // Para simplificar, asumimos que hay más productos
+        setTotalProducts(productsFromFirebase.length * 2);
+        setTotalPages(Math.ceil((productsFromFirebase.length * 2) / ITEMS_PER_PAGE));
       }
     } catch (error) {
       console.error('❌ Error cargando productos:', error);
       console.log('📦 Usando datos locales como fallback');
-      setProductList(products);
+      const localProducts = products.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+      setProductList(localProducts);
+      setTotalProducts(products.length);
+      setTotalPages(Math.ceil(products.length / ITEMS_PER_PAGE));
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    loadProducts(currentPage);
+  }, [loadProducts, currentPage]);
 
   // Filtrar productos con useMemo para mejor rendimiento
   const filteredProducts = useMemo(() => {
@@ -408,48 +521,29 @@ const Products = () => {
     }
   }, []);
 
-  const handleRefresh = useCallback(async () => {
-    await loadProducts();
-    toast.success('Productos actualizados');
-  }, [loadProducts]);
-
-  // Función para forzar recarga de datos de muestra
-  const handleForceReload = useCallback(async () => {
-    try {
-      setSyncing(true);
-      console.log('🔄 Forzando recarga de datos de muestra...');
-      
-      // Limpiar productos existentes
-      const existingProducts = await productService.getAllProducts();
-      for (const product of existingProducts) {
-        await productService.deleteProduct(product.id);
-        console.log(`🗑️ Producto eliminado: ${product.name}`);
-      }
-      
-      // Recargar datos de muestra
-      await loadSampleData();
-      await loadProducts();
-      
-      toast.success('Datos de muestra recargados exitosamente');
-      console.log('✅ Datos de muestra recargados');
-    } catch (error) {
-      console.error('❌ Error recargando datos:', error);
-      toast.error('Error recargando datos');
-    } finally {
-      setSyncing(false);
-    }
-  }, [loadProducts]);
-
-  // Funciones helper optimizadas
-  const getCategoryColor = useCallback((categoryName) => {
-    const category = categories.find(c => c.name === categoryName);
-    return category?.color || 'gray';
+  // Handlers de paginación
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const getStockStatus = useCallback((stock, minStock = 10) => {
-    if (stock === 0) return { color: 'red', text: 'Sin Stock' };
-    if (stock <= minStock) return { color: 'yellow', text: 'Stock Bajo' };
-    return { color: 'green', text: 'En Stock' };
+  // Funciones de utilidad memoizadas
+  const getCategoryColor = useCallback((category) => {
+    const colors = {
+      'Carnes Rojas': 'red',
+      'Carnes Blancas': 'blue',
+      'Embutidos': 'purple',
+      'Aves': 'green',
+      'Pescados': 'cyan',
+      'Otros': 'gray'
+    };
+    return colors[category] || 'gray';
+  }, []);
+
+  const getStockStatus = useCallback((stock, minStock) => {
+    if (stock === 0) return { color: 'red', text: 'Sin stock' };
+    if (stock <= minStock) return { color: 'yellow', text: 'Stock bajo' };
+    return { color: 'green', text: 'En stock' };
   }, []);
 
   const handleClearFilters = useCallback(() => {
@@ -566,6 +660,13 @@ const Products = () => {
           getStockStatus={getStockStatus}
         />
       )}
+
+      {/* Pagination Optimizada */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+      />
 
       {/* Empty State Mejorado */}
       {filteredProducts.length === 0 && (

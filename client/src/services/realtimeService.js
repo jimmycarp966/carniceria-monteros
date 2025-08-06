@@ -13,7 +13,8 @@ import {
   where,
   orderBy,
   limit,
-  getDocs
+  getDocs,
+  startAfter
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getDatabase } from 'firebase/database';
@@ -21,24 +22,41 @@ import { getDatabase } from 'firebase/database';
 // Inicializar Realtime Database
 const realtimeDb = getDatabase();
 
-// Estado global de sincronización
+// Estado global de sincronización optimizado
 let syncState = {
   isOnline: navigator.onLine,
   pendingOperations: [],
   listeners: new Map(),
-  lastSync: Date.now()
+  lastSync: Date.now(),
+  debounceTimers: new Map()
 };
 
-// Cola de operaciones offline
+// Cola de operaciones offline optimizada
 const offlineQueue = [];
-const MAX_QUEUE_SIZE = 100;
+const MAX_QUEUE_SIZE = 50; // Reducido de 100
 
+// Cache para datos frecuentemente accedidos
+const dataCache = new Map();
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutos
 
-
-// Callbacks para actualizaciones en tiempo real
+// Callbacks para actualizaciones en tiempo real con debouncing
 const realtimeCallbacks = new Map();
 
-// Configurar listeners de conectividad
+// Función de debouncing optimizada
+const debounce = (func, wait, key) => {
+  if (syncState.debounceTimers.has(key)) {
+    clearTimeout(syncState.debounceTimers.get(key));
+  }
+  
+  const timer = setTimeout(() => {
+    func();
+    syncState.debounceTimers.delete(key);
+  }, wait);
+  
+  syncState.debounceTimers.set(key, timer);
+};
+
+// Configurar listeners de conectividad optimizados
 window.addEventListener('online', () => {
   syncState.isOnline = true;
   console.log('🌐 Conexión restaurada - Sincronizando...');
@@ -50,19 +68,26 @@ window.addEventListener('offline', () => {
   console.log('📴 Modo offline activado');
 });
 
-// Procesar cola offline
+// Procesar cola offline optimizada
 const processOfflineQueue = async () => {
   if (offlineQueue.length === 0) return;
   
   console.log(`🔄 Procesando ${offlineQueue.length} operaciones pendientes...`);
   
-  for (const operation of offlineQueue) {
-    try {
-      await operation();
-      console.log('✅ Operación sincronizada:', operation.type);
-    } catch (error) {
-      console.error('❌ Error sincronizando:', error);
-    }
+  const batchSize = 10; // Procesar en lotes
+  for (let i = 0; i < offlineQueue.length; i += batchSize) {
+    const batch = offlineQueue.slice(i, i + batchSize);
+    
+    await Promise.allSettled(
+      batch.map(async (operation) => {
+        try {
+          await operation();
+          console.log('✅ Operación sincronizada:', operation.type);
+        } catch (error) {
+          console.error('❌ Error sincronizando:', error);
+        }
+      })
+    );
   }
   
   offlineQueue.length = 0;
@@ -73,7 +98,7 @@ const processOfflineQueue = async () => {
   notifyListeners('sync_completed', { timestamp: Date.now() });
 };
 
-// Agregar operación a la cola offline
+// Agregar operación a la cola offline optimizada
 const addToOfflineQueue = (operation) => {
   if (offlineQueue.length >= MAX_QUEUE_SIZE) {
     offlineQueue.shift(); // Remover operación más antigua
@@ -87,46 +112,68 @@ const addToOfflineQueue = (operation) => {
   }
 };
 
-// Notificar a todos los listeners
+// Notificar a todos los listeners con debouncing
 const notifyListeners = (event, data) => {
   const listeners = realtimeCallbacks.get(event) || [];
-  listeners.forEach(callback => {
-    try {
-      callback(data);
-    } catch (error) {
-      console.error('Error en callback:', error);
-    }
-  });
+  
+  // Debouncing para eventos frecuentes
+  if (event === 'sales_updated' || event === 'inventory_updated') {
+    debounce(() => {
+      listeners.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('Error en callback:', error);
+        }
+      });
+    }, 500, event);
+  } else {
+    // Para eventos menos frecuentes, notificar inmediatamente
+    listeners.forEach(callback => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error('Error en callback:', error);
+      }
+    });
+  }
 };
 
-// Servicio principal de tiempo real
+// Servicio principal de tiempo real optimizado
 export const realtimeService = {
-  // Inicializar listeners de tiempo real
+  // Inicializar listeners de tiempo real optimizados
   initializeRealtimeListeners() {
-    console.log('🚀 Inicializando listeners de tiempo real...');
+    console.log('🚀 Inicializando listeners de tiempo real optimizados...');
     
-    // Listener para ventas
+    // Limpiar listeners existentes
+    this.cleanup();
+    
+    // Listener para ventas optimizado
     this.listenToSales();
     
-    // Listener para inventario
+    // Listener para inventario optimizado
     this.listenToInventory();
     
-    // Listener para productos
+    // Listener para productos optimizado
     this.listenToProducts();
     
-    // Listener para clientes
+    // Listener para clientes optimizado
     this.listenToCustomers();
     
-    // Listener para turnos
+    // Listener para turnos optimizado
     this.listenToShifts();
     
-    console.log('✅ Listeners de tiempo real inicializados');
+    console.log('✅ Listeners de tiempo real optimizados inicializados');
   },
 
-  // Listener para ventas
+  // Listener para ventas optimizado con límites
   listenToSales() {
     const salesRef = collection(db, 'sales');
-    const q = query(salesRef, orderBy('createdAt', 'desc'), limit(50));
+    const q = query(
+      salesRef, 
+      orderBy('createdAt', 'desc'), 
+      limit(30) // Reducido de 50
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const sales = snapshot.docs.map(doc => ({
@@ -134,21 +181,34 @@ export const realtimeService = {
         ...doc.data()
       }));
       
+      // Cachear datos
+      dataCache.set('recent_sales', {
+        data: sales,
+        timestamp: Date.now()
+      });
+      
       notifyListeners('sales_updated', { sales, timestamp: Date.now() });
     });
     
     syncState.listeners.set('sales', unsubscribe);
   },
 
-  // Listener para inventario
+  // Listener para inventario optimizado
   listenToInventory() {
     const inventoryRef = collection(db, 'inventory');
+    const q = query(inventoryRef, where('stock', '<=', 'minStock'));
     
-    const unsubscribe = onSnapshot(inventoryRef, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const inventory = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      // Cachear datos
+      dataCache.set('low_stock_inventory', {
+        data: inventory,
+        timestamp: Date.now()
+      });
       
       // Verificar alertas de stock bajo
       const lowStockItems = inventory.filter(item => 
@@ -171,15 +231,22 @@ export const realtimeService = {
     syncState.listeners.set('inventory', unsubscribe);
   },
 
-  // Listener para productos
+  // Listener para productos optimizado
   listenToProducts() {
     const productsRef = collection(db, 'products');
+    const q = query(productsRef, orderBy('name'), limit(100));
     
-    const unsubscribe = onSnapshot(productsRef, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const products = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      // Cachear datos
+      dataCache.set('products', {
+        data: products,
+        timestamp: Date.now()
+      });
       
       notifyListeners('products_updated', { 
         products, 
@@ -190,15 +257,22 @@ export const realtimeService = {
     syncState.listeners.set('products', unsubscribe);
   },
 
-  // Listener para clientes
+  // Listener para clientes optimizado
   listenToCustomers() {
     const customersRef = collection(db, 'customers');
+    const q = query(customersRef, orderBy('name'), limit(50));
     
-    const unsubscribe = onSnapshot(customersRef, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const customers = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      // Cachear datos
+      dataCache.set('customers', {
+        data: customers,
+        timestamp: Date.now()
+      });
       
       notifyListeners('customers_updated', { 
         customers, 
@@ -209,16 +283,26 @@ export const realtimeService = {
     syncState.listeners.set('customers', unsubscribe);
   },
 
-  // Listener para turnos
+  // Listener para turnos optimizado
   listenToShifts() {
     const shiftsRef = collection(db, 'shifts');
-    const q = query(shiftsRef, where('status', '==', 'active'));
+    const q = query(
+      shiftsRef, 
+      where('status', '==', 'active'),
+      limit(5)
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const shifts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      // Cachear datos
+      dataCache.set('active_shifts', {
+        data: shifts,
+        timestamp: Date.now()
+      });
       
       notifyListeners('shifts_updated', { 
         shifts, 
@@ -227,6 +311,15 @@ export const realtimeService = {
     });
     
     syncState.listeners.set('shifts', unsubscribe);
+  },
+
+  // Obtener datos del cache
+  getCachedData(key) {
+    const cached = dataCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
   },
 
   // Registrar callback para eventos
@@ -248,18 +341,29 @@ export const realtimeService = {
     }
   },
 
-  // Limpiar todos los listeners
+  // Limpiar todos los listeners optimizado
   cleanup() {
+    // Limpiar timers de debouncing
+    syncState.debounceTimers.forEach(timer => clearTimeout(timer));
+    syncState.debounceTimers.clear();
+    
+    // Limpiar listeners
     syncState.listeners.forEach(unsubscribe => unsubscribe());
     syncState.listeners.clear();
+    
+    // Limpiar callbacks
     realtimeCallbacks.clear();
+    
+    // Limpiar cache
+    dataCache.clear();
   },
 
   // Obtener estado de sincronización
   getSyncState() {
     return {
       ...syncState,
-      offlineQueueSize: offlineQueue.length
+      offlineQueueSize: offlineQueue.length,
+      cacheSize: dataCache.size
     };
   },
 

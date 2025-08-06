@@ -47,8 +47,8 @@ const NavItem = memo(({ icon: Icon, label, to, onClick, isActive, badge }) => {
       onClick={handleClick}
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 relative group ${
         isActive 
-          ? 'text-orange-700 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50 shadow-lg transform scale-105 backdrop-blur-sm' 
-          : 'text-gray-700 hover:text-orange-600 hover:bg-gradient-to-r hover:from-orange-50/60 hover:to-red-50/60 hover:transform hover:scale-105 backdrop-blur-sm'
+          ? 'text-orange-700 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50 shadow-lg transform scale-105' 
+          : 'text-gray-700 hover:text-orange-600 hover:bg-gradient-to-r hover:from-orange-50/60 hover:to-red-50/60 hover:transform hover:scale-105'
       }`}
     >
       <Icon className={`h-5 w-5 mr-3 transition-colors duration-200 ${isActive ? 'text-orange-600' : 'text-gray-500 group-hover:text-orange-500'}`} />
@@ -68,7 +68,6 @@ const Layout = memo(({ children }) => {
   const [user, setUser] = useState(null);
   const [activeRoute, setActiveRoute] = useState('/');
   const [lowStockAlerts] = useState(3);
-
   const [darkMode, setDarkMode] = useState(false);
 
   // Optimizar useEffect para auth
@@ -126,7 +125,7 @@ const Layout = memo(({ children }) => {
       <div className="lg:hidden fixed top-6 left-6 z-[9999]">
         <button
           onClick={toggleSidebar}
-          className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
+          className="p-3 rounded-2xl bg-white/90 shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
           aria-label="Toggle menu"
           style={{ minWidth: '48px', minHeight: '48px' }}
         >
@@ -139,7 +138,7 @@ const Layout = memo(({ children }) => {
         <RealtimeNotifications />
         <button 
           onClick={toggleDarkMode}
-          className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
+          className="p-3 rounded-2xl bg-white/90 shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
         >
           {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
@@ -148,20 +147,20 @@ const Layout = memo(({ children }) => {
       {/* Overlay para móvil optimizado */}
       {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+          className="lg:hidden fixed inset-0 bg-black/40 z-40"
           onClick={closeSidebar}
         />
       )}
 
       {/* Sidebar optimizado */}
       <div className={`
-        fixed left-0 top-0 z-50 w-80 h-full bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200/50
+        fixed left-0 top-0 z-50 w-80 h-full bg-white/95 shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200/50
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:w-72 lg:z-auto lg:bg-white/95
       `}>
         <div className="flex flex-col h-full">
           {/* Header optimizado */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-orange-50/80 to-red-50/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-orange-50/80 to-red-50/80">
             <div className="flex items-center">
               <div className="relative p-3 bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl shadow-lg">
                 <Store className="h-8 w-8 text-orange-600" />
@@ -207,7 +206,7 @@ const Layout = memo(({ children }) => {
           </nav>
 
           {/* Footer optimizado */}
-          <div className="p-4 border-t border-gray-200/50 bg-gradient-to-r from-gray-50/80 to-orange-50/80 backdrop-blur-sm">
+          <div className="p-4 border-t border-gray-200/50 bg-gradient-to-r from-gray-50/80 to-orange-50/80">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-full flex items-center justify-center shadow-sm">
@@ -224,7 +223,7 @@ const Layout = memo(({ children }) => {
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-gradient-to-r hover:from-orange-50/80 hover:to-red-50/80 hover:border-orange-200/50 transition-all duration-200"
+              className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 bg-white/80 rounded-2xl border border-gray-200/50 hover:bg-gradient-to-r hover:from-orange-50/80 hover:to-red-50/80 hover:border-orange-200/50 transition-all duration-200"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar Sesión

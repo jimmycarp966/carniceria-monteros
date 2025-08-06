@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { 
   DollarSign, 
   Package, 
@@ -15,8 +15,142 @@ import { realtimeService } from '../services/realtimeService';
 import { productService, saleService } from '../services/firebaseService';
 import toast from 'react-hot-toast';
 
+// Componentes memoizados para evitar re-renders
+const StatCard = memo(({ title, value, icon: Icon, color, subtitle, subtitleIcon: SubtitleIcon }) => (
+  <div className="bg-white rounded-2xl p-6 shadow-lg">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        <p className={`text-3xl font-bold text-${color}-600`}>
+          {typeof value === 'number' ? value.toLocaleString() : value}
+        </p>
+      </div>
+      <div className={`p-3 bg-${color}-100 rounded-xl`}>
+        <Icon className={`h-8 w-8 text-${color}-600`} />
+      </div>
+    </div>
+    {subtitle && (
+      <div className="mt-4 flex items-center text-sm">
+        <SubtitleIcon className={`h-4 w-4 text-${color}-500 mr-1`} />
+        <span className={`text-${color}-600`}>{subtitle}</span>
+      </div>
+    )}
+  </div>
+));
+
+const NotificationItem = memo(({ notification }) => (
+  <div className="flex items-center p-3 bg-gray-50 rounded-xl">
+    <div className="flex-1">
+      <div className="font-medium">{notification.type}</div>
+      <div className="text-sm text-gray-600">
+        {notification.data?.message || 'Nueva notificación'}
+      </div>
+      <div className="text-xs text-gray-500">
+        {new Date(notification.timestamp?.toDate?.() || notification.timestamp).toLocaleString()}
+      </div>
+    </div>
+  </div>
+));
+
+const SalesChart = memo(({ salesChart }) => (
+  <div className="bg-white rounded-2xl p-6 shadow-lg">
+    <h3 className="text-lg font-semibold mb-4">Ventas por Hora</h3>
+    <div className="h-64 flex items-end justify-between space-x-1">
+      {salesChart.map((data, index) => (
+        <div key={index} className="flex-1 flex flex-col items-center">
+          <div 
+            className="w-full bg-gradient-to-t from-orange-500 to-red-500 rounded-t"
+            style={{ 
+              height: `${(data.ventas / Math.max(...salesChart.map(d => d.ventas))) * 200}px` 
+            }}
+          ></div>
+          <span className="text-xs text-gray-600 mt-1">{data.hora}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+));
+
+const ProductPerformance = memo(({ productPerformance }) => (
+  <div className="bg-white rounded-2xl p-6 shadow-lg">
+    <h3 className="text-lg font-semibold mb-4">Productos Más Vendidos</h3>
+    <div className="space-y-3">
+      {productPerformance.map((product, index) => (
+        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+              <span className="text-sm font-bold text-orange-600">{index + 1}</span>
+            </div>
+            <div>
+              <div className="font-medium">{product.name}</div>
+              <div className="text-sm text-gray-600">{product.cantidad} unidades</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-semibold text-green-600">${product.ventas.toLocaleString()}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+));
+
+const RecentSales = memo(({ ventasRecientes }) => (
+  <div className="bg-white rounded-2xl p-6 shadow-lg">
+    <h3 className="text-lg font-semibold mb-4">Ventas Recientes</h3>
+    <div className="space-y-3">
+      {ventasRecientes.map((sale, index) => (
+        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+              <DollarSign className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <div className="font-medium">{sale.cliente}</div>
+              <div className="text-sm text-gray-600">{sale.productos} productos</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-semibold text-green-600">${sale.monto.toLocaleString()}</div>
+            <div className="text-xs text-gray-500">{sale.hora}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+));
+
+const StockAlerts = memo(({ stockAlerts }) => (
+  <div className="bg-white rounded-2xl p-6 shadow-lg">
+    <h3 className="text-lg font-semibold mb-4">Alertas de Stock</h3>
+    {stockAlerts.length === 0 ? (
+      <div className="text-center py-8 text-gray-500">
+        <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+        <p>No hay alertas de stock</p>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        {stockAlerts.slice(0, 5).map((item, index) => (
+          <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
+              <div>
+                <div className="font-medium">{item.name}</div>
+                <div className="text-sm text-red-600">Stock: {item.stock}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium text-red-600">Mínimo: {item.minStock}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+));
+
 const Dashboard = () => {
-  // Estados para datos en tiempo real
+  // Estados optimizados con valores iniciales
   const [realtimeStats, setRealtimeStats] = useState({
     ventasHoy: 0,
     productosVendidos: 0,
@@ -43,20 +177,21 @@ const Dashboard = () => {
   const [salesChart, setSalesChart] = useState([]);
   const [productPerformance, setProductPerformance] = useState([]);
 
+  // Cargar datos iniciales optimizado
   const loadInitialData = useCallback(async () => {
     try {
       setIsLoading(true);
       
-      // Cargar estadísticas básicas
+      // Cargar datos en paralelo con cache
       const [products, sales] = await Promise.all([
-        productService.getAllProducts(),
-        saleService.getAllSales()
+        productService.getAllProducts(1, 50), // Solo primera página
+        saleService.getAllSales(1, 100) // Solo últimas 100 ventas
       ]);
       
       updateSalesStats(sales);
       updateProductStats(products);
       
-      // Generar datos de gráficos
+      // Generar datos de gráficos de forma optimizada
       generateChartData(sales);
       
     } catch (error) {
@@ -67,11 +202,24 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Inicializar listeners de tiempo real
+  // Inicializar listeners de tiempo real optimizado
   useEffect(() => {
-    console.log('🚀 Inicializando Dashboard con tiempo real...');
+    console.log('🚀 Inicializando Dashboard optimizado...');
     
-    // Escuchar actualizaciones de ventas
+    // Usar datos del cache si están disponibles
+    const cachedSales = realtimeService.getCachedData('recent_sales');
+    const cachedProducts = realtimeService.getCachedData('products');
+    
+    if (cachedSales) {
+      updateSalesStats(cachedSales);
+      updateRecentSales(cachedSales);
+    }
+    
+    if (cachedProducts) {
+      updateProductStats(cachedProducts);
+    }
+    
+    // Escuchar actualizaciones de ventas con debouncing
     realtimeService.on('sales_updated', (data) => {
       updateSalesStats(data.sales);
       updateRecentSales(data.sales);
@@ -101,10 +249,14 @@ const Dashboard = () => {
       toast.success('Sincronización completada');
     });
     
-    // Cargar datos iniciales
-    loadInitialData();
+    // Cargar datos iniciales solo si no hay cache
+    if (!cachedSales && !cachedProducts) {
+      loadInitialData();
+    } else {
+      setIsLoading(false);
+    }
     
-    // Actualizar estado de conexión cada 30 segundos
+    // Actualizar estado de conexión cada 60 segundos (reducido de 30)
     const connectionInterval = setInterval(() => {
       const syncState = realtimeService.getSyncState();
       setConnectionStatus({
@@ -112,7 +264,7 @@ const Dashboard = () => {
         pendingOperations: syncState.offlineQueueSize,
         lastSync: syncState.lastSync
       });
-    }, 30000);
+    }, 60000);
     
     return () => {
       clearInterval(connectionInterval);
@@ -123,7 +275,8 @@ const Dashboard = () => {
     };
   }, [loadInitialData]);
 
-  const updateSalesStats = (sales) => {
+  // Funciones optimizadas con useCallback
+  const updateSalesStats = useCallback((sales) => {
     const today = new Date().toDateString();
     const todaySales = sales.filter(sale => 
       new Date(sale.createdAt?.toDate?.() || sale.createdAt).toDateString() === today
@@ -147,9 +300,9 @@ const Dashboard = () => {
         sum + (sale.items?.length || 0), 0
       )
     }));
-  };
+  }, []);
 
-  const updateRecentSales = (sales) => {
+  const updateRecentSales = useCallback((sales) => {
     const recent = sales
       .slice(0, 5)
       .map(sale => ({
@@ -165,19 +318,19 @@ const Dashboard = () => {
       ...prev,
       ventasRecientes: recent
     }));
-  };
+  }, []);
 
-  const updateProductStats = (products) => {
+  const updateProductStats = useCallback((products) => {
     const lowStock = products.filter(p => (p.stock || 0) <= (p.minStock || 5));
     
     setRealtimeStats(prev => ({
       ...prev,
       inventarioBajo: lowStock.length
     }));
-  };
+  }, []);
 
-  const generateChartData = (sales) => {
-    // Datos para gráfico de ventas por hora
+  const generateChartData = useCallback((sales) => {
+    // Datos para gráfico de ventas por hora optimizado
     const hourlyData = Array.from({ length: 24 }, (_, hour) => {
       const hourSales = sales.filter(sale => {
         const saleHour = new Date(sale.createdAt?.toDate?.() || sale.createdAt).getHours();
@@ -191,7 +344,7 @@ const Dashboard = () => {
     
     setSalesChart(hourlyData);
     
-    // Datos para rendimiento de productos
+    // Datos para rendimiento de productos optimizado
     const productSales = {};
     sales.forEach(sale => {
       sale.items?.forEach(item => {
@@ -208,25 +361,10 @@ const Dashboard = () => {
       .slice(0, 5);
     
     setProductPerformance(topProducts);
-    
-    // Datos para tendencia de ingresos (comentado porque se removió el estado)
-    // const last7Days = Array.from({ length: 7 }, (_, i) => {
-    //   const date = new Date();
-    //   date.setDate(date.getDate() - i);
-    //   const daySales = sales.filter(sale => {
-    //     const saleDate = new Date(sale.createdAt?.toDate?.() || sale.createdAt);
-    //     return saleDate.toDateString() === date.toDateString();
-    //   });
-    //   return {
-    //     fecha: date.toLocaleDateString('es-ES', { weekday: 'short' }),
-    //     ingresos: daySales.reduce((sum, sale) => sum + (sale.total || 0), 0)
-    //   };
-    // }).reverse();
-    
-    // setRevenueTrend(last7Days); // This state was removed
-  };
+  }, []);
 
-  const handleForceSync = async () => {
+  // Handlers optimizados
+  const handleForceSync = useCallback(async () => {
     try {
       const success = await realtimeService.forceSync();
       if (success) {
@@ -238,12 +376,48 @@ const Dashboard = () => {
     } catch (error) {
       toast.error('Error en sincronización');
     }
-  };
+  }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     loadInitialData();
     toast.success('Datos actualizados');
-  };
+  }, [loadInitialData]);
+
+  // Estadísticas memoizadas
+  const statsCards = useMemo(() => [
+    {
+      title: 'Ventas Hoy',
+      value: realtimeStats.ventasHoy,
+      icon: DollarSign,
+      color: 'green',
+      subtitle: `+${realtimeStats.ventasUltimaHora.toLocaleString()} última hora`,
+      subtitleIcon: TrendingUp
+    },
+    {
+      title: 'Productos Vendidos',
+      value: realtimeStats.productosVendidos,
+      icon: Package,
+      color: 'blue',
+      subtitle: `Promedio: $${realtimeStats.promedioTicket.toLocaleString()}`,
+      subtitleIcon: ShoppingCart
+    },
+    {
+      title: 'Clientes Nuevos',
+      value: realtimeStats.clientesNuevos,
+      icon: Users,
+      color: 'purple',
+      subtitle: 'Este mes',
+      subtitleIcon: Activity
+    },
+    {
+      title: 'Stock Bajo',
+      value: realtimeStats.inventarioBajo,
+      icon: AlertTriangle,
+      color: 'red',
+      subtitle: 'Requieren atención',
+      subtitleIcon: AlertTriangle
+    }
+  ], [realtimeStats]);
 
   if (isLoading) {
     return (
@@ -331,17 +505,7 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-3">
               {recentNotifications.map((notification, index) => (
-                <div key={index} className="flex items-center p-3 bg-gray-50 rounded-xl">
-                  <div className="flex-1">
-                    <div className="font-medium">{notification.type}</div>
-                    <div className="text-sm text-gray-600">
-                      {notification.data?.message || 'Nueva notificación'}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(notification.timestamp?.toDate?.() || notification.timestamp).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
+                <NotificationItem key={index} notification={notification} />
               ))}
             </div>
           )}
@@ -350,174 +514,21 @@ const Dashboard = () => {
 
       {/* Estadísticas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Ventas Hoy</p>
-              <p className="text-3xl font-bold text-green-600">
-                ${realtimeStats.ventasHoy.toLocaleString()}
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-xl">
-              <DollarSign className="h-8 w-8 text-green-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-            <span className="text-green-600">+{realtimeStats.ventasUltimaHora.toLocaleString()} última hora</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Productos Vendidos</p>
-              <p className="text-3xl font-bold text-blue-600">
-                {realtimeStats.productosVendidos}
-              </p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Package className="h-8 w-8 text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <ShoppingCart className="h-4 w-4 text-blue-500 mr-1" />
-            <span className="text-blue-600">Promedio: ${realtimeStats.promedioTicket.toLocaleString()}</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Clientes Nuevos</p>
-              <p className="text-3xl font-bold text-purple-600">
-                {realtimeStats.clientesNuevos}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <Users className="h-8 w-8 text-purple-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <Activity className="h-4 w-4 text-purple-500 mr-1" />
-            <span className="text-purple-600">Este mes</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Stock Bajo</p>
-              <p className="text-3xl font-bold text-red-600">
-                {realtimeStats.inventarioBajo}
-              </p>
-            </div>
-            <div className="p-3 bg-red-100 rounded-xl">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <AlertTriangle className="h-4 w-4 text-red-500 mr-1" />
-            <span className="text-red-600">Requieren atención</span>
-          </div>
-        </div>
+        {statsCards.map((stat, index) => (
+          <StatCard key={index} {...stat} />
+        ))}
       </div>
 
       {/* Gráficos y análisis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Ventas por hora */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4">Ventas por Hora</h3>
-          <div className="h-64 flex items-end justify-between space-x-1">
-            {salesChart.map((data, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <div 
-                  className="w-full bg-gradient-to-t from-orange-500 to-red-500 rounded-t"
-                  style={{ height: `${(data.ventas / Math.max(...salesChart.map(d => d.ventas))) * 200}px` }}
-                ></div>
-                <span className="text-xs text-gray-600 mt-1">{data.hora}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Productos más vendidos */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4">Productos Más Vendidos</h3>
-          <div className="space-y-3">
-            {productPerformance.map((product, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-sm font-bold text-orange-600">{index + 1}</span>
-                  </div>
-                  <div>
-                    <div className="font-medium">{product.name}</div>
-                    <div className="text-sm text-gray-600">{product.cantidad} unidades</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-green-600">${product.ventas.toLocaleString()}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SalesChart salesChart={salesChart} />
+        <ProductPerformance productPerformance={productPerformance} />
       </div>
 
       {/* Ventas recientes y alertas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ventas recientes */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4">Ventas Recientes</h3>
-          <div className="space-y-3">
-            {realtimeStats.ventasRecientes.map((sale, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">{sale.cliente}</div>
-                    <div className="text-sm text-gray-600">{sale.productos} productos</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-green-600">${sale.monto.toLocaleString()}</div>
-                  <div className="text-xs text-gray-500">{sale.hora}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Alertas de stock */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4">Alertas de Stock</h3>
-          {stockAlerts.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-              <p>No hay alertas de stock</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stockAlerts.slice(0, 5).map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">
-                  <div className="flex items-center">
-                    <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
-                    <div>
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-sm text-red-600">Stock: {item.stock}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-red-600">Mínimo: {item.minStock}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <RecentSales ventasRecientes={realtimeStats.ventasRecientes} />
+        <StockAlerts stockAlerts={stockAlerts} />
       </div>
     </div>
   );
