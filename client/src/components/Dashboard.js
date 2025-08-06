@@ -177,105 +177,7 @@ const Dashboard = () => {
   const [salesChart, setSalesChart] = useState([]);
   const [productPerformance, setProductPerformance] = useState([]);
 
-  // Cargar datos iniciales optimizado
-  const loadInitialData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      // Cargar datos en paralelo con cache
-      const [products, sales] = await Promise.all([
-        productService.getAllProducts(1, 50), // Solo primera página
-        saleService.getAllSales(1, 100) // Solo últimas 100 ventas
-      ]);
-      
-      updateSalesStats(sales);
-      updateProductStats(products);
-      
-      // Generar datos de gráficos de forma optimizada
-      generateChartData(sales);
-      
-    } catch (error) {
-      console.error('Error cargando datos iniciales:', error);
-      toast.error('Error cargando datos del dashboard');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [updateSalesStats, updateProductStats, generateChartData]);
-
-  // Inicializar listeners de tiempo real optimizado
-  useEffect(() => {
-    console.log('🚀 Inicializando Dashboard optimizado...');
-    
-    // Usar datos del cache si están disponibles
-    const cachedSales = realtimeService.getCachedData('recent_sales');
-    const cachedProducts = realtimeService.getCachedData('products');
-    
-    if (cachedSales) {
-      updateSalesStats(cachedSales);
-      updateRecentSales(cachedSales);
-    }
-    
-    if (cachedProducts) {
-      updateProductStats(cachedProducts);
-    }
-    
-    // Escuchar actualizaciones de ventas con debouncing
-    realtimeService.on('sales_updated', (data) => {
-      updateSalesStats(data.sales);
-      updateRecentSales(data.sales);
-    });
-    
-    // Escuchar alertas de stock
-    realtimeService.on('stock_alert', (data) => {
-      setStockAlerts(data.items);
-      if (data.items.length > 0) {
-        toast.error(`¡Alerta! ${data.items.length} productos con stock bajo`);
-      }
-    });
-    
-    // Escuchar notificaciones
-    realtimeService.on('notification_received', (notification) => {
-      setRecentNotifications(prev => [notification, ...prev.slice(0, 9)]);
-      toast.success(notification.data?.message || 'Nueva notificación');
-    });
-    
-    // Escuchar sincronización completada
-    realtimeService.on('sync_completed', (data) => {
-      setConnectionStatus(prev => ({
-        ...prev,
-        lastSync: data.timestamp,
-        pendingOperations: 0
-      }));
-      toast.success('Sincronización completada');
-    });
-    
-    // Cargar datos iniciales solo si no hay cache
-    if (!cachedSales && !cachedProducts) {
-      loadInitialData();
-    } else {
-      setIsLoading(false);
-    }
-    
-    // Actualizar estado de conexión cada 60 segundos (reducido de 30)
-    const connectionInterval = setInterval(() => {
-      const syncState = realtimeService.getSyncState();
-      setConnectionStatus({
-        isOnline: syncState.isOnline,
-        pendingOperations: syncState.offlineQueueSize,
-        lastSync: syncState.lastSync
-      });
-    }, 60000);
-    
-    return () => {
-      clearInterval(connectionInterval);
-      realtimeService.off('sales_updated');
-      realtimeService.off('stock_alert');
-      realtimeService.off('notification_received');
-      realtimeService.off('sync_completed');
-    };
-  }, [loadInitialData, updateSalesStats, updateProductStats, updateRecentSales]);
-
-  // Funciones optimizadas con useCallback
+  // Funciones optimizadas con useCallback - definidas antes de su uso
   const updateSalesStats = useCallback((sales) => {
     const today = new Date().toDateString();
     const todaySales = sales.filter(sale => 
@@ -362,6 +264,105 @@ const Dashboard = () => {
     
     setProductPerformance(topProducts);
   }, []);
+
+  // Cargar datos iniciales optimizado
+  const loadInitialData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Cargar datos en paralelo con cache
+      const [products, sales] = await Promise.all([
+        productService.getAllProducts(1, 50), // Solo primera página
+        saleService.getAllSales(1, 100) // Solo últimas 100 ventas
+      ]);
+      
+      updateSalesStats(sales);
+      updateRecentSales(sales);
+      updateProductStats(products);
+      
+      // Generar datos de gráficos de forma optimizada
+      generateChartData(sales);
+      
+    } catch (error) {
+      console.error('Error cargando datos iniciales:', error);
+      toast.error('Error cargando datos del dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateSalesStats, updateProductStats, generateChartData, updateRecentSales]);
+
+  // Inicializar listeners de tiempo real optimizado
+  useEffect(() => {
+    console.log('🚀 Inicializando Dashboard optimizado...');
+    
+    // Usar datos del cache si están disponibles
+    const cachedSales = realtimeService.getCachedData('recent_sales');
+    const cachedProducts = realtimeService.getCachedData('products');
+    
+    if (cachedSales) {
+      updateSalesStats(cachedSales);
+      updateRecentSales(cachedSales);
+    }
+    
+    if (cachedProducts) {
+      updateProductStats(cachedProducts);
+    }
+    
+    // Escuchar actualizaciones de ventas con debouncing
+    realtimeService.on('sales_updated', (data) => {
+      updateSalesStats(data.sales);
+      updateRecentSales(data.sales);
+    });
+    
+    // Escuchar alertas de stock
+    realtimeService.on('stock_alert', (data) => {
+      setStockAlerts(data.items);
+      if (data.items.length > 0) {
+        toast.error(`¡Alerta! ${data.items.length} productos con stock bajo`);
+      }
+    });
+    
+    // Escuchar notificaciones
+    realtimeService.on('notification_received', (notification) => {
+      setRecentNotifications(prev => [notification, ...prev.slice(0, 9)]);
+      toast.success(notification.data?.message || 'Nueva notificación');
+    });
+    
+    // Escuchar sincronización completada
+    realtimeService.on('sync_completed', (data) => {
+      setConnectionStatus(prev => ({
+        ...prev,
+        lastSync: data.timestamp,
+        pendingOperations: 0
+      }));
+      toast.success('Sincronización completada');
+    });
+    
+    // Cargar datos iniciales solo si no hay cache
+    if (!cachedSales && !cachedProducts) {
+      loadInitialData();
+    } else {
+      setIsLoading(false);
+    }
+    
+    // Actualizar estado de conexión cada 60 segundos (reducido de 30)
+    const connectionInterval = setInterval(() => {
+      const syncState = realtimeService.getSyncState();
+      setConnectionStatus({
+        isOnline: syncState.isOnline,
+        pendingOperations: syncState.offlineQueueSize,
+        lastSync: syncState.lastSync
+      });
+    }, 60000);
+    
+    return () => {
+      clearInterval(connectionInterval);
+      realtimeService.off('sales_updated');
+      realtimeService.off('stock_alert');
+      realtimeService.off('notification_received');
+      realtimeService.off('sync_completed');
+    };
+  }, [loadInitialData, updateSalesStats, updateProductStats, updateRecentSales]);
 
   // Handlers optimizados
   const handleForceSync = useCallback(async () => {

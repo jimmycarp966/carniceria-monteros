@@ -373,7 +373,6 @@ const Products = () => {
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalProducts, setTotalProducts] = useState(0);
   const ITEMS_PER_PAGE = 12;
 
   // Cargar productos desde Firebase con paginación optimizada
@@ -393,12 +392,10 @@ const Products = () => {
         console.log('⚠️ No se encontraron productos en Firebase, usando datos locales');
         const localProducts = products.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
         setProductList(localProducts);
-        setTotalProducts(products.length);
         setTotalPages(Math.ceil(products.length / ITEMS_PER_PAGE));
       } else {
         setProductList(productsFromFirebase);
         // Para simplificar, asumimos que hay más productos
-        setTotalProducts(productsFromFirebase.length * 2);
         setTotalPages(Math.ceil((productsFromFirebase.length * 2) / ITEMS_PER_PAGE));
       }
     } catch (error) {
@@ -406,7 +403,6 @@ const Products = () => {
       console.log('📦 Usando datos locales como fallback');
       const localProducts = products.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
       setProductList(localProducts);
-      setTotalProducts(products.length);
       setTotalPages(Math.ceil(products.length / ITEMS_PER_PAGE));
     } finally {
       setLoading(false);
