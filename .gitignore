@@ -68,7 +68,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public (commented out to allow client/public/_redirects)
 
 # Storybook build outputs
 .out
