@@ -527,6 +527,32 @@ const Products = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  // Handler para refrescar productos
+  const handleRefresh = useCallback(async () => {
+    await loadProducts(currentPage);
+    toast.success('Productos actualizados');
+  }, [loadProducts, currentPage]);
+
+  // Handler para forzar recarga de datos
+  const handleForceReload = useCallback(async () => {
+    try {
+      setSyncing(true);
+      console.log('🔄 Forzando recarga de datos...');
+      
+      // Limpiar cache y recargar
+      setProductList([]);
+      await loadProducts(1);
+      setCurrentPage(1);
+      
+      toast.success('Datos recargados exitosamente');
+    } catch (error) {
+      console.error('❌ Error recargando datos:', error);
+      toast.error('Error recargando datos');
+    } finally {
+      setSyncing(false);
+    }
+  }, [loadProducts]);
+
   // Funciones de utilidad memoizadas
   const getCategoryColor = useCallback((category) => {
     const colors = {
