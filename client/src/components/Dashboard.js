@@ -200,7 +200,7 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [updateSalesStats, updateProductStats, generateChartData]);
 
   // Inicializar listeners de tiempo real optimizado
   useEffect(() => {
@@ -273,7 +273,7 @@ const Dashboard = () => {
       realtimeService.off('notification_received');
       realtimeService.off('sync_completed');
     };
-  }, [loadInitialData]);
+  }, [loadInitialData, updateSalesStats, updateProductStats, updateRecentSales]);
 
   // Funciones optimizadas con useCallback
   const updateSalesStats = useCallback((sales) => {

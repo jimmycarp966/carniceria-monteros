@@ -10,8 +10,7 @@ import {
   where, 
   serverTimestamp,
   orderBy,
-  limit,
-  startAfter
+  limit
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
