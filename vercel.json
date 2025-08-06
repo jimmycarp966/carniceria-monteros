@@ -1,30 +1,8 @@
 {
-  "version": 2,
-  "name": "carniceria-monteros",
-  "builds": [
+  "rewrites": [
     {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/client/build/static/$1"
-    },
-    {
-      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
-      "dest": "/client/build/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/client/build/index.html"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 } 
