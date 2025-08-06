@@ -295,6 +295,34 @@ body {
   }
 
   /* Optimizaciones específicas para móvil */
+  @media (max-width: 640px) {
+    .card {
+      @apply p-3 rounded-xl;
+    }
+    
+    .modal-content {
+      @apply max-w-full mx-2 rounded-2xl;
+    }
+    
+    .table-container {
+      @apply rounded-2xl;
+    }
+    
+    /* Mejorar touch targets para móvil */
+    .btn {
+      @apply min-h-[44px];
+    }
+    
+    /* Reducir padding en pantallas muy pequeñas */
+    .p-6 {
+      padding: 1rem;
+    }
+    
+    .p-4 {
+      padding: 0.75rem;
+    }
+  }
+
   @media (max-width: 768px) {
     .card {
       @apply p-4 rounded-2xl;
@@ -397,6 +425,49 @@ body {
 
     .mt-6 {
       margin-top: 1.25rem;
+    }
+  }
+
+  /* Optimizaciones para tablets */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .card {
+      @apply p-5 rounded-3xl;
+    }
+    
+    .stats-card {
+      @apply p-5;
+    }
+    
+    .btn {
+      @apply px-5 py-3 text-base;
+    }
+    
+    .form-input, .form-select {
+      @apply px-4 py-3 text-base;
+    }
+    
+    /* Grid optimizado para tablets */
+    .grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-3.xl\\:grid-cols-4 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    
+    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Optimizaciones para pantallas grandes */
+  @media (min-width: 1440px) {
+    .modal-content {
+      @apply max-w-2xl;
+    }
+    
+    .stats-card {
+      @apply p-8;
+    }
+    
+    .card {
+      @apply p-8;
     }
   }
 

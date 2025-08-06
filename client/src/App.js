@@ -154,21 +154,21 @@ const Layout = memo(({ children }) => {
 
       {/* Sidebar optimizado */}
       <div className={`
-        fixed left-0 top-0 z-50 w-80 h-full bg-white/95 shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200/50
+        fixed left-0 top-0 z-50 w-full sm:w-80 h-full bg-white/95 shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-gray-200/50
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:w-72 lg:z-auto lg:bg-white/95
       `}>
         <div className="flex flex-col h-full">
           {/* Header optimizado */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-gradient-to-r from-orange-50/80 to-red-50/80">
-            <div className="flex items-center">
-              <div className="relative p-3 bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl shadow-lg">
-                <Store className="h-8 w-8 text-orange-600" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200/50 bg-gradient-to-r from-orange-50/80 to-red-50/80">
+            <div className="flex items-center min-w-0 flex-1">
+              <div className="relative p-2 sm:p-3 bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl shadow-lg">
+                <Store className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
-              <div className="ml-3">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">Carnicería Muñoz</h1>
-                <p className="text-xs text-gray-600">Sistema de Administración</p>
+              <div className="ml-2 sm:ml-3 min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent truncate">Carnicería Muñoz</h1>
+                <p className="text-xs text-gray-600 hidden sm:block">Sistema de Administración</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -234,7 +234,7 @@ const Layout = memo(({ children }) => {
 
       {/* Main content optimizado */}
       <div className="lg:pl-72 w-full flex-1">
-        <div className="min-h-screen w-full">
+        <div className="min-h-screen w-full pt-20 lg:pt-0">
           <Suspense fallback={<LoadingSpinner />}>
             {children}
           </Suspense>

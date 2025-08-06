@@ -1,0 +1,5 @@
+[33med121d7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix ESLint errors: resolve function hoisting issues and remove unused variables
+[33m5926d22[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix: Corregir errores de ESLint para build exitoso en Vercel
+[33m92284be[m  Fix: Agregar funciones faltantes handleRefresh y handleForceReload en Products.js
+[33mbfcc16a[m  Optimizaciones de rendimiento completas: Firebase optimizado, React memoizado, Service Worker, cache inteligente y paginación
+[33m47b003a[m Configuración robusta para Vercel - Agregar buildCommand, outputDirectory y .vercelignore
