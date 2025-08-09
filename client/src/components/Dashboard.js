@@ -169,8 +169,8 @@ const Dashboard = () => {
     lastSync: Date.now()
   });
 
-  const [stockAlerts, setStockAlerts] = useState([]);
-  const [recentNotifications, setRecentNotifications] = useState([]);
+  const [stockAlerts] = useState([]);
+  const [recentNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -292,59 +292,10 @@ const Dashboard = () => {
     }
   }, [updateSalesStats, updateProductStats, generateChartData, updateRecentSales]);
 
-  // Inicializar listeners de tiempo real optimizado
+  // Inicializar: usar carga puntual; listeners solo para eventos críticos
   useEffect(() => {
     console.log('🚀 Inicializando Dashboard optimizado...');
-    
-    // Usar datos del cache si están disponibles
-    const cachedSales = realtimeService.getCachedData('recent_sales');
-    const cachedProducts = realtimeService.getCachedData('products');
-    
-    if (cachedSales) {
-      updateSalesStats(cachedSales);
-      updateRecentSales(cachedSales);
-    }
-    
-    if (cachedProducts) {
-      updateProductStats(cachedProducts);
-    }
-    
-    // Escuchar actualizaciones de ventas con debouncing
-    realtimeService.on('sales_updated', (data) => {
-      updateSalesStats(data.sales);
-      updateRecentSales(data.sales);
-    });
-    
-    // Escuchar alertas de stock
-    realtimeService.on('stock_alert', (data) => {
-      setStockAlerts(data.items);
-      if (data.items.length > 0) {
-        toast.error(`¡Alerta! ${data.items.length} productos con stock bajo`);
-      }
-    });
-    
-    // Escuchar notificaciones
-    realtimeService.on('notification_received', (notification) => {
-      setRecentNotifications(prev => [notification, ...prev.slice(0, 9)]);
-      toast.success(notification.data?.message || 'Nueva notificación');
-    });
-    
-    // Escuchar sincronización completada
-    realtimeService.on('sync_completed', (data) => {
-      setConnectionStatus(prev => ({
-        ...prev,
-        lastSync: data.timestamp,
-        pendingOperations: 0
-      }));
-      toast.success('Sincronización completada');
-    });
-    
-    // Cargar datos iniciales solo si no hay cache
-    if (!cachedSales && !cachedProducts) {
-      loadInitialData();
-    } else {
-      setIsLoading(false);
-    }
+    loadInitialData();
     
     // Actualizar estado de conexión cada 60 segundos (reducido de 30)
     const connectionInterval = setInterval(() => {
@@ -358,10 +309,7 @@ const Dashboard = () => {
     
     return () => {
       clearInterval(connectionInterval);
-      realtimeService.off('sales_updated');
-      realtimeService.off('stock_alert');
-      realtimeService.off('notification_received');
-      realtimeService.off('sync_completed');
+      // sin off: no registramos listeners en este componente ahora
     };
   }, [loadInitialData, updateSalesStats, updateProductStats, updateRecentSales]);
 
