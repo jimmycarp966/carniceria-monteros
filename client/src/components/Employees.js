@@ -389,6 +389,27 @@ const EmployeeModal = ({ employee, onSave, onCancel }) => {
     return 'none';
   });
 
+  const applyClaims = async () => {
+    try {
+      const body = {
+        email: formData.email,
+        role: selectedRole === 'admin' ? 'admin' : undefined,
+        permissions: formData.permissions
+      };
+      const res = await fetch('/api/admin/set-claims', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error aplicando claims');
+      toast.success('Claims aplicados. Pedir re-login para reflejar permisos');
+    } catch (e) {
+      console.error(e);
+      toast.error('No se pudieron aplicar claims');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
@@ -540,7 +561,14 @@ const EmployeeModal = ({ employee, onSave, onCancel }) => {
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className="flex justify-between items-center pt-4">
+              <button
+                type="button"
+                onClick={applyClaims}
+                className="btn btn-secondary"
+              >
+                Aplicar claims
+              </button>
               <button
                 type="button"
                 onClick={onCancel}
