@@ -24,5 +24,22 @@
   <body>
     <noscript>Necesitas habilitar JavaScript para ejecutar esta aplicación.</noscript>
     <div id="root"></div>
+    <script>
+      // Kill-switch: navegadores con SW viejo → desregistrar y limpiar antes de cargar la app
+      (function () {
+        try {
+          var key = 'sw_hard_recover_v1';
+          if ('serviceWorker' in navigator && !localStorage.getItem(key)) {
+            Promise.resolve()
+              .then(function () { return navigator.serviceWorker.getRegistrations(); })
+              .then(function (regs) { return Promise.all(regs.map(function (r) { return r.unregister().catch(function(){}); })); })
+              .then(function () { return caches && caches.keys ? caches.keys() : []; })
+              .then(function (names) { return Promise.all((names || []).map(function (n) { return caches.delete(n).catch(function(){}); })); })
+              .then(function () { localStorage.setItem(key, '1'); location.reload(); })
+              .catch(function () {});
+          }
+        } catch (e) {}
+      })();
+    </script>
   </body>
 </html> 

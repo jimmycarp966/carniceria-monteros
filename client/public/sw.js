@@ -1,5 +1,5 @@
 // Service Worker para optimización de rendimiento
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE_NAME = `carniceria-${VERSION}`;
 const STATIC_CACHE = `static-${VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${VERSION}`;
@@ -45,6 +45,15 @@ self.addEventListener('activate', (event) => {
         );
       })
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then((clients) => {
+        // Forzar una recarga única de las pestañas controladas para tomar el nuevo HTML/JS
+        clients.forEach((client) => {
+          try {
+            client.navigate(client.url);
+          } catch (e) {}
+        });
+      })
   );
   self.skipWaiting();
 });
@@ -54,8 +63,28 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Evitar cache para scripts/chunks para prevenir errores de versiones
-  if (request.destination === 'script' || url.pathname.includes('/static/js/')) {
+  // Navegación (HTML): Network First con no-store, fallback a cache para offline
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then((response) => {
+          // Opcional: cachear como fallback offline
+          const clone = response.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => cache.put('/', clone).catch(() => {}));
+          return response;
+        })
+        .catch(() => caches.match('/') || caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Evitar cache para JS y CSS para prevenir errores de versiones
+  if (
+    request.destination === 'script' ||
+    url.pathname.includes('/static/js/') ||
+    request.destination === 'style' ||
+    url.pathname.includes('/static/css/')
+  ) {
     event.respondWith(
       fetch(request, { cache: 'no-store' }).catch(() => caches.match(request))
     );
