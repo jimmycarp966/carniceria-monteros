@@ -18,11 +18,11 @@ import {
   doc,
   increment
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, realtimeDb as appRealtimeDb } from '../firebase';
 import { getDatabase } from 'firebase/database';
 
-// Inicializar Realtime Database
-const realtimeDb = getDatabase();
+// Inicializar Realtime Database del app (evita URL incorrecta)
+const realtimeDb = appRealtimeDb ?? getDatabase();
 
 // Estado global de sincronización optimizado
 let syncState = {

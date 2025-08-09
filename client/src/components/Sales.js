@@ -3,7 +3,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { saleService, productService, loadSampleData, shiftService } from '../services/firebaseService';
+import { shiftService } from '../services/firebaseService';
 import { dataSyncService, realtimeService } from '../services/realtimeService';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -15,43 +15,8 @@ const Sales = () => {
   const [showSalesHistory, setShowSalesHistory] = useState(false);
   const [allProducts, setAllProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
 
-  // Cargar productos y ventas desde Firebase
-  useEffect(() => {
-    let isMounted = true;
-    const loadData = async () => {
-      try {
-        console.log('🔄 Cargando datos en componente Sales...');
-        
-        // Intentar cargar datos simulados si Firebase está vacío
-        await loadSampleData();
-        
-        // Cargar productos desde Firebase
-        const productsFromFirebase = await productService.getAllProducts();
-        console.log('📦 Productos cargados en Sales:', productsFromFirebase.length);
-        if (!isMounted) return;
-        setAllProducts(Array.isArray(productsFromFirebase) ? productsFromFirebase : []);
-        
-        // Cargar ventas desde Firebase
-        const salesFromFirebase = await saleService.getAllSales();
-        console.log('💰 Ventas cargadas en Sales:', salesFromFirebase.length);
-        if (!isMounted) return;
-        setSales(Array.isArray(salesFromFirebase) ? salesFromFirebase : []);
-        setHasError(false);
-      } catch (error) {
-        console.error('❌ Error cargando datos en Sales:', error);
-        if (!isMounted) return;
-        setHasError(true);
-      } finally {
-        if (!isMounted) return;
-        setIsLoading(false);
-      }
-    };
-    // Pequeño timeout para evitar sensación de congelado
-    const id = setTimeout(loadData, 50);
-    return () => { isMounted = false; clearTimeout(id); };
-  }, []);
+  // Sin carga inicial con servicios ni datos simulados; todo por onSnapshot
 
   // Listeners directos a Firestore para productos y ventas (sin depender de servicios)
   useEffect(() => {
@@ -87,25 +52,7 @@ const Sales = () => {
     };
   }, []);
 
-  const retryLoad = () => {
-    setIsLoading(true);
-    setHasError(false);
-    // Re-disparar efecto
-    (async () => {
-      try {
-        await loadSampleData();
-        const prods = await productService.getAllProducts();
-        const s = await saleService.getAllSales();
-        setAllProducts(Array.isArray(prods) ? prods : []);
-        setSales(Array.isArray(s) ? s : []);
-      } catch (e) {
-        console.error(e);
-        setHasError(true);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  };
+  // Sin retry manual: onSnapshot es la fuente de verdad
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -221,12 +168,7 @@ const Sales = () => {
       {isLoading && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-gray-600">Cargando ventas...</div>
       )}
-      {(!isLoading && hasError) && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-800 flex items-center justify-between">
-          <span>Hubo un problema cargando los datos. Intentá nuevamente.</span>
-          <button onClick={retryLoad} className="btn btn-secondary">Reintentar</button>
-        </div>
-      )}
+      {/* Sin fallback de cache ni reintento manual */}
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

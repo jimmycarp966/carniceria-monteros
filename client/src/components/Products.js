@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { categories } from '../data/products';
 import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List, RefreshCw, AlertTriangle, TrendingUp, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '../firebase';
 import { productService } from '../services/firebaseService';
 
 // Componente de producto optimizado con memo
@@ -375,37 +377,23 @@ const Products = () => {
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
-  // Cargar productos desde Firebase con paginación optimizada
-  const loadProducts = useCallback(async (page = 1) => {
-    try {
-      setLoading(true);
-      console.log('🔄 Cargando productos optimizado...');
-
-      const productsFromFirebase = await productService.getAllProducts(page, ITEMS_PER_PAGE);
-      console.log('📦 Productos cargados desde Firebase:', productsFromFirebase.length);
-      
-      if (productsFromFirebase.length === 0) {
-        console.log('⚠️ No se encontraron productos en Firebase');
-        setProductList([]);
-        setTotalPages(1);
-      } else {
-        setProductList(productsFromFirebase);
-        // Para simplificar, asumimos que hay más productos
-        setTotalPages(Math.ceil((productsFromFirebase.length * 2) / ITEMS_PER_PAGE));
-      }
-    } catch (error) {
-      console.error('❌ Error cargando productos:', error);
+  // Cargar productos en tiempo real sin cache local ni servicios
+  useEffect(() => {
+    setLoading(true);
+    const unsub = onSnapshot(query(collection(db, 'products'), orderBy('name')), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setProductList(Array.isArray(list) ? list : []);
+      setTotalPages(1);
+      setLoading(false);
+    }, (err) => {
+      console.error('❌ Error onSnapshot productos:', err);
       toast.error('No se pudieron cargar productos');
       setProductList([]);
       setTotalPages(1);
-    } finally {
       setLoading(false);
-    }
+    });
+    return () => { try { unsub(); } catch {} };
   }, []);
-
-  useEffect(() => {
-    loadProducts(currentPage);
-  }, [loadProducts, currentPage]);
 
   // Filtrar productos con useMemo para mejor rendimiento
   const filteredProducts = useMemo(() => {
@@ -451,9 +439,7 @@ const Products = () => {
       const productId = await productService.addProduct(productData);
       console.log('✅ Producto agregado con ID:', productId);
       
-      // Actualizar estado local optimizado
-      const productWithId = { ...productData, id: productId };
-      setProductList(prev => [productWithId, ...prev]);
+      // No forzar estado local; onSnapshot actualizará la lista
       setShowAddModal(false);
       toast.success('Producto agregado exitosamente');
     } catch (error) {
@@ -478,10 +464,7 @@ const Products = () => {
       
       await productService.updateProduct(updatedProduct.id, productData);
       
-      // Actualizar estado local optimizado
-      setProductList(prev => prev.map(p => 
-        p.id === updatedProduct.id ? { ...productData, id: updatedProduct.id } : p
-      ));
+      // No forzar estado local; onSnapshot actualizará la lista
       
       setEditingProduct(null);
       toast.success('Producto actualizado exitosamente');
@@ -500,8 +483,7 @@ const Products = () => {
       
       await productService.deleteProduct(id);
       
-      // Actualizar estado local optimizado
-      setProductList(prev => prev.filter(p => p.id !== id));
+      // No forzar estado local; onSnapshot actualizará la lista
       toast.success('Producto eliminado exitosamente');
     } catch (error) {
       console.error('❌ Error eliminando producto:', error);
@@ -519,29 +501,21 @@ const Products = () => {
 
   // Handler para refrescar productos
   const handleRefresh = useCallback(async () => {
-    await loadProducts(currentPage);
     toast.success('Productos actualizados');
-  }, [loadProducts, currentPage]);
+  }, []);
 
   // Handler para forzar recarga de datos
   const handleForceReload = useCallback(async () => {
     try {
       setSyncing(true);
       console.log('🔄 Forzando recarga de datos...');
-      
-      // Limpiar cache y recargar
       setProductList([]);
-      await loadProducts(1);
       setCurrentPage(1);
-      
       toast.success('Datos recargados exitosamente');
-    } catch (error) {
-      console.error('❌ Error recargando datos:', error);
-      toast.error('Error recargando datos');
     } finally {
       setSyncing(false);
     }
-  }, [loadProducts]);
+  }, []);
 
   // Funciones de utilidad memoizadas
   const getCategoryColor = useCallback((category) => {
