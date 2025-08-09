@@ -9,6 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCVn2q5J4zl0U1RL8D6nmaWGdq5WPJ2t9Y",
   authDomain: "carniceria-monteros.firebaseapp.com",
   projectId: "carniceria-monteros",
+  databaseURL: "https://carniceria-monteros-default-rtdb.firebaseio.com",
   storageBucket: "carniceria-monteros.firebasestorage.app",
   messagingSenderId: "295246860976",
   appId: "1:295246860976:web:a529e27f8e382c59daa175",

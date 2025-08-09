@@ -63,6 +63,15 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
+  // No interceptar canales streaming de Firestore (Listen/Write)
+  if (
+    url.host.includes('firestore.googleapis.com') &&
+    (url.pathname.includes('/google.firestore.v1.Firestore/Listen/') ||
+     url.pathname.includes('/google.firestore.v1.Firestore/Write/'))
+  ) {
+    return; // dejar que el navegador maneje directamente
+  }
+
   // Navegación (HTML): Network First con no-store, fallback a cache para offline
   if (request.mode === 'navigate') {
     event.respondWith(
