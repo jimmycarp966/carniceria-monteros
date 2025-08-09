@@ -1,13 +1,11 @@
 // Service Worker para optimización de rendimiento
-const CACHE_NAME = 'carniceria-v1';
-const STATIC_CACHE = 'static-v1';
-const DYNAMIC_CACHE = 'dynamic-v1';
+const CACHE_NAME = 'carniceria-v3';
+const STATIC_CACHE = 'static-v3';
+const DYNAMIC_CACHE = 'dynamic-v3';
 
 // Archivos estáticos para cachear
 const STATIC_FILES = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
   '/favicon.ico'
 ];
@@ -44,7 +42,9 @@ self.addEventListener('activate', (event) => {
           })
         );
       })
+      .then(() => self.clients.claim())
   );
+  self.skipWaiting();
 });
 
 // Interceptar peticiones
@@ -52,6 +52,12 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
+  // Evitar cache para scripts/chunks para prevenir errores de versiones
+  if (request.destination === 'script' || url.pathname.includes('/static/js/')) {
+    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    return;
+  }
+
   // Estrategia: Cache First para archivos estáticos
   if (request.method === 'GET' && isStaticFile(url.pathname)) {
     event.respondWith(
@@ -138,8 +144,7 @@ self.addEventListener('fetch', (event) => {
 
 // Función para identificar archivos estáticos
 function isStaticFile(pathname) {
-  return pathname.includes('/static/') ||
-         pathname.includes('/manifest.json') ||
+  return pathname.includes('/manifest.json') ||
          pathname.includes('/favicon.ico') ||
          pathname === '/';
 }
