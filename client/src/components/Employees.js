@@ -3,8 +3,10 @@ import { employees, positions, employeeStatuses } from '../data/employees';
 import { UserCheck, Plus, Edit, Trash2, Search, DollarSign, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { employeeService, loadSampleData } from '../services/firebaseService';
+import { usePermissions } from '../context/PermissionsContext';
 
 const Employees = () => {
+  const permissions = usePermissions();
   const [employeeList, setEmployeeList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
@@ -130,13 +132,15 @@ const Employees = () => {
             Gestiona el personal de la carnicería
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn btn-primary flex items-center"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar Empleado
-        </button>
+        {(permissions.includes('employees') || permissions.includes('admin')) && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary flex items-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Empleado
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -305,7 +309,8 @@ const Employees = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
+                     {(permissions.includes('employees') || permissions.includes('admin')) && (
+                     <button
                       onClick={() => {
                         setSelectedEmployee(employee);
                         setShowEditModal(true);
@@ -313,13 +318,16 @@ const Employees = () => {
                       className="text-primary-600 hover:text-primary-900 mr-3"
                     >
                       <Edit className="h-4 w-4" />
-                    </button>
-                    <button
+                     </button>
+                     )}
+                     {(permissions.includes('employees') || permissions.includes('admin')) && (
+                     <button
                       onClick={() => handleDeleteEmployee(employee.id)}
                       className="text-red-600 hover:text-red-900"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                     </button>
+                     )}
                   </td>
                 </tr>
               ))}

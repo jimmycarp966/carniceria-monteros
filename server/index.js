@@ -23,6 +23,26 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Inicializar Firebase Admin para custom claims
+let admin;
+try {
+  admin = require('firebase-admin');
+  if (!admin.apps.length) {
+    const serviceAccountJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    if (serviceAccountJson) {
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log('✅ Firebase Admin inicializado');
+    } else {
+      console.warn('⚠️ No se encontró GOOGLE_APPLICATION_CREDENTIALS_JSON; endpoints de claims no estarán activos.');
+    }
+  }
+} catch (e) {
+  console.warn('⚠️ Firebase Admin no disponible:', e.message);
+}
+
 // Middleware de autenticación
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -101,6 +121,48 @@ app.post('/api/auth/test-login', (req, res) => {
   } else {
     console.log('❌ Test login fallido para:', email);
     res.status(401).json({ error: 'Credenciales inválidas' });
+  }
+});
+
+// Endpoint para asignar custom claims (Firebase Admin)
+app.post('/api/admin/set-claims', async (req, res) => {
+  try {
+    if (!admin || !admin.apps || !admin.apps.length) {
+      return res.status(500).json({ error: 'Firebase Admin no inicializado' });
+    }
+    const { email, role, permissions } = req.body;
+    if (!email) return res.status(400).json({ error: 'email requerido' });
+
+    const userRecord = await admin.auth().getUserByEmail(email);
+
+    const claims = {};
+    if (role) claims.role = role;
+    if (Array.isArray(permissions)) {
+      claims.permissions = permissions.reduce((acc, p) => { acc[p] = true; return acc; }, {});
+    }
+
+    await admin.auth().setCustomUserClaims(userRecord.uid, claims);
+    res.json({ ok: true, uid: userRecord.uid, claims });
+  } catch (error) {
+    console.error('❌ Error asignando claims:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para leer custom claims por email
+app.get('/api/admin/get-claims', async (req, res) => {
+  try {
+    if (!admin || !admin.apps || !admin.apps.length) {
+      return res.status(500).json({ error: 'Firebase Admin no inicializado' });
+    }
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'email requerido' });
+
+    const userRecord = await admin.auth().getUserByEmail(email);
+    res.json({ uid: userRecord.uid, customClaims: userRecord.customClaims || {} });
+  } catch (error) {
+    console.error('❌ Error obteniendo claims:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
