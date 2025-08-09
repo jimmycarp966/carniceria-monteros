@@ -81,6 +81,7 @@ export const expensesService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      smartCache.invalidate('expenses');
       return docRef.id;
     } catch (error) {
       console.error('❌ Error agregando gasto:', error);
@@ -542,17 +543,23 @@ export const saleService = {
       }
 
       const salesRef = collection(db, 'sales');
+      // Evitar índice compuesto: filtrar por shiftId y ordenar en memoria
       const q = query(
         salesRef, 
-        where('shiftId', '==', shiftId),
-        orderBy('createdAt', 'desc')
+        where('shiftId', '==', shiftId)
       );
       
       const snapshot = await getDocs(q);
-      const sales = snapshot.docs.map(doc => ({
+      let sales = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      // Ordenar por createdAt desc en cliente
+      sales = sales.sort((a, b) => {
+        const ta = a.createdAt?.toDate?.()?.getTime?.() || new Date(a.createdAt || 0).getTime();
+        const tb = b.createdAt?.toDate?.()?.getTime?.() || new Date(b.createdAt || 0).getTime();
+        return tb - ta;
+      });
       
       smartCache.set(cacheKey, sales);
       return sales;
@@ -739,6 +746,8 @@ export const shiftService = {
 
       // Limpiar cache
       smartCache.invalidate('shifts');
+      // Si hay gasto vinculado, invalidar cache de expenses del turno
+      smartCache.invalidate('expenses');
       
       console.log('✅ Turno cerrado:', shiftId);
     } catch (error) {
