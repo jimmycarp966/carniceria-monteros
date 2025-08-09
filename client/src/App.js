@@ -282,12 +282,20 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
       </div>
 
       {/* Main content optimizado */}
-      <div className="flex-1 w-full min-w-0">
-        <div className="min-h-screen w-full pt-20 lg:pt-0 px-4 lg:px-6">
+      <div className="flex-1 w-full min-w-0 flex flex-col">
+        <div className="flex-1 w-full pt-20 lg:pt-0 px-4 lg:px-6">
           <Suspense fallback={<LoadingSpinner />}>
             {children}
           </Suspense>
         </div>
+        {/* Footer global */}
+        <footer className="w-full bg-white/90 backdrop-blur-xl border-t border-gray-200/60 px-4 lg:px-6 py-4">
+          <div className="max-w-7xl mx-auto text-center">
+            <p className="text-xs sm:text-sm text-gray-600">
+              Diseñado por <span className="font-semibold text-gray-900">DaniR</span>
+            </p>
+          </div>
+        </footer>
       </div>
 
       {/* Debug Panel */}
