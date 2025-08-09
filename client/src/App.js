@@ -11,9 +11,7 @@ import { onAuthStateChanged, signOut, updatePassword } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
-
-// Versión mínima de la aplicación (para trazabilidad en despliegues)
-const APP_VERSION = '1.0.1';
+import realtimeService from './services/realtimeService';
 
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
@@ -297,7 +295,6 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
             <p className="text-xs sm:text-sm text-gray-600">
               Diseñado por <span className="font-semibold text-gray-900">DaniR</span>
             </p>
-            <p className="mt-1 text-[10px] sm:text-xs text-gray-400">v{APP_VERSION}</p>
           </div>
         </footer>
       </div>
@@ -364,6 +361,14 @@ function App() {
         }
         const perms = await authzService.getUserPermissionsByEmail(user.email);
         setPermissions(perms);
+
+        // Inicializar listeners realtime una sola vez al autenticar
+        if (!window.__rt_listeners_initialized__) {
+          try {
+            realtimeService.initializeRealtimeListeners();
+            window.__rt_listeners_initialized__ = true;
+          } catch {}
+        }
       } else {
         setPermissions([]);
       }

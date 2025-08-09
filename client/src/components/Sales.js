@@ -59,11 +59,13 @@ const Sales = () => {
     const handleSales = (data) => {
       if (Array.isArray(data.sales)) setSales(data.sales);
     };
-    realtimeService.on('products_updated', handleProducts);
-    realtimeService.on('sales_updated', handleSales);
+    try {
+      realtimeService.on('products_updated', handleProducts);
+      realtimeService.on('sales_updated', handleSales);
+    } catch {}
     return () => {
-      realtimeService.off('products_updated', handleProducts);
-      realtimeService.off('sales_updated', handleSales);
+      try { realtimeService.off('products_updated', handleProducts); } catch {}
+      try { realtimeService.off('sales_updated', handleSales); } catch {}
     };
   }, []);
 
