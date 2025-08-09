@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { CreditCard, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { expensesService, shiftService } from '../services/firebaseService';
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { db } from '../firebase';
 import { usePermissions } from '../context/PermissionsContext';
 
 const Expenses = () => {
@@ -13,19 +15,29 @@ const Expenses = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!(permissions.includes('expenses') || permissions.includes('admin'))) return;
+    let unsub = null;
     (async () => {
-      if (!(permissions.includes('expenses') || permissions.includes('admin'))) return;
       try {
         const shift = await shiftService.getActiveShift();
         setCurrentShift(shift);
-        if (shift) {
-          const list = await expensesService.getExpensesByShift(shift.id);
-          setExpenses(list);
+        if (shift?.id) {
+          unsub = onSnapshot(
+            query(collection(db, 'expenses'), where('shiftId', '==', shift.id), orderBy('createdAt', 'desc')),
+            (snap) => {
+              const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              setExpenses(list);
+            },
+            (err) => console.error('Error onSnapshot gastos:', err)
+          );
+        } else {
+          setExpenses([]);
         }
       } catch (e) {
         console.error('Error cargando gastos:', e);
       }
     })();
+    return () => { try { unsub && unsub(); } catch {} };
   }, [permissions]);
 
   const addExpense = async () => {
@@ -39,13 +51,13 @@ const Expenses = () => {
     }
     setSaving(true);
     try {
-      const id = await expensesService.addExpense({
+      await expensesService.addExpense({
         shiftId: currentShift.id,
         amount: Number(amount) || 0,
         reason: reason || 'Gasto operativo',
         type: 'operational'
       });
-      setExpenses([{ id, amount: Number(amount) || 0, reason, createdAt: new Date() }, ...expenses]);
+      // onSnapshot actualizará la lista
       setAmount(0);
       setReason('');
       toast.success('Gasto registrado');

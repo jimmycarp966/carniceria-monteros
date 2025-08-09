@@ -16,8 +16,6 @@ const RealtimeNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [isVisible, setIsVisible] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isOnline, setIsOnline] = useState(true);
-  const [queueSize, setQueueSize] = useState(0);
 
   useEffect(() => {
     // Escuchar notificaciones en tiempo real
@@ -81,17 +79,10 @@ const RealtimeNotifications = () => {
       handleNotification(saleNotification);
     });
 
-    // Estado de red y cola
-    realtimeService.on('network_status', (data) => {
-      if (typeof data?.isOnline === 'boolean') setIsOnline(data.isOnline);
-      if (typeof data?.queueSize === 'number') setQueueSize(data.queueSize);
-    });
-
     return () => {
       realtimeService.off('notification_received', handleNotification);
       realtimeService.off('stock_alert');
       realtimeService.off('sale_synced');
-      realtimeService.off('network_status');
     };
   }, []);
 
@@ -180,12 +171,6 @@ const RealtimeNotifications = () => {
 
   return (
     <div className="relative">
-      {/* Banner de red */}
-      {!isOnline && (
-        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[9998] px-3 py-1 rounded-full bg-yellow-100 border border-yellow-200 text-yellow-800 text-xs shadow">
-          Sin conexión. Operaciones en cola: {queueSize}
-        </div>
-      )}
       {/* Botón de notificaciones */}
       <button
         onClick={() => {

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { inventoryItems, inventoryMovements, inventoryStatuses, movementTypes } from '../data/inventory';
+import { inventoryStatuses, movementTypes } from '../data/inventory';
 import { Building, Search, AlertTriangle, TrendingUp, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { inventoryService, loadSampleData, inventoryMovementsService } from '../services/firebaseService';
+import { inventoryMovementsService } from '../services/firebaseService';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const Inventory = () => {
   const [inventoryList, setInventoryList] = useState([]);
@@ -14,86 +16,45 @@ const Inventory = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Cargar inventario desde Firebase (source of truth: inventory)
+  // Inventario en tiempo real (onSnapshot)
   useEffect(() => {
-    let isMounted = true;
-    const loadInventory = async () => {
-      try {
-        console.log('🔄 Cargando inventario desde Firebase...');
-        
-        // Intentar cargar datos simulados si Firebase está vacío
-        await loadSampleData();
-        
-        const inventoryFromFirebase = await inventoryService.getAllInventory();
-        console.log('📦 Ítems de inventario:', inventoryFromFirebase.length);
-        
-        // Normalizar campos esperados por la UI
-        const inventoryData = (Array.isArray(inventoryFromFirebase) ? inventoryFromFirebase : []).map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productName: item.productName || item.name || 'Producto',
-          category: item.category || 'Sin categoría',
-          currentStock: item.stock ?? item.currentStock ?? 0,
-          minStock: item.minStock ?? 10,
-          cost: item.cost ?? 0,
-          status: getStockStatus(item.stock ?? item.currentStock ?? 0, item.minStock ?? 10),
-          lastUpdated: item.lastUpdated || new Date().toISOString(),
-          unit: item.unit || 'unidad',
-          location: item.location || '-',
-          supplier: item.supplier || ''
-        }));
-        
-        if (!isMounted) return;
+    setIsLoading(true);
+    const unsub = onSnapshot(
+      query(collection(db, 'inventory'), orderBy('productName')),
+      (snap) => {
+        const inventoryData = snap.docs.map(doc => {
+          const item = doc.data() || {};
+          return {
+            id: doc.id,
+            productId: item.productId,
+            productName: item.productName || item.name || 'Producto',
+            category: item.category || 'Sin categoría',
+            currentStock: item.stock ?? item.currentStock ?? 0,
+            minStock: item.minStock ?? 10,
+            cost: item.cost ?? 0,
+            status: getStockStatus(item.stock ?? item.currentStock ?? 0, item.minStock ?? 10),
+            lastUpdated: item.lastUpdated || new Date().toISOString(),
+            unit: item.unit || 'unidad',
+            location: item.location || '-',
+            supplier: item.supplier || ''
+          };
+        });
         setInventoryList(inventoryData);
-        
-        // Por ahora, usar movimientos simulados
-        setMovementsList(inventoryMovements);
-        setHasError(false);
-      } catch (error) {
-        console.error('❌ Error cargando inventario:', error);
-        if (!isMounted) return;
-        setInventoryList(inventoryItems);
-        setMovementsList(inventoryMovements);
-        setHasError(true);
-      } finally {
-        if (!isMounted) return;
         setIsLoading(false);
+        setHasError(false);
+      },
+      (error) => {
+        console.error('❌ Error onSnapshot inventario:', error);
+        setIsLoading(false);
+        setHasError(true);
+        setInventoryList([]);
       }
-    };
-    const id = setTimeout(loadInventory, 50);
-    return () => { isMounted = false; clearTimeout(id); };
+    );
+    return () => { try { unsub(); } catch {} };
   }, []);
 
   const retryLoad = () => {
-    setIsLoading(true);
-    setHasError(false);
-    (async () => {
-      try {
-        await loadSampleData();
-        const inv = await inventoryService.getAllInventory();
-        const mapped = (Array.isArray(inv) ? inv : []).map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productName: item.productName || item.name || 'Producto',
-          category: item.category || 'Sin categoría',
-          currentStock: item.stock ?? item.currentStock ?? 0,
-          minStock: item.minStock ?? 10,
-          cost: item.cost ?? 0,
-          status: getStockStatus(item.stock ?? item.currentStock ?? 0, item.minStock ?? 10),
-          lastUpdated: item.lastUpdated || new Date().toISOString(),
-          unit: item.unit || 'unidad',
-          location: item.location || '-',
-          supplier: item.supplier || ''
-        }));
-        setInventoryList(mapped);
-        setMovementsList(inventoryMovements);
-      } catch (e) {
-        console.error(e);
-        setHasError(true);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+    // onSnapshot actualiza solo
   };
 
   // Función para determinar el estado del stock

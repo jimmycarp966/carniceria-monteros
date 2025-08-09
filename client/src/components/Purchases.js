@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, Plus, Trash2, DollarSign, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { purchasesService, suppliersService, productService } from '../services/firebaseService';
+import { purchasesService } from '../services/firebaseService';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '../firebase';
 import { usePermissions } from '../context/PermissionsContext';
 
 const Purchases = () => {
@@ -15,18 +17,13 @@ const Purchases = () => {
 
   useEffect(() => {
     if (!(permissions.includes('purchases') || permissions.includes('admin'))) return;
-    (async () => {
-      try {
-        const [sups, prods] = await Promise.all([
-          suppliersService.getAllSuppliers().catch(() => []),
-          productService.getAllProducts(1, 200).catch(() => [])
-        ]);
-        setSuppliers(sups);
-        setProducts(prods);
-      } catch (e) {
-        console.error('Error cargando datos de compras:', e);
-      }
-    })();
+    const unsubSup = onSnapshot(query(collection(db, 'suppliers'), orderBy('name')), (snap) => {
+      setSuppliers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (e) => console.error('Error onSnapshot suppliers:', e));
+    const unsubProd = onSnapshot(query(collection(db, 'products'), orderBy('name')), (snap) => {
+      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (e) => console.error('Error onSnapshot products:', e));
+    return () => { try { unsubSup(); } catch {} try { unsubProd(); } catch {} };
   }, [permissions]);
 
   const addItemRow = () => setItems([...items, { productId: '', quantity: 1, unitCost: 0 }]);
