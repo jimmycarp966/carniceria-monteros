@@ -30,9 +30,23 @@ let syncState = {
   debounceTimers: new Map()
 };
 
-// Cola de operaciones offline optimizada
-const offlineQueue = [];
-const MAX_QUEUE_SIZE = 50; // Reducido de 100
+// Cola de operaciones offline (descriptores serializables)
+let offlineQueue = [];
+const MAX_QUEUE_SIZE = 100;
+const OFFLINE_QUEUE_KEY = 'offlineQueue_v1';
+
+const saveOfflineQueue = () => {
+  try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(offlineQueue)); } catch {}
+};
+
+const loadOfflineQueue = () => {
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    offlineQueue = raw ? JSON.parse(raw) : [];
+  } catch { offlineQueue = []; }
+};
+
+loadOfflineQueue();
 
 // Cache para datos frecuentemente accedidos
 const dataCache = new Map();
@@ -72,43 +86,37 @@ const processOfflineQueue = async () => {
   if (offlineQueue.length === 0) return;
   
   console.log(`🔄 Procesando ${offlineQueue.length} operaciones pendientes...`);
-  
-  const batchSize = 10; // Procesar en lotes
-  for (let i = 0; i < offlineQueue.length; i += batchSize) {
-    const batch = offlineQueue.slice(i, i + batchSize);
-    
-    await Promise.allSettled(
-      batch.map(async (operation) => {
-        try {
-          await operation();
-          console.log('✅ Operación sincronizada:', operation.type);
-        } catch (error) {
-          console.error('❌ Error sincronizando:', error);
-        }
-      })
-    );
+  const remaining = [];
+  for (const op of offlineQueue) {
+    try {
+      if (op?.type === 'sale' && op.payload) {
+        await dataSyncService.syncSale(op.payload);
+      } else if (op?.type === 'inventory' && op.payload) {
+        await dataSyncService.updateInventoryStock(op.payload.productId, op.payload.quantityChange);
+      } else if (op?.type === 'shift' && op.payload) {
+        await dataSyncService.syncShift(op.payload);
+      }
+      console.log('✅ Operación sincronizada:', op?.type);
+    } catch (e) {
+      console.error('❌ Error sincronizando:', op?.type, e);
+      remaining.push(op);
+    }
   }
-  
-  offlineQueue.length = 0;
+  offlineQueue = remaining;
+  saveOfflineQueue();
   syncState.lastSync = Date.now();
-  localStorage.removeItem('offlineQueue');
   
   // Notificar a todos los listeners
   notifyListeners('sync_completed', { timestamp: Date.now() });
 };
 
 // Agregar operación a la cola offline optimizada
-const addToOfflineQueue = (operation) => {
-  if (offlineQueue.length >= MAX_QUEUE_SIZE) {
-    offlineQueue.shift(); // Remover operación más antigua
-  }
-  
-  offlineQueue.push(operation);
-  localStorage.setItem('offlineQueue', JSON.stringify(offlineQueue));
-  
-  if (syncState.isOnline) {
-    processOfflineQueue();
-  }
+const addToOfflineQueue = (descriptor) => {
+  if (!descriptor || !descriptor.type) return;
+  if (offlineQueue.length >= MAX_QUEUE_SIZE) offlineQueue.shift();
+  offlineQueue.push(descriptor);
+  saveOfflineQueue();
+  if (syncState.isOnline) processOfflineQueue();
 };
 
 // Notificar a todos los listeners con debouncing
@@ -523,10 +531,8 @@ export const dataSyncService = {
     if (syncState.isOnline) {
       return await operation();
     } else {
-      addToOfflineQueue({
-        type: 'sale',
-        operation
-      });
+      const clientOperationId = saleData.clientOperationId || `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      addToOfflineQueue({ type: 'sale', payload: { ...saleData, clientOperationId } });
       return 'pending';
     }
   },
@@ -578,10 +584,7 @@ export const dataSyncService = {
     if (syncState.isOnline) {
       return await operation();
     } else {
-      addToOfflineQueue({
-        type: 'inventory',
-        operation
-      });
+      addToOfflineQueue({ type: 'inventory', payload: { productId, quantityChange } });
     }
   },
 
@@ -622,10 +625,7 @@ export const dataSyncService = {
     if (syncState.isOnline) {
       return await operation();
     } else {
-      addToOfflineQueue({
-        type: 'shift',
-        operation
-      });
+      addToOfflineQueue({ type: 'shift', payload: shiftData });
       return 'pending';
     }
   }
