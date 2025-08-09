@@ -2,7 +2,7 @@ import {
   ref, 
   push, 
   update, 
-  serverTimestamp
+  serverTimestamp as rtdbServerTimestamp
 } from 'firebase/database';
 import { 
   collection, 
@@ -13,7 +13,10 @@ import {
   where,
   orderBy,
   limit,
-  getDocs
+  getDocs,
+  serverTimestamp as fsServerTimestamp,
+  doc,
+  increment
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getDatabase } from 'firebase/database';
@@ -394,10 +397,10 @@ export const realtimeService = {
 export const notificationService = {
   // Enviar notificación de venta completada
   async notifySaleCompleted(saleData) {
-    const notification = {
+          const notification = {
       type: 'sale_completed',
       data: saleData,
-      timestamp: serverTimestamp(),
+            timestamp: rtdbServerTimestamp(),
       read: false
     };
 
@@ -428,10 +431,10 @@ export const notificationService = {
 
   // Enviar alerta de stock bajo
   async notifyStockAlert(productData) {
-    const notification = {
+          const notification = {
       type: 'stock_alert',
       data: productData,
-      timestamp: serverTimestamp(),
+            timestamp: rtdbServerTimestamp(),
       priority: 'high',
       read: false
     };
@@ -473,7 +476,7 @@ export const dataSyncService = {
         if (cleanSale.shiftId === undefined) delete cleanSale.shiftId;
         const saleDoc = await addDoc(salesRef, {
           ...cleanSale,
-          createdAt: serverTimestamp(),
+          createdAt: fsServerTimestamp(),
           synced: true
         });
 
@@ -486,17 +489,16 @@ export const dataSyncService = {
         try {
           if (cleanSale.shiftId) {
             const shiftId = String(cleanSale.shiftId);
-            const { doc: docFn, updateDoc: updateDocFn, increment } = await import('firebase/firestore');
-            const sRef = docFn(db, 'shifts', shiftId);
+            const sRef = doc(db, 'shifts', shiftId);
             const amount = Number(cleanSale.finalTotal ?? cleanSale.total) || 0;
             const method = String(cleanSale.paymentMethod || 'cash');
             const updates = {
               salesCount: increment(1),
-              updatedAt: serverTimestamp(),
+              updatedAt: fsServerTimestamp(),
               'totals.overall': increment(amount)
             };
             updates[`totals.${method}`] = increment(amount);
-            await updateDocFn(sRef, updates);
+            await updateDoc(sRef, updates);
           }
         } catch (e) {
           console.warn('No se actualizaron métricas de turno:', e);
@@ -507,7 +509,7 @@ export const dataSyncService = {
           const statsRef = ref(realtimeDb, 'stats');
           await update(statsRef, {
             totalSales: saleData.total,
-            lastSale: serverTimestamp(),
+            lastSale: rtdbServerTimestamp(),
             dailySales: saleData.total
           });
         } catch (e) {
@@ -552,7 +554,7 @@ export const dataSyncService = {
           
           await updateDoc(doc.ref, {
             stock: Math.max(0, newStock),
-            lastUpdated: serverTimestamp()
+            lastUpdated: fsServerTimestamp()
           });
 
           // Verificar stock bajo
@@ -569,7 +571,7 @@ export const dataSyncService = {
             const productRef = doc(db, 'products', String(productId));
             await updateDoc(productRef, {
               stock: Math.max(0, newStock),
-              updatedAt: serverTimestamp()
+              updatedAt: fsServerTimestamp()
             });
           } catch (e) {
             console.warn('No se pudo actualizar stock en products para', productId);
@@ -595,7 +597,7 @@ export const dataSyncService = {
         const shiftsRef = collection(db, 'shifts');
         const shiftDoc = await addDoc(shiftsRef, {
           ...shiftData,
-          createdAt: serverTimestamp(),
+          createdAt: fsServerTimestamp(),
           synced: true
         });
 
@@ -605,7 +607,7 @@ export const dataSyncService = {
           [shiftDoc.id]: {
             ...shiftData,
             status: 'active',
-            lastUpdated: serverTimestamp()
+            lastUpdated: rtdbServerTimestamp()
           }
         });
 
