@@ -96,7 +96,7 @@ const Reports = () => {
         const end = new Date();
         end.setMonth(end.getMonth()+1); end.setDate(0); end.setHours(23,59,59,999);
         const [expenses, purchases] = await Promise.all([
-          expensesService.getExpensesByShift ? Promise.resolve([]) : Promise.resolve([]),
+          expensesService.getExpensesByDateRange(start, end),
           purchasesService.getPurchasesByDateRange(start, end)
         ]);
         if (!isMounted) return;

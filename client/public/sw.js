@@ -124,7 +124,7 @@ self.addEventListener('fetch', (event) => {
   }
   
   // Estrategia: Network First para API calls
-  else if (isApiCall(url.pathname)) {
+  else if (isApiCall(url.href)) {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -183,10 +183,21 @@ function isStaticFile(pathname) {
 }
 
 // Función para identificar llamadas a API
-function isApiCall(pathname) {
-  return pathname.includes('/api/') ||
-         pathname.includes('firebase') ||
-         pathname.includes('googleapis');
+function isApiCall(href) {
+  try {
+    const u = new URL(href);
+    const host = u.host;
+    const path = u.pathname;
+    // Ignorar completamente canales de Firestore Listen (evitar interferir realtime)
+    if (path.includes('/google.firestore.v1.Firestore/Listen/')) return false;
+    return path.includes('/api/') ||
+           host.includes('firebase') ||
+           host.includes('googleapis') ||
+           host.includes('gstatic.com') ||
+           host.includes('firestore.googleapis.com');
+  } catch (e) {
+    return false;
+  }
 }
 
 // Función para limpiar cache antiguo

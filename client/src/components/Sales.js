@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { products } from '../data/products';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { saleService, productService, loadSampleData } from '../services/firebaseService';
@@ -40,9 +39,7 @@ const Sales = () => {
         setHasError(false);
       } catch (error) {
         console.error('❌ Error cargando datos en Sales:', error);
-        // Fallback a datos locales
         if (!isMounted) return;
-        setAllProducts(products || []);
         setHasError(true);
       } finally {
         if (!isMounted) return;
@@ -87,7 +84,7 @@ const Sales = () => {
       return;
     }
 
-    const product = allProducts.find(p => p.id === parseInt(selectedProduct));
+    const product = allProducts.find(p => String(p.id) === String(selectedProduct));
     if (!product) return;
 
     const existingItem = cart.find(item => item.id === product.id);

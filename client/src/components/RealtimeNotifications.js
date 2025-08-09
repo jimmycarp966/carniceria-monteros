@@ -173,7 +173,15 @@ const RealtimeNotifications = () => {
     <div className="relative">
       {/* Botón de notificaciones */}
       <button
-        onClick={() => setIsVisible(!isVisible)}
+        onClick={() => {
+          const next = !isVisible;
+          setIsVisible(next);
+          if (next) {
+            // Al abrir, marcar todas como leídas y resetear contador
+            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+            setUnreadCount(0);
+          }
+        }}
         className="relative p-2 bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95 rounded-2xl"
         aria-label="Notificaciones"
       >
