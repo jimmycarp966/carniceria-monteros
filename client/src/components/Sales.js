@@ -195,8 +195,7 @@ const Sales = () => {
       }
 
       // Actualizar estado local
-      const saleWithId = { ...saleData, id: saleId };
-      setSales([saleWithId, ...sales]);
+      // Dejar que el onSnapshot de Firestore actualice la lista; solo limpiar carrito
       setCart([]);
       toast.success('Venta completada exitosamente');
     } catch (error) {

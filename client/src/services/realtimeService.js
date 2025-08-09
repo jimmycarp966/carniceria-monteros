@@ -480,9 +480,13 @@ export const dataSyncService = {
           synced: true
         });
 
-        // Actualizar inventario y también stock en products si existe
+        // Actualizar inventario y también stock en products si existe (no bloquear venta si falla)
         for (const item of saleData.items) {
-          await this.updateInventoryStock(item.productId, -Math.abs(Number(item.quantity) || 0));
+          try {
+            await this.updateInventoryStock(item.productId, -Math.abs(Number(item.quantity) || 0));
+          } catch (e) {
+            console.warn('No se pudo actualizar inventario para', item.productId, e);
+          }
         }
 
         // Intentar actualizar métricas del turno (si aplica)
@@ -525,18 +529,17 @@ export const dataSyncService = {
 
         return saleDoc.id;
       } catch (error) {
-        console.error('Error sincronizando venta:', error);
-        throw error;
+        console.error('Error sincronizando venta (agregar a Firestore falló):', error);
+        throw error; // Solo si falló crear la venta en Firestore
       }
     };
 
     if (syncState.isOnline) {
       return await operation();
-    } else {
-      const clientOperationId = saleData.clientOperationId || `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-      addToOfflineQueue({ type: 'sale', payload: { ...saleData, clientOperationId } });
-      return 'pending';
     }
+    const clientOperationId = saleData.clientOperationId || `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+    addToOfflineQueue({ type: 'sale', payload: { ...saleData, clientOperationId } });
+    return 'pending';
   },
 
   // Actualizar stock de inventario
