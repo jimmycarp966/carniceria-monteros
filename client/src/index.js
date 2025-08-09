@@ -11,8 +11,10 @@ if ('serviceWorker' in navigator) {
       .then((registration) => {
         console.log('Service Worker registrado:', registration.scope);
 
-        // Forzar check de update tras 5s en segundo plano
-        setTimeout(() => registration.update().catch(() => {}), 5000);
+        // Forzar actualización periódica y limpieza de cache obsoleta
+        const doUpdate = () => registration.update().catch(() => {});
+        setTimeout(doUpdate, 3000);
+        setInterval(doUpdate, 60 * 1000);
 
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
@@ -27,7 +29,11 @@ if ('serviceWorker' in navigator) {
         // Escuchar cambios de controlador
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           console.log('Service Worker actualizado y activado');
-          window.location.reload();
+          // Evitar loops: recargar una sola vez
+          if (!window.__reloaded_for_sw__) {
+            window.__reloaded_for_sw__ = true;
+            window.location.reload();
+          }
         });
       })
       .catch((error) => {

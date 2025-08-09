@@ -54,7 +54,9 @@ self.addEventListener('fetch', (event) => {
   
   // Evitar cache para scripts/chunks para prevenir errores de versiones
   if (request.destination === 'script' || url.pathname.includes('/static/js/')) {
-    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    event.respondWith(
+      fetch(request, { cache: 'no-store' }).catch(() => caches.match(request))
+    );
     return;
   }
 
@@ -118,7 +120,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request)
         .then((cachedResponse) => {
-          const fetchPromise = fetch(request)
+          const fetchPromise = fetch(request, { cache: 'no-store' })
             .then((networkResponse) => {
               // Cachear nueva respuesta
               if (networkResponse.status === 200) {

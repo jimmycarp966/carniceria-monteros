@@ -1502,68 +1502,7 @@ const sampleEmployees = [
 
 // Función para cargar datos simulados en Firebase
 export const loadSampleData = async () => {
-  try {
-    console.log('🔄 Verificando si Firebase está vacío...');
-    const existingProducts = await productService.getAllProducts();
-    const existingCustomers = await customerService.getAllCustomers();
-    const existingEmployees = await employeeService.getAllEmployees();
-    const existingShifts = await shiftService.getAllShifts();
-    
-    if (existingProducts.length === 0) {
-      console.log('📦 Firebase está vacío, cargando productos simulados...');
-      
-      for (const product of sampleProducts) {
-        await productService.addProduct(product);
-        console.log(`✅ Producto simulado agregado: ${product.name}`);
-      }
-      
-      console.log('🎉 Productos simulados cargados exitosamente');
-    } else {
-      console.log('📦 Firebase ya tiene productos, no se cargan simulados');
-    }
-
-    if (existingCustomers.length === 0) {
-      console.log('👥 Cargando clientes simulados...');
-      
-      for (const customer of sampleCustomers) {
-        await customerService.addCustomer(customer);
-        console.log(`✅ Cliente simulado agregado: ${customer.name}`);
-      }
-      
-      console.log('🎉 Clientes simulados cargados exitosamente');
-    } else {
-      console.log('👥 Firebase ya tiene clientes, no se cargan simulados');
-    }
-
-    if (existingEmployees.length === 0) {
-      console.log('👨‍💼 Cargando empleados simulados...');
-      
-      for (const employee of sampleEmployees) {
-        await employeeService.addEmployee(employee);
-        console.log(`✅ Empleado simulado agregado: ${employee.name}`);
-      }
-      
-      console.log('🎉 Empleados simulados cargados exitosamente');
-    } else {
-      console.log('👨‍💼 Firebase ya tiene empleados, no se cargan simulados');
-    }
-
-    if (existingShifts.length === 0) {
-      console.log('⏰ Cargando turnos simulados...');
-      
-      for (const shift of sampleShifts) {
-        await shiftService.addShift(shift);
-        console.log(`✅ Turno simulado agregado: ${shift.type} - ${shift.date}`);
-      }
-      
-      console.log('🎉 Turnos simulados cargados exitosamente');
-    } else {
-      console.log('⏰ Firebase ya tiene turnos, no se cargan simulados');
-    }
-
-    return true;
-  } catch (error) {
-    console.error('❌ Error cargando datos simulados:', error);
-    return false;
-  }
-}; 
+  // Deshabilitado: no cargar datos simulados
+  console.log('ℹ️ Carga de datos simulados deshabilitada');
+  return false;
+};
