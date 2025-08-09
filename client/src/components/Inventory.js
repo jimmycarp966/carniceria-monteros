@@ -238,7 +238,7 @@ const Inventory = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Valor Total</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${stats.totalValue.toLocaleString()}
+               ${(Number(stats.totalValue) || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -249,7 +249,7 @@ const Inventory = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Stock</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {stats.totalStock.toLocaleString()}
+                {(Number(stats.totalStock) || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -372,12 +372,12 @@ const Inventory = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      ${item.cost.toLocaleString()}
+                      ${(Number(item.cost) || 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      ${(item.currentStock * item.cost).toLocaleString()}
+                      {((Number(item.currentStock) || 0) * (Number(item.cost) || 0)).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

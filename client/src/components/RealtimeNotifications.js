@@ -71,7 +71,7 @@ const RealtimeNotifications = () => {
         id: Date.now(),
         type: 'sale_completed',
         title: 'Venta Completada',
-        message: `Nueva venta de $${data.saleData.finalTotal.toLocaleString()}`,
+        message: `Nueva venta de $${(Number(data.saleData.finalTotal) || 0).toLocaleString()}`,
         priority: 'medium',
         timestamp: new Date(),
         data: data.saleData

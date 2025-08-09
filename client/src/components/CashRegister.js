@@ -707,7 +707,7 @@ const CashRegister = () => {
                   <div className="text-center">
                     <div className="text-2xl mb-2">{product.icon}</div>
                     <p className="text-xs font-medium text-gray-900 truncate">{product.name}</p>
-                    <p className="text-xs text-gray-600">${product.price.toLocaleString()}</p>
+                    <p className="text-xs text-gray-600">${(Number(product.price) || 0).toLocaleString()}</p>
                   </div>
                 </button>
               ))}
@@ -833,7 +833,7 @@ const CashRegister = () => {
                               <p className="text-sm text-gray-600">{product.category}</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-primary-600">${product.price.toLocaleString()}</p>
+                              <p className="font-bold text-primary-600">${(Number(product.price) || 0).toLocaleString()}</p>
                               <p className="text-xs text-gray-500">Stock: {product.stock}</p>
                             </div>
                           </button>
@@ -897,7 +897,7 @@ const CashRegister = () => {
                       <span className="text-2xl">{product.icon}</span>
                       <div>
                         <p className="font-medium text-gray-900 text-sm">{product.name}</p>
-                        <p className="text-primary-600 font-bold">${product.price.toLocaleString()}</p>
+                        <p className="text-primary-600 font-bold">${(Number(product.price) || 0).toLocaleString()}</p>
                       </div>
                     </div>
                   </button>
@@ -933,7 +933,7 @@ const CashRegister = () => {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{item.name}</p>
-                          <p className="text-sm text-gray-600">${item.price.toLocaleString()} c/u</p>
+                          <p className="text-sm text-gray-600">${(Number(item.price) || 0).toLocaleString()} c/u</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -1009,7 +1009,7 @@ const CashRegister = () => {
                       placeholder="0"
                     />
                     {change > 0 && (
-                      <p className="text-sm text-green-600 mt-1">Cambio: ${change.toLocaleString()}</p>
+                      <p className="text-sm text-green-600 mt-1">Cambio: ${(Number(change) || 0).toLocaleString()}</p>
                     )}
                   </div>
                 )}
@@ -1035,7 +1035,7 @@ const CashRegister = () => {
             <div className="card">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Total</h3>
-                <p className="text-2xl font-bold text-primary-600">${cartTotal.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-primary-600">${(Number(cartTotal) || 0).toLocaleString()}</p>
               </div>
               
               <button
@@ -1133,11 +1133,11 @@ const CashRegister = () => {
                           Venta #{sale.id}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {new Date(sale.date).toLocaleString()}
+                          {new Date(sale.date || Date.now()).toLocaleString()}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="history-amount">${sale.total.toLocaleString()}</p>
+                        <p className="history-amount">${(Number(sale.total) || 0).toLocaleString()}</p>
                         <p className="text-xs text-gray-500">
                           {sale.paymentMethod === 'cash' ? 'Efectivo' : 
                            sale.paymentMethod === 'card' ? 'Tarjeta Crédito' :
@@ -1186,7 +1186,7 @@ const CashRegister = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-blue-700">Total de Ventas</p>
-                    <p className="text-2xl font-bold text-blue-900">${dailyReport.totalSales.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-blue-900">${(Number(dailyReport.totalSales) || 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-blue-700">Total de Transacciones</p>
@@ -1209,7 +1209,7 @@ const CashRegister = () => {
                       </div>
                       <span className="text-sm text-green-600">{dailyReport.cashTransactions} trans.</span>
                     </div>
-                    <p className="text-2xl font-bold text-green-900">${dailyReport.cashTotal.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-green-900">${(Number(dailyReport.cashTotal) || 0).toLocaleString()}</p>
                     <p className="text-xs text-green-600 mt-1">Para arqueo de caja</p>
                   </div>
 
@@ -1222,7 +1222,7 @@ const CashRegister = () => {
                       </div>
                       <span className="text-sm text-purple-600">{dailyReport.cardTransactions} trans.</span>
                     </div>
-                    <p className="text-2xl font-bold text-purple-900">${dailyReport.cardTotal.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-purple-900">${(Number(dailyReport.cardTotal) || 0).toLocaleString()}</p>
                   </div>
 
                   {/* Transferencia */}
@@ -1234,7 +1234,7 @@ const CashRegister = () => {
                       </div>
                       <span className="text-sm text-blue-600">{dailyReport.transferTransactions} trans.</span>
                     </div>
-                    <p className="text-2xl font-bold text-blue-900">${dailyReport.transferTotal.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-blue-900">${(Number(dailyReport.transferTotal) || 0).toLocaleString()}</p>
                   </div>
 
                   {/* Débito */}
@@ -1246,7 +1246,7 @@ const CashRegister = () => {
                       </div>
                       <span className="text-sm text-orange-600">{dailyReport.debitTransactions} trans.</span>
                     </div>
-                    <p className="text-2xl font-bold text-orange-900">${dailyReport.debitTotal.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-orange-900">${(Number(dailyReport.debitTotal) || 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -1257,7 +1257,7 @@ const CashRegister = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-yellow-700">Total en Efectivo:</span>
-                    <span className="font-bold text-yellow-900">${dailyReport.cashTotal.toLocaleString()}</span>
+                    <span className="font-bold text-yellow-900">${(Number(dailyReport.cashTotal) || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-yellow-700">Transacciones en Efectivo:</span>

@@ -169,7 +169,7 @@ const Employees = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Salarios</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${stats.totalSalary.toLocaleString()}
+              ${(Number(stats.totalSalary) || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -180,7 +180,7 @@ const Employees = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Salario Promedio</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${Math.round(stats.averageSalary).toLocaleString()}
+                ${(Number(Math.round(stats.averageSalary)) || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -297,7 +297,7 @@ const Employees = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      ${employee.salary.toLocaleString()}
+                      ${(Number(employee.salary) || 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

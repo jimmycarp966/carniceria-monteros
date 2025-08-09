@@ -22,7 +22,7 @@ const StatCard = memo(({ title, value, icon: Icon, color, subtitle, subtitleIcon
       <div>
         <p className="text-sm font-medium text-gray-600">{title}</p>
         <p className={`text-3xl font-bold text-${color}-600`}>
-          {typeof value === 'number' ? value.toLocaleString() : value}
+          {typeof value === 'number' ? (Number(value) || 0).toLocaleString() : value}
         </p>
       </div>
       <div className={`p-3 bg-${color}-100 rounded-xl`}>
@@ -46,7 +46,7 @@ const NotificationItem = memo(({ notification }) => (
         {notification.data?.message || 'Nueva notificación'}
       </div>
       <div className="text-xs text-gray-500">
-        {new Date(notification.timestamp?.toDate?.() || notification.timestamp).toLocaleString()}
+        {new Date(notification.timestamp?.toDate?.() || notification.timestamp || Date.now()).toLocaleString()}
       </div>
     </div>
   </div>
@@ -88,7 +88,7 @@ const ProductPerformance = memo(({ productPerformance }) => (
             </div>
           </div>
           <div className="text-right">
-            <div className="font-semibold text-green-600">${product.ventas.toLocaleString()}</div>
+            <div className="font-semibold text-green-600">${(Number(product.ventas) || 0).toLocaleString()}</div>
           </div>
         </div>
       ))}
@@ -112,7 +112,7 @@ const RecentSales = memo(({ ventasRecientes }) => (
             </div>
           </div>
           <div className="text-right">
-            <div className="font-semibold text-green-600">${sale.monto.toLocaleString()}</div>
+            <div className="font-semibold text-green-600">${(Number(sale.monto) || 0).toLocaleString()}</div>
             <div className="text-xs text-gray-500">{sale.hora}</div>
           </div>
         </div>
@@ -392,7 +392,7 @@ const Dashboard = () => {
       value: realtimeStats.ventasHoy,
       icon: DollarSign,
       color: 'green',
-      subtitle: `+${realtimeStats.ventasUltimaHora.toLocaleString()} última hora`,
+      subtitle: `+${(Number(realtimeStats.ventasUltimaHora) || 0).toLocaleString()} última hora`,
       subtitleIcon: TrendingUp
     },
     {
@@ -400,7 +400,7 @@ const Dashboard = () => {
       value: realtimeStats.productosVendidos,
       icon: Package,
       color: 'blue',
-      subtitle: `Promedio: $${realtimeStats.promedioTicket.toLocaleString()}`,
+      subtitle: `Promedio: $${(Number(realtimeStats.promedioTicket) || 0).toLocaleString()}`,
       subtitleIcon: ShoppingCart
     },
     {

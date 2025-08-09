@@ -258,7 +258,7 @@ const Reports = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900">
-                    ${shiftReport?.totalSales?.toLocaleString() || shift.totalSales?.toLocaleString() || '0'}
+                    ${(Number(shiftReport?.totalSales ?? shift.totalSales ?? 0) || 0).toLocaleString()}
                   </p>
                   <p className="text-sm text-gray-600">
                     {shiftReport?.salesCount || shift.salesCount || 0} ventas
@@ -294,7 +294,7 @@ const Reports = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-gray-900">${(sale.total || 0).toLocaleString()}</p>
+                <p className="font-bold text-gray-900">${(Number(sale.total) || 0).toLocaleString()}</p>
                 <p className="text-xs text-gray-600">{sale.items?.length || 0} items</p>
               </div>
             </div>
@@ -308,7 +308,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Ingresos (Ventas)</p>
-              <p className="stats-value">${salesData.reduce((s, v) => s + (v.total || 0), 0).toLocaleString()}</p>
+              <p className="stats-value">${(Number(salesData.reduce((s, v) => s + (Number(v.total) || 0), 0)) || 0).toLocaleString()}</p>
             </div>
             <div className="stats-icon"><DollarSign className="h-6 w-6" /></div>
           </div>
@@ -317,7 +317,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Gastos</p>
-              <p className="stats-value">${expensesData.reduce((s, e) => s + (e.amount || 0), 0).toLocaleString()}</p>
+              <p className="stats-value">${(Number(expensesData.reduce((s, e) => s + (Number(e.amount) || 0), 0)) || 0).toLocaleString()}</p>
             </div>
             <div className="stats-icon"><TrendingDown className="h-6 w-6" /></div>
           </div>
@@ -326,7 +326,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Compras (Costo)</p>
-              <p className="stats-value">${purchasesData.reduce((s, p) => s + (p.total || 0), 0).toLocaleString()}</p>
+              <p className="stats-value">${(Number(purchasesData.reduce((s, p) => s + (Number(p.total) || 0), 0)) || 0).toLocaleString()}</p>
             </div>
             <div className="stats-icon"><Package className="h-6 w-6" /></div>
           </div>
@@ -399,7 +399,7 @@ const Reports = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-gray-900">${customer.totalSpent.toLocaleString()}</p>
+                <p className="font-bold text-gray-900">${(Number(customer.totalSpent) || 0).toLocaleString()}</p>
                 <div className={`badge ${customer.loyalty === 'gold' ? 'badge-success' : customer.loyalty === 'silver' ? 'badge-info' : 'badge-warning'}`}>
                   {customer.loyalty}
                 </div>
@@ -550,7 +550,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Total Pedidos</p>
-              <p className="stats-value">${supplierStats.reduce((sum, s) => sum + s.totalOrdered, 0).toLocaleString()}</p>
+            <p className="stats-value">${(Number(supplierStats.reduce((sum, s) => sum + (Number(s.totalOrdered) || 0), 0)) || 0).toLocaleString()}</p>
             </div>
             <div className="stats-icon">
               <Package className="h-6 w-6" />
@@ -562,7 +562,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Total Pagado</p>
-              <p className="stats-value">${supplierStats.reduce((sum, s) => sum + s.totalPaid, 0).toLocaleString()}</p>
+            <p className="stats-value">${(Number(supplierStats.reduce((sum, s) => sum + (Number(s.totalPaid) || 0), 0)) || 0).toLocaleString()}</p>
             </div>
             <div className="stats-icon">
               <DollarSign className="h-6 w-6" />
@@ -606,7 +606,7 @@ const Reports = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-gray-900">${supplier.totalPaid.toLocaleString()}</p>
+                <p className="font-bold text-gray-900">${(Number(supplier.totalPaid) || 0).toLocaleString()}</p>
                 <div className={`badge ${supplier.reliability >= 95 ? 'badge-success' : supplier.reliability >= 90 ? 'badge-warning' : 'badge-danger'}`}>
                   {supplier.reliability}% confiable
                 </div>

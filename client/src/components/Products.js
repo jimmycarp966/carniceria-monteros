@@ -24,12 +24,12 @@ const ProductCard = memo(({ product, onEdit, onDelete, getCategoryColor, getStoc
       <div className="space-y-2 mb-4">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Precio:</span>
-          <span className="text-lg font-bold text-gray-900">${product.price.toLocaleString()}</span>
+          <span className="text-lg font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Stock:</span>
           <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
-            {product.stock} {product.unit}
+            {(Number(product.stock) || 0)} {product.unit || ''}
           </span>
         </div>
         <div className="flex justify-between items-center">
@@ -112,15 +112,15 @@ const ProductTable = memo(({ products, onEdit, onDelete, getCategoryColor, getSt
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${product.price.toLocaleString()}
+                    ${(Number(product.price) || 0).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
-                      {product.stock} {product.unit}
+                      {(Number(product.stock) || 0)} {product.unit || ''}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {product.salesCount || 0}
+                     {Number(product.salesCount) || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">

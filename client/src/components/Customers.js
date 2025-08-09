@@ -403,15 +403,15 @@ const Customers = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      ${customer.creditLimit.toLocaleString()}
+              <div className="text-sm text-gray-900">
+                      ${(Number(customer.creditLimit) || 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm font-medium ${
                       customer.currentBalance > 0 ? 'text-red-600' : 'text-green-600'
                     }`}>
-                      ${customer.currentBalance.toLocaleString()}
+                      ${(Number(customer.currentBalance) || 0).toLocaleString()}
                     </div>
                   </td>
 
@@ -522,10 +522,10 @@ const Customers = () => {
 
               <div className="bg-gray-50 rounded-lg p-3">
                 <p className="text-sm text-gray-600">
-                  <strong>Saldo actual:</strong> ${selectedCustomerForCredit.currentBalance.toLocaleString()}
+                   <strong>Saldo actual:</strong> ${(Number(selectedCustomerForCredit.currentBalance) || 0).toLocaleString()}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <strong>Nuevo saldo:</strong> ${(selectedCustomerForCredit.currentBalance + creditAmount).toLocaleString()}
+                   <strong>Nuevo saldo:</strong> ${((Number(selectedCustomerForCredit.currentBalance) || 0) + (Number(creditAmount) || 0)).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -565,7 +565,7 @@ const Customers = () => {
                   <strong>Cliente Atrasado:</strong> {calculateOverdueDays(selectedCustomerForPayment)} días
                 </p>
                 <p className="text-sm text-red-800">
-                  <strong>Saldo pendiente:</strong> ${selectedCustomerForPayment.currentBalance.toLocaleString()}
+                   <strong>Saldo pendiente:</strong> ${(Number(selectedCustomerForPayment.currentBalance) || 0).toLocaleString()}
                 </p>
               </div>
               
@@ -582,13 +582,13 @@ const Customers = () => {
                   max={selectedCustomerForPayment.currentBalance}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Máximo: ${selectedCustomerForPayment.currentBalance.toLocaleString()}
+                  Máximo: ${(Number(selectedCustomerForPayment.currentBalance) || 0).toLocaleString()}
                 </p>
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p className="text-sm text-green-800">
-                  <strong>Saldo después del pago:</strong> ${(selectedCustomerForPayment.currentBalance - paymentAmount).toLocaleString()}
+                   <strong>Saldo después del pago:</strong> ${((Number(selectedCustomerForPayment.currentBalance) || 0) - (Number(paymentAmount) || 0)).toLocaleString()}
                 </p>
                 <p className="text-xs text-green-600 mt-1">
                   Este pago se sumará a la caja del turno actual

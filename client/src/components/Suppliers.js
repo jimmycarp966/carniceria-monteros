@@ -149,7 +149,7 @@ const Suppliers = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Pedido</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${stats.totalOrdered.toLocaleString()}
+                ${(Number(stats.totalOrdered) || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -160,7 +160,7 @@ const Suppliers = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Pagado</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${stats.totalPaid.toLocaleString()}
+                ${(Number(stats.totalPaid) || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -171,7 +171,7 @@ const Suppliers = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Deuda</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${stats.totalOwed.toLocaleString()}
+                ${(Number(stats.totalOwed) || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -292,19 +292,19 @@ const Suppliers = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      ${supplier.totalOrdered.toLocaleString()}
+                      ${(Number(supplier.totalOrdered) || 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-green-600">
-                      ${supplier.totalPaid.toLocaleString()}
+                      ${(Number(supplier.totalPaid) || 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm font-medium ${
                       supplier.totalOwed > 0 ? 'text-red-600' : 'text-green-600'
                     }`}>
-                      ${supplier.totalOwed.toLocaleString()}
+                      ${(Number(supplier.totalOwed) || 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

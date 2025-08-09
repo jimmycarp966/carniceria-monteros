@@ -263,7 +263,7 @@ const Sales = () => {
                 <option value="">Seleccionar producto...</option>
                 {allProducts.map(product => (
                   <option key={product.id} value={product.id}>
-                    {product.name} - ${product.price.toLocaleString()}
+                 {product.name} - ${(Number(product.price) || 0).toLocaleString()}
                   </option>
                 ))}
               </select>
@@ -325,7 +325,7 @@ const Sales = () => {
                   <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{item.name}</h4>
-                      <p className="text-sm text-gray-500">${item.price.toLocaleString()} c/u</p>
+                       <p className="text-sm text-gray-500">${(Number(item.price) || 0).toLocaleString()} c/u</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
@@ -350,7 +350,7 @@ const Sales = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-gray-900">
-                        ${(item.price * item.quantity).toLocaleString()}
+                       {((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -361,7 +361,7 @@ const Sales = () => {
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-lg font-semibold text-gray-900">Total:</span>
                   <span className="text-2xl font-bold text-primary-600">
-                    ${cartTotal.toLocaleString()}
+                    {(Number(cartTotal) || 0).toLocaleString()}
                   </span>
                 </div>
                 <button

@@ -110,7 +110,7 @@ const Purchases = () => {
           </div>
           <div>
             <label className="form-label">Total</label>
-            <div className="form-input">${total.toLocaleString()}</div>
+            <div className="form-input">${(Number(total) || 0).toLocaleString()}</div>
           </div>
         </div>
       </div>

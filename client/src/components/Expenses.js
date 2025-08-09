@@ -95,7 +95,7 @@ const Expenses = () => {
           <div className="card">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-semibold text-gray-900">Gastos del Turno</h2>
-              <div className="text-sm text-gray-700">Total: ${total.toLocaleString()}</div>
+              <div className="text-sm text-gray-700">Total: ${(Number(total) || 0).toLocaleString()}</div>
             </div>
 
             {expenses.length === 0 ? (
@@ -105,7 +105,7 @@ const Expenses = () => {
                 {expenses.map((e) => (
                   <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                     <div>
-                      <div className="font-medium text-gray-900">${(e.amount || 0).toLocaleString()}</div>
+                      <div className="font-medium text-gray-900">${(Number(e.amount) || 0).toLocaleString()}</div>
                       <div className="text-sm text-gray-600">{e.reason || 'Gasto'}</div>
                     </div>
                     <div className="text-xs text-gray-500">{e.createdAt?.toDate?.()?.toLocaleString?.() || ''}</div>

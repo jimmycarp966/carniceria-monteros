@@ -312,7 +312,7 @@ const EnhancedCashRegister = () => {
       setShiftTotal(newShiftTotal);
 
       playSound('sale');
-      toast.success(`Venta completada - $${finalTotal.toLocaleString()}`);
+      toast.success(`Venta completada - $${(Number(finalTotal) || 0).toLocaleString()}`);
       
       // Imprimir ticket (simulado)
       printReceipt(saleData);
@@ -407,7 +407,7 @@ const EnhancedCashRegister = () => {
         
         <div className="mb-4">
           <div className="text-2xl font-bold text-center p-4 bg-gray-50 rounded-xl">
-            ${cashAmount.toLocaleString()}
+            ${(Number(cashAmount) || 0).toLocaleString()}
           </div>
         </div>
         
@@ -559,7 +559,7 @@ const EnhancedCashRegister = () => {
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">${shiftTotal.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-green-600">${(Number(shiftTotal) || 0).toLocaleString()}</div>
                 <div className="text-sm text-gray-600">Total Turno</div>
               </div>
               <div className="text-center">
@@ -571,7 +571,7 @@ const EnhancedCashRegister = () => {
                 <div className="text-sm text-gray-600">En Carrito</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">${finalTotal.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-purple-600">${(Number(finalTotal) || 0).toLocaleString()}</div>
                 <div className="text-sm text-gray-600">Total Actual</div>
               </div>
             </div>
@@ -674,7 +674,7 @@ const EnhancedCashRegister = () => {
                         <Plus className="h-4 w-4 text-green-500" />
                       </button>
                       <div className="text-right min-w-[4rem]">
-                        <div className="font-semibold">${(item.price * item.quantity).toLocaleString()}</div>
+                        <div className="font-semibold">${((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}</div>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.id)}
@@ -700,20 +700,20 @@ const EnhancedCashRegister = () => {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>${cartTotal.toLocaleString()}</span>
+                <span>${(Number(cartTotal) || 0).toLocaleString()}</span>
               </div>
               
               {appliedDiscount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Descuento:</span>
-                  <span>-${appliedDiscount.toLocaleString()}</span>
+                  <span>-${(Number(appliedDiscount) || 0).toLocaleString()}</span>
                 </div>
               )}
               
               <div className="border-t pt-3">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>${finalTotal.toLocaleString()}</span>
+                  <span>${(Number(finalTotal) || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -783,7 +783,7 @@ const EnhancedCashRegister = () => {
                     <div className="flex justify-between">
                       <span>Cambio:</span>
                       <span className={change >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        ${change.toLocaleString()}
+                        ${(Number(change) || 0).toLocaleString()}
                       </span>
                     </div>
                   </div>
