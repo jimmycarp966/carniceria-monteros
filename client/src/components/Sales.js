@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '../firebase';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { saleService, productService, loadSampleData, shiftService } from '../services/firebaseService';
@@ -49,6 +51,22 @@ const Sales = () => {
     // Pequeño timeout para evitar sensación de congelado
     const id = setTimeout(loadData, 50);
     return () => { isMounted = false; clearTimeout(id); };
+  }, []);
+
+  // Listeners directos a Firestore para productos y ventas (sin depender de servicios)
+  useEffect(() => {
+    try {
+      const unsubProducts = onSnapshot(query(collection(db, 'products'), orderBy('name')), (snap) => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAllProducts(Array.isArray(list) ? list : []);
+      });
+      const unsubSales = onSnapshot(query(collection(db, 'sales'), orderBy('createdAt', 'desc')), (snap) => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setSales(Array.isArray(list) ? list : []);
+        setIsLoading(false);
+      });
+      return () => { try { unsubProducts(); } catch {} try { unsubSales(); } catch {} };
+    } catch {}
   }, []);
 
   // Suscribirse a actualizaciones en tiempo real (productos y ventas)
