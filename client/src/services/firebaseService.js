@@ -769,7 +769,7 @@ export const shiftService = {
     try {
       const shiftRef = doc(db, 'shifts', shiftId);
       await updateDoc(shiftRef, {
-        total,
+        total: Number(total) || 0,
         updatedAt: serverTimestamp()
       });
 

@@ -171,7 +171,7 @@ export const realtimeService = {
     const q = query(
       salesRef, 
       orderBy('createdAt', 'desc'), 
-      limit(30) // Reducido de 50
+      limit(50)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -471,7 +471,7 @@ export const dataSyncService = {
 
         // Actualizar inventario y también stock en products si existe
         for (const item of saleData.items) {
-          await this.updateInventoryStock(item.productId, -item.quantity);
+          await this.updateInventoryStock(item.productId, -Math.abs(Number(item.quantity) || 0));
         }
 
         // Actualizar estadísticas en tiempo real (no bloquear venta si falla RTDB)

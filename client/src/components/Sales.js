@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { saleService, productService, loadSampleData } from '../services/firebaseService';
-import { dataSyncService } from '../services/realtimeService';
+import { saleService, productService, loadSampleData, shiftService } from '../services/firebaseService';
+import { dataSyncService, realtimeService } from '../services/realtimeService';
 import ErrorBoundary from './ErrorBoundary';
 
 const Sales = () => {
@@ -49,6 +49,22 @@ const Sales = () => {
     // Pequeño timeout para evitar sensación de congelado
     const id = setTimeout(loadData, 50);
     return () => { isMounted = false; clearTimeout(id); };
+  }, []);
+
+  // Suscribirse a actualizaciones en tiempo real (productos y ventas)
+  useEffect(() => {
+    const handleProducts = (data) => {
+      if (Array.isArray(data.products)) setAllProducts(data.products);
+    };
+    const handleSales = (data) => {
+      if (Array.isArray(data.sales)) setSales(data.sales);
+    };
+    realtimeService.on('products_updated', handleProducts);
+    realtimeService.on('sales_updated', handleSales);
+    return () => {
+      realtimeService.off('products_updated', handleProducts);
+      realtimeService.off('sales_updated', handleSales);
+    };
   }, []);
 
   const retryLoad = () => {
@@ -141,12 +157,22 @@ const Sales = () => {
         paymentMethod: 'cash' // Método de pago por defecto
       };
 
-      // Sincronizar venta para que actualice inventario y realtime
+      // Asociar a turno activo si existe
+      const activeShift = await shiftService.getActiveShift().catch(() => null);
       const payload = { ...saleData };
-      // Evitar enviar shiftId undefined a Firestore
-      if (payload.shiftId === undefined) delete payload.shiftId;
+      if (activeShift?.id) payload.shiftId = activeShift.id;
       const saleId = await dataSyncService.syncSale(payload);
       console.log('✅ Venta agregada a Firebase con ID:', saleId);
+
+      // Actualizar total del turno si corresponde
+      if (activeShift?.id) {
+        try {
+          const newTotal = (Number(activeShift.total) || 0) + (Number(cartTotal) || 0);
+          await shiftService.updateShiftTotal(activeShift.id, newTotal);
+        } catch (e) {
+          // no bloquear flujo
+        }
+      }
 
       // Actualizar estado local
       const saleWithId = { ...saleData, id: saleId };
