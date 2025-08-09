@@ -1,7 +1,8 @@
 // Service Worker para optimización de rendimiento
-const CACHE_NAME = 'carniceria-v3';
-const STATIC_CACHE = 'static-v3';
-const DYNAMIC_CACHE = 'dynamic-v3';
+const VERSION = 'v4';
+const CACHE_NAME = `carniceria-${VERSION}`;
+const STATIC_CACHE = `static-${VERSION}`;
+const DYNAMIC_CACHE = `dynamic-${VERSION}`;
 
 // Archivos estáticos para cachear
 const STATIC_FILES = [
@@ -24,6 +25,7 @@ self.addEventListener('install', (event) => {
         console.error('Error cacheando archivos:', error);
       })
   );
+  self.skipWaiting();
 });
 
 // Activar Service Worker

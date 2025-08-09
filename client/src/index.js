@@ -4,9 +4,27 @@ import './index.css';
 import App from './App';
 import './utils/consoleTesting';
 
-// Registrar Service Worker para optimización con control de actualizaciones
+// Registrar Service Worker con rutina de recuperación para evitar pantallas blancas por caché obsoleto
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
+    try {
+      // Recuperación una sola vez: desregistrar SW antiguos y limpiar caches
+      if (!localStorage.getItem('sw_recovered_v2')) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister().catch(() => {})));
+        if (window.caches && caches.keys) {
+          const names = await caches.keys();
+          await Promise.all(names.map((n) => caches.delete(n).catch(() => {})));
+        }
+        localStorage.setItem('sw_recovered_v2', '1');
+        // Recargar con SW desregistrado y caches limpios
+        window.location.reload();
+        return;
+      }
+    } catch (e) {
+      // ignore
+    }
+
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('Service Worker registrado:', registration.scope);
