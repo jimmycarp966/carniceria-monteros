@@ -375,7 +375,6 @@ const Products = () => {
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const ITEMS_PER_PAGE = 12;
 
   // Cargar productos en tiempo real sin cache local ni servicios
   useEffect(() => {
