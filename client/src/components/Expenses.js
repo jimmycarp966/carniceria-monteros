@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Plus, Trash2, Check } from 'lucide-react';
+import { CreditCard, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { expensesService, shiftService } from '../services/firebaseService';
 import { usePermissions } from '../context/PermissionsContext';

@@ -13,8 +13,7 @@ import {
   where,
   orderBy,
   limit,
-  getDocs,
-  doc
+  getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getDatabase } from 'firebase/database';

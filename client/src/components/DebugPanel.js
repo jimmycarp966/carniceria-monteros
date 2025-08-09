@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bug, X, RefreshCw, AlertTriangle, CheckCircle, Info } from 'lucide-react';
-import { runAllTests, startRealTimeTesting } from '../utils/testing';
+import { runAllTests } from '../utils/testing';
 
 const DebugPanel = ({ isVisible, onClose }) => {
   const [testResults, setTestResults] = useState([]);

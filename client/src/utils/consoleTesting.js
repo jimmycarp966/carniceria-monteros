@@ -1,8 +1,10 @@
 // Script de Testing para Consola del Navegador
 // Ejecuta esto en la consola del navegador (F12) para diagnosticar problemas
 
+'use strict'; // eslint-disable-line strict
+
 (function() {
-  'use strict';
+  // modo estricto declarado arriba
 
   // Colores para la consola
   const colors = {
@@ -33,9 +35,9 @@
     console.log(`${colors.info} ${message}`, styles.info, styles.reset);
   };
 
-  const logWarning = (message) => {
-    console.log(`${colors.warning} ${message}`, styles.warning, styles.reset);
-  };
+  // const logWarning = (message) => {
+  //   console.log(`${colors.warning} ${message}`, styles.warning, styles.reset);
+  // };
 
   // Tests básicos
   const runBasicTests = () => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { inventoryItems, inventoryMovements, inventoryStatuses, movementTypes } from '../data/inventory';
 import { Building, Search, AlertTriangle, TrendingUp, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { inventoryService, productService, loadSampleData, inventoryMovementsService } from '../services/firebaseService';
+import { inventoryService, loadSampleData, inventoryMovementsService } from '../services/firebaseService';
 
 const Inventory = () => {
   const [inventoryList, setInventoryList] = useState([]);

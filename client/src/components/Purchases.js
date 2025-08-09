@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Plus, Trash2, DollarSign, Package, Check } from 'lucide-react';
+import { Truck, Plus, Trash2, DollarSign, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { purchasesService, suppliersService, productService } from '../services/firebaseService';
 import { usePermissions } from '../context/PermissionsContext';
@@ -58,7 +58,7 @@ const Purchases = () => {
         total,
         notes
       };
-      const id = await purchasesService.addPurchase(purchaseData);
+      await purchasesService.addPurchase(purchaseData);
       toast.success('Compra registrada');
       // reset
       setSelectedSupplier('');

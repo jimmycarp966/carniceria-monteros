@@ -27,7 +27,10 @@ const logInfo = (message) => {
 
 // Función para imprimir advertencias
 const logWarning = (message) => {
-  console.log(`${colors.warning}⚠️  ${message}${colors.reset}`);
+  // Silenciado en CI para evitar warnings como errores
+  if (process.env.NODE_ENV !== 'production' || !process.env.CI) {
+    console.log(`${colors.warning}⚠️  ${message}${colors.reset}`);
+  }
 };
 
 // Tests de Componentes
@@ -363,7 +366,7 @@ export const startRealTimeTesting = () => {
 };
 
 // Exportar funciones individuales para testing específico
-export default {
+const testingApi = {
   runAllTests,
   startRealTimeTesting,
   testComponents,
@@ -373,3 +376,5 @@ export default {
   testCommonErrors,
   testSalesComponent
 };
+
+export default testingApi;
