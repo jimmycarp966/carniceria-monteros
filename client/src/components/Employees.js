@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { employees, positions, employeeStatuses } from '../data/employees';
-import { UserCheck, Plus, Edit, Trash2, Search, DollarSign, Users } from 'lucide-react';
+import { UserCheck, Plus, Edit, Trash2, Search, DollarSign, Users, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { employeeService, loadSampleData } from '../services/firebaseService';
 import { usePermissions } from '../context/PermissionsContext';
@@ -410,6 +410,37 @@ const EmployeeModal = ({ employee, onSave, onCancel }) => {
     }
   };
 
+  const createFirebaseAccount = async () => {
+    try {
+      if (!formData.email) {
+        toast.error('Primero ingresá el email');
+        return;
+      }
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          displayName: formData.name,
+          role: selectedRole === 'admin' ? 'admin' : undefined,
+          permissions: formData.permissions,
+          tempPasswordLength: 12,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo crear la cuenta');
+      toast.success('Cuenta creada. Copiá la contraseña temporal.');
+      try {
+        await navigator.clipboard.writeText(data.tempPassword);
+        toast.success('Contraseña temporal copiada al portapapeles');
+      } catch {}
+      console.log('Temp password para', data.email, ':', data.tempPassword);
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || 'Error creando cuenta');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
@@ -561,7 +592,16 @@ const EmployeeModal = ({ employee, onSave, onCancel }) => {
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
-            <div className="flex justify-between items-center pt-4">
+            <div className="flex justify-between items-center pt-4 space-x-2">
+              <button
+                type="button"
+                onClick={createFirebaseAccount}
+                className="btn btn-secondary flex items-center"
+                title="Crear cuenta en Firebase con contraseña temporal y forzar cambio al primer ingreso"
+              >
+                <KeyRound className="h-4 w-4 mr-2" />
+                Crear cuenta Firebase
+              </button>
               <button
                 type="button"
                 onClick={applyClaims}

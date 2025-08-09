@@ -403,6 +403,28 @@ export const productService = {
       // Invalidar cache de productos
       smartCache.invalidate('products');
       
+      // Crear item en inventario con stock inicial 0 para reflejarse en Inventario
+      try {
+        const inventoryRef = collection(db, 'inventory');
+        await addDoc(inventoryRef, {
+          productId: docRef.id,
+          productName: productData.name || 'Producto',
+          category: productData.category || 'Sin categoría',
+          stock: Number(productData.stock) || 0,
+          minStock: Number(productData.minStock) || 10,
+          cost: Number(productData.cost) || 0,
+          price: Number(productData.price) || 0,
+          unit: productData.unit || 'unidad',
+          location: 'Almacén',
+          supplier: '',
+          lastUpdated: serverTimestamp(),
+          createdAt: serverTimestamp()
+        });
+        smartCache.invalidate('inventory');
+      } catch (e) {
+        console.warn('No se pudo crear item de inventario para el producto', e);
+      }
+      
       return docRef.id;
     } catch (error) {
       console.error('Error agregando producto:', error);
@@ -440,6 +462,19 @@ export const productService = {
       // Invalidar cache
       smartCache.invalidate(`product_${id}`);
       smartCache.invalidate('products');
+
+      // Sincronizar inventario correspondiente
+      try {
+        const inventoryRef = collection(db, 'inventory');
+        const qInv = query(inventoryRef, where('productId', '==', id));
+        const snap = await getDocs(qInv);
+        if (!snap.empty) {
+          await updateDoc(snap.docs[0].ref, { stock: Number(newStock) || 0, lastUpdated: serverTimestamp() });
+        }
+        smartCache.invalidate('inventory');
+      } catch (e) {
+        console.warn('No se pudo sincronizar inventario para producto', id);
+      }
       
       return id;
     } catch (error) {

@@ -1,5 +1,5 @@
 // Service Worker para optimización de rendimiento
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE_NAME = `carniceria-${VERSION}`;
 const STATIC_CACHE = `static-${VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${VERSION}`;

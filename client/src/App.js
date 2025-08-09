@@ -1,12 +1,13 @@
 import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback, memo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Settings, Sun, Moon, Bug, CreditCard } from 'lucide-react';
 import RealtimeNotifications from './components/RealtimeNotifications';
 import DebugPanel from './components/DebugPanel';
 import { auth } from './firebase';
 import { authzService } from './services/firebaseService';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, updatePassword } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
@@ -303,6 +304,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState([]);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   // Prefetch de rutas en idle/hover
   const prefetchMap = useMemo(() => ({
@@ -339,6 +343,13 @@ function App() {
   useEffect(() => {
     (async () => {
       if (user?.email) {
+        try {
+          const tokenResult = await user.getIdTokenResult(true);
+          const claims = tokenResult?.claims || {};
+          setMustChangePassword(!!claims.mustChangePassword);
+        } catch (e) {
+          setMustChangePassword(false);
+        }
         const perms = await authzService.getUserPermissionsByEmail(user.email);
         setPermissions(perms);
       } else {
@@ -346,6 +357,38 @@ function App() {
       }
     })();
   }, [user]);
+
+  const handleForcePasswordChange = useCallback(async () => {
+    try {
+      if (!newPassword || newPassword.length < 6) {
+        toast.error('La contraseña debe tener al menos 6 caracteres');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        toast.error('Las contraseñas no coinciden');
+        return;
+      }
+      if (!auth.currentUser) {
+        toast.error('Sesión no disponible');
+        return;
+      }
+      await updatePassword(auth.currentUser, newPassword);
+      // Limpiar flag en claims
+      await fetch('/api/admin/set-claims', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: auth.currentUser.email, mustChangePassword: false })
+      });
+      await auth.currentUser.getIdToken(true);
+      setMustChangePassword(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Contraseña actualizada');
+    } catch (e) {
+      console.error(e);
+      toast.error('No se pudo actualizar la contraseña');
+    }
+  }, [newPassword, confirmPassword]);
 
   // Prefetch en idle de las rutas más usadas luego de cargar
   useEffect(() => {
@@ -391,6 +434,40 @@ function App() {
 
   if (!user) {
     return <FirebaseAuth onLogin={setUser} />;
+  }
+
+  if (mustChangePassword) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 flex items-center justify-center px-4">
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 w-full max-w-md">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Cambiar contraseña</h2>
+          <p className="text-sm text-gray-600 mb-6">Debés definir una nueva contraseña para continuar.</p>
+          <div className="space-y-4">
+            <input
+              type="password"
+              className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Nueva contraseña"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <input
+              type="password"
+              className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Confirmar contraseña"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            <button
+              onClick={handleForcePasswordChange}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold py-3 rounded-2xl"
+            >
+              Guardar nueva contraseña
+            </button>
+          </div>
+        </div>
+        <Toaster position="top-right" />
+      </div>
+    );
   }
 
   return (

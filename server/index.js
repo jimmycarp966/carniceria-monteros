@@ -141,27 +141,73 @@ app.post('/api/auth/test-login', (req, res) => {
   }
 });
 
-// Endpoint para asignar custom claims (Firebase Admin)
+// Endpoint para asignar/actualizar custom claims (Firebase Admin)
 app.post('/api/admin/set-claims', async (req, res) => {
   try {
     if (!admin || !admin.apps || !admin.apps.length) {
       return res.status(500).json({ error: 'Firebase Admin no inicializado' });
     }
-    const { email, role, permissions } = req.body;
+    const { email, role, permissions, mustChangePassword } = req.body;
     if (!email) return res.status(400).json({ error: 'email requerido' });
 
     const userRecord = await admin.auth().getUserByEmail(email);
 
+    // Fusionar claims actuales con los nuevos
+    const currentClaims = userRecord.customClaims || {};
+    const newClaims = { ...currentClaims };
+    if (role !== undefined) newClaims.role = role;
+    if (Array.isArray(permissions)) {
+      newClaims.permissions = permissions.reduce((acc, p) => { acc[p] = true; return acc; }, {});
+    }
+    if (typeof mustChangePassword === 'boolean') {
+      newClaims.mustChangePassword = mustChangePassword;
+    }
+
+    await admin.auth().setCustomUserClaims(userRecord.uid, newClaims);
+    res.json({ ok: true, uid: userRecord.uid, claims: newClaims });
+  } catch (error) {
+    console.error('❌ Error asignando claims:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para crear usuario con contraseña temporal y claim de cambio obligatorio
+app.post('/api/admin/create-user', async (req, res) => {
+  try {
+    if (!admin || !admin.apps || !admin.apps.length) {
+      return res.status(500).json({ error: 'Firebase Admin no inicializado' });
+    }
+    const { email, displayName, role, permissions, tempPasswordLength } = req.body;
+    if (!email) return res.status(400).json({ error: 'email requerido' });
+
+    // Generar contraseña temporal segura
+    const length = Math.max(8, Math.min(64, Number(tempPasswordLength) || 12));
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+    const tempPassword = Array.from({ length })
+      .map(() => alphabet[Math.floor(Math.random() * alphabet.length)])
+      .join('');
+
+    // Crear usuario
+    const userRecord = await admin.auth().createUser({
+      email,
+      displayName: displayName || undefined,
+      password: tempPassword,
+      emailVerified: false,
+      disabled: false,
+    });
+
+    // Asignar claims (incluye forzar cambio de contraseña)
     const claims = {};
     if (role) claims.role = role;
     if (Array.isArray(permissions)) {
       claims.permissions = permissions.reduce((acc, p) => { acc[p] = true; return acc; }, {});
     }
-
+    claims.mustChangePassword = true;
     await admin.auth().setCustomUserClaims(userRecord.uid, claims);
-    res.json({ ok: true, uid: userRecord.uid, claims });
+
+    res.json({ ok: true, uid: userRecord.uid, email, tempPassword, claims });
   } catch (error) {
-    console.error('❌ Error asignando claims:', error);
+    console.error('❌ Error creando usuario:', error);
     res.status(500).json({ error: error.message });
   }
 });
