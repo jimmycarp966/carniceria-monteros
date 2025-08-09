@@ -279,7 +279,11 @@ const EnhancedCashRegister = () => {
       
       // Actualizar total del turno
       const newShiftTotal = shiftTotal + finalTotal;
-      await shiftService.updateShiftTotal(currentShift.id, newShiftTotal);
+      try {
+        await shiftService.updateShiftTotal(currentShift.id, newShiftTotal);
+      } catch (e) {
+        console.warn('No se pudo actualizar total del turno en este momento, continuará al sincronizar');
+      }
 
       // Si el cliente es a crédito y paga algo en efectivo, actualizar saldo en Firestore
       if (selectedCustomer?.id && selectedCustomer?.currentBalance > 0 && paymentMethod === 'cash') {

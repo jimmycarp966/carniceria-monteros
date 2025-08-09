@@ -474,13 +474,17 @@ export const dataSyncService = {
           await this.updateInventoryStock(item.productId, -item.quantity);
         }
 
-        // Actualizar estadísticas en tiempo real
-        const statsRef = ref(realtimeDb, 'stats');
-        await update(statsRef, {
-          totalSales: saleData.total,
-          lastSale: serverTimestamp(),
-          dailySales: saleData.total
-        });
+        // Actualizar estadísticas en tiempo real (no bloquear venta si falla RTDB)
+        try {
+          const statsRef = ref(realtimeDb, 'stats');
+          await update(statsRef, {
+            totalSales: saleData.total,
+            lastSale: serverTimestamp(),
+            dailySales: saleData.total
+          });
+        } catch (e) {
+          console.warn('RTDB no disponible para stats, continúa sin bloquear venta');
+        }
 
         // Notificar a todos los componentes
         notifyListeners('sale_synced', {
