@@ -142,10 +142,10 @@ const Sales = () => {
       };
 
       // Sincronizar venta para que actualice inventario y realtime
-      const saleId = await dataSyncService.syncSale({
-        ...saleData,
-        shiftId: undefined // sin turno desde esta pantalla
-      });
+      const payload = { ...saleData };
+      // Evitar enviar shiftId undefined a Firestore
+      if (payload.shiftId === undefined) delete payload.shiftId;
+      const saleId = await dataSyncService.syncSale(payload);
       console.log('✅ Venta agregada a Firebase con ID:', saleId);
 
       // Actualizar estado local

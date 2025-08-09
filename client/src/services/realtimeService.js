@@ -457,8 +457,10 @@ export const dataSyncService = {
       try {
         // Agregar a Firestore
         const salesRef = collection(db, 'sales');
+        const cleanSale = { ...saleData };
+        if (cleanSale.shiftId === undefined) delete cleanSale.shiftId;
         const saleDoc = await addDoc(salesRef, {
-          ...saleData,
+          ...cleanSale,
           createdAt: serverTimestamp(),
           synced: true
         });

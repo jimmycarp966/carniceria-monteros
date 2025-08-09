@@ -18,7 +18,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
-import { productService, shiftService, customerService } from '../services/firebaseService';
+import { productService, shiftService, customerService, saleService } from '../services/firebaseService';
 import ShiftManagement from './ShiftManagement';
 import toast from 'react-hot-toast';
 
@@ -143,10 +143,10 @@ const EnhancedCashRegister = () => {
       setCurrentShift(activeShift);
       
       if (activeShift) {
-        // Cargar ventas del turno
-        const shiftSalesData = await shiftService.getSalesByShift(activeShift.id);
+        // Cargar ventas del turno (servicio de ventas)
+        const shiftSalesData = await saleService.getSalesByShift(activeShift.id);
         setShiftSales(shiftSalesData);
-        setShiftTotal(shiftSalesData.reduce((sum, sale) => sum + sale.finalTotal, 0));
+        setShiftTotal(shiftSalesData.reduce((sum, sale) => sum + (sale.finalTotal || sale.total || 0), 0));
       }
     } catch (error) {
       console.error('Error cargando turno activo:', error);
