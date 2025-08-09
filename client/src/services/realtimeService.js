@@ -13,7 +13,8 @@ import {
   where,
   orderBy,
   limit,
-  getDocs
+  getDocs,
+  doc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getDatabase } from 'firebase/database';
@@ -195,7 +196,7 @@ export const realtimeService = {
   // Listener para inventario optimizado
   listenToInventory() {
     const inventoryRef = collection(db, 'inventory');
-    const q = query(inventoryRef, where('stock', '<=', 'minStock'));
+    const q = query(inventoryRef, orderBy('productName'), limit(500));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const inventory = snapshot.docs.map(doc => ({
@@ -203,16 +204,18 @@ export const realtimeService = {
         ...doc.data()
       }));
       
-      // Cachear datos
-      dataCache.set('low_stock_inventory', {
+      // Cachear datos completos
+      dataCache.set('inventory', {
         data: inventory,
         timestamp: Date.now()
       });
       
-      // Verificar alertas de stock bajo
-      const lowStockItems = inventory.filter(item => 
-        item.stock <= item.minStock
-      );
+      // Verificar alertas de stock bajo en cliente
+      const lowStockItems = inventory.filter(item => {
+        const stock = item.stock ?? item.currentStock ?? 0;
+        const minStock = item.minStock ?? 0;
+        return stock <= minStock;
+      });
       
       if (lowStockItems.length > 0) {
         notifyListeners('stock_alert', { 
@@ -461,7 +464,7 @@ export const dataSyncService = {
           synced: true
         });
 
-        // Actualizar inventario
+        // Actualizar inventario y también stock en products si existe
         for (const item of saleData.items) {
           await this.updateInventoryStock(item.productId, -item.quantity);
         }
@@ -524,6 +527,17 @@ export const dataSyncService = {
               currentStock: newStock,
               minStock: doc.data().minStock
             });
+          }
+
+          // Intentar reflejar el stock también en products para mantener la UI consistente
+          try {
+            const productRef = doc(db, 'products', String(productId));
+            await updateDoc(productRef, {
+              stock: Math.max(0, newStock),
+              updatedAt: serverTimestamp()
+            });
+          } catch (e) {
+            console.warn('No se pudo actualizar stock en products para', productId);
           }
         }
       } catch (error) {

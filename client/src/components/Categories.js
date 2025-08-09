@@ -148,7 +148,7 @@ const Categories = () => {
           <div key={category.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
-                <div className={`w-4 h-4 rounded-full mr-3 bg-${category.color}-500`}></div>
+            <div className={`w-4 h-4 rounded-full mr-3 bg-${category.color}-500`} aria-hidden="true"></div>
                 <h3 className="text-lg font-semibold text-gray-900">
                   {category.name}
                 </h3>

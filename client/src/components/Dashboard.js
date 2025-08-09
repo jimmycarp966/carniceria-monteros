@@ -52,24 +52,25 @@ const NotificationItem = memo(({ notification }) => (
   </div>
 ));
 
-const SalesChart = memo(({ salesChart }) => (
-  <div className="bg-white rounded-2xl p-6 shadow-lg">
-    <h3 className="text-lg font-semibold mb-4">Ventas por Hora</h3>
-    <div className="h-64 flex items-end justify-between space-x-1">
-      {salesChart.map((data, index) => (
-        <div key={index} className="flex-1 flex flex-col items-center">
-          <div 
-            className="w-full bg-gradient-to-t from-orange-500 to-red-500 rounded-t"
-            style={{ 
-              height: `${(data.ventas / Math.max(...salesChart.map(d => d.ventas))) * 200}px` 
-            }}
-          ></div>
-          <span className="text-xs text-gray-600 mt-1">{data.hora}</span>
-        </div>
-      ))}
+const SalesChart = memo(({ salesChart }) => {
+  const maxValue = Math.max(1, ...salesChart.map(d => d.ventas || 0));
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-lg">
+      <h3 className="text-lg font-semibold mb-4">Ventas por Hora</h3>
+      <div className="h-64 flex items-end justify-between space-x-1">
+        {salesChart.map((data, index) => (
+          <div key={index} className="flex-1 flex flex-col items-center">
+            <div
+              className="w-full bg-gradient-to-t from-orange-500 to-red-500 rounded-t"
+              style={{ height: `${(Math.max(0, data.ventas || 0) / maxValue) * 200}px` }}
+            />
+            <span className="text-xs text-gray-600 mt-1">{data.hora}</span>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-));
+  );
+});
 
 const ProductPerformance = memo(({ productPerformance }) => (
   <div className="bg-white rounded-2xl p-6 shadow-lg">

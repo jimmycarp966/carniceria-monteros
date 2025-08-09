@@ -51,13 +51,11 @@
 
 /* Estilos base optimizados para móvil */
 html {
-  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fecaca 100%);
   margin: 0;
   padding: 0;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease;
 }
 
 body {
@@ -70,28 +68,23 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  transition: background-color 0.3s ease;
 }
 
 #root {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fecaca 100%);
   width: 100%;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  transition: background-color 0.3s ease;
 }
 
 .App {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fecaca 100%);
   width: 100%;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   flex: 1;
-  transition: background-color 0.3s ease;
 }
 
 /* Asegurar que el layout principal funcione correctamente */
@@ -104,16 +97,7 @@ body {
   width: 100%;
 }
 
-/* Mejorar el comportamiento del sidebar */
-@media (max-width: 1023px) {
-  .lg\\:pl-72 {
-    padding-left: 0 !important;
-  }
-  
-  .lg\\:w-72 {
-    width: 100% !important;
-  }
-}
+/* Nota: Evitar sobreescribir utilidades core de Tailwind (como .lg:pl-72, .lg:w-72) para no romper el layout responsivo */
 
 /* Scrollbar personalizada */
 ::-webkit-scrollbar {
@@ -373,108 +357,22 @@ body {
       @apply p-3;
     }
 
-    /* Mejor espaciado para móvil */
-    .space-y-6 > * + * {
-      margin-top: 1.25rem;
-    }
+    /* Mantener espaciados por utilidades de Tailwind, no redefinir aquí */
 
-    .space-y-4 > * + * {
-      margin-top: 1rem;
-    }
-
-    .space-y-3 > * + * {
-      margin-top: 0.75rem;
-    }
-
-    .space-y-2 > * + * {
-      margin-top: 0.5rem;
-    }
-
-    /* Grid responsivo mejorado */
-    .grid-cols-1 {
-      grid-template-columns: repeat(1, minmax(0, 1fr));
-    }
-
-    .grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-cols-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .grid-cols-4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
+    /* No redefinir grillas utilitarias de Tailwind */
 
     /* Mejor padding para móvil */
-    .p-4 {
-      padding: 1rem;
-    }
+    /* No redefinir paddings utilitarios */
 
-    .p-6 {
-      padding: 1.25rem;
-    }
-
-    .px-4 {
-      padding-left: 1rem;
-      padding-right: 1rem;
-    }
-
-    .py-3 {
-      padding-top: 0.75rem;
-      padding-bottom: 0.75rem;
-    }
-
-    .py-4 {
-      padding-top: 1rem;
-      padding-bottom: 1rem;
-    }
+    /* No redefinir paddings utilitarios */
 
     /* Mejor margen para móvil */
-    .mb-4 {
-      margin-bottom: 1rem;
-    }
-
-    .mb-6 {
-      margin-bottom: 1.25rem;
-    }
-
-    .mt-4 {
-      margin-top: 1rem;
-    }
-
-    .mt-6 {
-      margin-top: 1.25rem;
-    }
+    /* No redefinir márgenes utilitarios */
   }
 
   /* Optimizaciones para tablets */
   @media (min-width: 768px) and (max-width: 1024px) {
-    .card {
-      @apply p-5 rounded-3xl;
-    }
-    
-    .stats-card {
-      @apply p-5;
-    }
-    
-    .btn {
-      @apply px-5 py-3 text-base;
-    }
-    
-    .form-input, .form-select {
-      @apply px-4 py-3 text-base;
-    }
-    
-    /* Grid optimizado para tablets */
-    .grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-3.xl\\:grid-cols-4 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    
-    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+    /* Mantener ajustes de componentes, evitar sobrescribir utilidades */
   }
 
   /* Optimizaciones específicas para netbooks del gobierno */
@@ -518,20 +416,10 @@ body {
     }
     
     /* Sidebar más compacto */
-    .lg\\:w-72 {
-      width: 16rem; /* 256px en lugar de 288px */
-    }
+    /* No modificar anchos utilitarios de Tailwind */
     
     /* Header más compacto */
-    .text-2xl {
-      font-size: 1.25rem;
-      line-height: 1.75rem;
-    }
-    
-    .text-xl {
-      font-size: 1.125rem;
-      line-height: 1.75rem;
-    }
+    /* No redefinir tamaños tipográficos utilitarios */
     
     /* Modal más pequeño */
     .modal-content {
@@ -539,85 +427,23 @@ body {
     }
     
     /* Optimizar grids para altura limitada */
-    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0.75rem;
-    }
+    /* Evitar redefinir utilidades de grid en breakpoints */
   }
 
   /* Mejoras específicas para pantallas medianas */
   @media (min-width: 768px) and (max-width: 1023px) {
-    .lg\\:pl-72 {
-      padding-left: 0; /* Remover padding en pantallas medianas */
-    }
-    
-    .lg\\:w-72 {
-      width: 16rem; /* 256px en lugar de 288px */
-    }
-    
-    /* Mejorar grids para pantallas medianas */
-    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    
-    .grid-cols-1.lg\\:grid-cols-2 {
-      grid-template-columns: repeat(1, minmax(0, 1fr));
-    }
+    /* Evitar sobrescritura de utilidades en pantallas medianas */
   }
 
   /* Optimizaciones para pantallas pequeñas */
   @media (max-width: 767px) {
-    .lg\\:pl-72 {
-      padding-left: 0;
-    }
-    
-    /* Asegurar que el contenido no se desplace */
-    .w-full.flex-1 {
-      width: 100%;
-      padding-left: 0;
-    }
-    
-    /* Mejorar espaciado en móvil */
-    .p-4.lg\\:p-6 {
-      padding: 1rem;
-    }
-    
-    /* Asegurar que los grids funcionen correctamente en móvil */
-    .grid-cols-1 {
-      grid-template-columns: repeat(1, minmax(0, 1fr));
-    }
-    
-    /* Mejorar el sidebar en móvil */
-    .lg\\:w-72 {
-      width: 100%;
-    }
-    
-    /* Asegurar que el contenido principal no tenga padding innecesario */
-    .lg\\:pl-72 {
-      padding-left: 0;
-    }
+    /* Evitar sobrescrituras específicas para móvil de utilidades base */
   }
 
   /* Mejoras específicas para tablets */
   @media (min-width: 768px) and (max-width: 1023px) {
     /* Asegurar que el contenido no se desplace en tablets */
-    .lg\\:pl-72 {
-      padding-left: 0;
-    }
-    
-    /* Mejorar el sidebar en tablets */
-    .lg\\:w-72 {
-      width: 16rem;
-    }
-    
-    /* Asegurar que los grids funcionen correctamente */
-    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    
-    .grid-cols-1.lg\\:grid-cols-2 {
-      grid-template-columns: repeat(1, minmax(0, 1fr));
-    }
+    /* Evitar sobrescrituras específicas para tablets de utilidades base */
   }
 
   /* Optimizaciones para netbooks con altura muy limitada (600px) */
@@ -643,26 +469,10 @@ body {
     }
     
     /* Sidebar aún más compacto */
-    .lg\\:w-72 {
-      width: 14rem; /* 224px */
-    }
+    /* No modificar utilidades de ancho en este modo */
     
     /* Reducir aún más el espaciado */
-    .space-y-6 > * + * {
-      margin-top: 0.5rem;
-    }
-    
-    .space-y-4 > * + * {
-      margin-top: 0.25rem;
-    }
-    
-    .mb-6 {
-      margin-bottom: 0.5rem;
-    }
-    
-    .mb-4 {
-      margin-bottom: 0.25rem;
-    }
+    /* No redefinir márgenes utilitarios */
     
     /* Header minimalista */
     .text-2xl {

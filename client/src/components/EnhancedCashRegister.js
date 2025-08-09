@@ -18,7 +18,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
-import { productService, shiftService } from '../services/firebaseService';
+import { productService, shiftService, customerService } from '../services/firebaseService';
 import ShiftManagement from './ShiftManagement';
 import toast from 'react-hot-toast';
 
@@ -64,7 +64,7 @@ const EnhancedCashRegister = () => {
 
   
   // Cálculos
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const cartTotal = cart.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const finalTotal = cartTotal - appliedDiscount;
   const change = cashAmount - finalTotal;
@@ -280,6 +280,19 @@ const EnhancedCashRegister = () => {
       // Actualizar total del turno
       const newShiftTotal = shiftTotal + finalTotal;
       await shiftService.updateShiftTotal(currentShift.id, newShiftTotal);
+
+      // Si el cliente es a crédito y paga algo en efectivo, actualizar saldo en Firestore
+      if (selectedCustomer?.id && selectedCustomer?.currentBalance > 0 && paymentMethod === 'cash') {
+        const newBalance = Math.max(0, (selectedCustomer.currentBalance || 0) - cashAmount);
+        try {
+          await customerService.updateCustomer(selectedCustomer.id, {
+            currentBalance: newBalance,
+            lastPurchase: new Date().toISOString().split('T')[0]
+          });
+        } catch (e) {
+          console.warn('No se pudo actualizar saldo de cliente:', e);
+        }
+      }
       
       // Notificar venta completada
       await notificationService.notifySaleCompleted({

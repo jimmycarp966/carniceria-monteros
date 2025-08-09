@@ -8,7 +8,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { realtimeService } from '../services/realtimeService';
-import { shiftService } from '../services/firebaseService';
+import { shiftService, expensesService } from '../services/firebaseService';
 import toast from 'react-hot-toast';
 
 const ShiftManagement = ({ onShiftChange, currentShift }) => {
@@ -29,6 +29,9 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
   // Estados para cerrar turno
   const [closingAmount, setClosingAmount] = useState(0);
   const [closingNotes, setClosingNotes] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState(0);
+  const [expenseReason, setExpenseReason] = useState('');
+  const net = (selectedShift?.total || 0) - (Number(expenseAmount) || 0);
   
   // Estados para validaciones
   const [validationErrors, setValidationErrors] = useState({});
@@ -169,6 +172,20 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
       
       await shiftService.closeShift(selectedShift.id, closingData);
       
+      // Registrar gasto opcional asociado al cierre
+      if (expenseAmount > 0) {
+        try {
+          await expensesService.addExpense({
+            shiftId: selectedShift.id,
+            amount: Number(expenseAmount),
+            reason: expenseReason || 'Gasto de cierre',
+            type: 'operational'
+          });
+        } catch (e) {
+          console.warn('No se pudo registrar gasto de cierre:', e);
+        }
+      }
+      
       // Actualizar estado local
       setShifts(prev => prev.map(shift => 
         shift.id === selectedShift.id 
@@ -184,6 +201,8 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
       // Limpiar formulario
       setClosingAmount(0);
       setClosingNotes('');
+      setExpenseAmount(0);
+      setExpenseReason('');
       setSelectedShift(null);
       setShowCloseShiftModal(false);
       
@@ -565,6 +584,12 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
                   <p className="text-sm text-gray-600">
                     <strong>Cantidad de Ventas:</strong> {selectedShift.salesCount || 0}
                   </p>
+                  <p className="text-sm text-gray-600">
+                    <strong>Gasto de Cierre:</strong> ${(Number(expenseAmount) || 0).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    <strong>Caja Neta:</strong> ${net.toFixed(2)}
+                  </p>
                 </div>
 
                 {/* Monto de Cierre */}
@@ -580,6 +605,30 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="0.00"
                   />
+                </div>
+
+                {/* Gasto de Cierre (opcional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gasto de Cierre (opcional)
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={expenseAmount}
+                      onChange={(e) => setExpenseAmount(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="0.00"
+                    />
+                    <input
+                      type="text"
+                      value={expenseReason}
+                      onChange={(e) => setExpenseReason(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Motivo del gasto"
+                    />
+                  </div>
                 </div>
 
                 {/* Notas de Cierre */}

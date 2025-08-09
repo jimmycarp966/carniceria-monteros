@@ -3,6 +3,7 @@ import { products } from '../data/products';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { saleService, productService, loadSampleData } from '../services/firebaseService';
+import { dataSyncService } from '../services/realtimeService';
 import ErrorBoundary from './ErrorBoundary';
 
 const Sales = () => {
@@ -110,18 +111,12 @@ const Sales = () => {
         paymentMethod: 'cash' // Método de pago por defecto
       };
 
-      const saleId = await saleService.addSale(saleData);
+      // Sincronizar venta para que actualice inventario y realtime
+      const saleId = await dataSyncService.syncSale({
+        ...saleData,
+        shiftId: undefined // sin turno desde esta pantalla
+      });
       console.log('✅ Venta agregada a Firebase con ID:', saleId);
-      
-      // Actualizar stock de productos
-      for (const item of cart) {
-        try {
-          await productService.updateProductStock(item.id.toString(), item.quantity);
-          console.log(`✅ Stock actualizado para producto ${item.name}`);
-        } catch (error) {
-          console.error(`❌ Error actualizando stock para ${item.name}:`, error);
-        }
-      }
 
       // Actualizar estado local
       const saleWithId = { ...saleData, id: saleId };

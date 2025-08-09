@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
-import { suppliers, supplierCategories, supplierStatuses } from '../data/suppliers';
+import { supplierCategories, supplierStatuses } from '../data/suppliers';
+import { suppliersService } from '../services/firebaseService';
 import { Truck, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Suppliers = () => {
-  const [supplierList, setSupplierList] = useState(suppliers);
+  const [supplierList, setSupplierList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+
+  // Cargar proveedores desde Firestore
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const list = await suppliersService.getAllSuppliers();
+        setSupplierList(list);
+      } catch (e) {
+        console.error('Error cargando proveedores:', e);
+      }
+    })();
+  }, []);
 
   // Filtrar proveedores
   const filteredSuppliers = supplierList.filter(supplier => {
@@ -31,33 +44,45 @@ const Suppliers = () => {
     totalOwed: supplierList.reduce((sum, s) => sum + s.totalOwed, 0)
   };
 
-  const handleAddSupplier = (newSupplier) => {
-    const supplier = {
-      ...newSupplier,
-      id: Date.now(),
-      status: 'active',
-      totalOrdered: 0,
-      totalPaid: 0,
-      totalOwed: 0,
-      lastOrder: new Date().toISOString().split('T')[0]
-    };
-    setSupplierList([supplier, ...supplierList]);
-    setShowAddModal(false);
-    toast.success('Proveedor agregado exitosamente');
+  const handleAddSupplier = async (newSupplier) => {
+    try {
+      const supplierData = {
+        ...newSupplier,
+        status: 'active',
+        totalOrdered: 0,
+        totalPaid: 0,
+        totalOwed: 0,
+        lastOrder: new Date().toISOString().split('T')[0]
+      };
+      const id = await suppliersService.addSupplier(supplierData);
+      setSupplierList([{ ...supplierData, id }, ...supplierList]);
+      setShowAddModal(false);
+      toast.success('Proveedor agregado exitosamente');
+    } catch (e) {
+      toast.error('Error agregando proveedor');
+    }
   };
 
-  const handleEditSupplier = (updatedSupplier) => {
-    setSupplierList(supplierList.map(s => 
-      s.id === updatedSupplier.id ? updatedSupplier : s
-    ));
-    setShowEditModal(false);
-    setSelectedSupplier(null);
-    toast.success('Proveedor actualizado exitosamente');
+  const handleEditSupplier = async (updatedSupplier) => {
+    try {
+      await suppliersService.updateSupplier(updatedSupplier.id, updatedSupplier);
+      setSupplierList(supplierList.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+      setShowEditModal(false);
+      setSelectedSupplier(null);
+      toast.success('Proveedor actualizado exitosamente');
+    } catch (e) {
+      toast.error('Error actualizando proveedor');
+    }
   };
 
-  const handleDeleteSupplier = (id) => {
-    setSupplierList(supplierList.filter(s => s.id !== id));
-    toast.success('Proveedor eliminado exitosamente');
+  const handleDeleteSupplier = async (id) => {
+    try {
+      await suppliersService.deleteSupplier(id);
+      setSupplierList(supplierList.filter(s => s.id !== id));
+      toast.success('Proveedor eliminado exitosamente');
+    } catch (e) {
+      toast.error('Error eliminando proveedor');
+    }
   };
 
   const getStatusColor = (status) => {

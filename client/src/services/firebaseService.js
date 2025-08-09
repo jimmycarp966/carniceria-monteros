@@ -12,7 +12,7 @@ import {
   orderBy,
   limit
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 
 // Cache inteligente optimizado
 const cache = new Map();
@@ -66,6 +66,202 @@ const loadPendingOperations = () => {
   const saved = localStorage.getItem('pendingOperations');
   if (saved) {
     pendingOperations = JSON.parse(saved);
+  }
+};
+
+// Servicio de gastos
+export const expensesService = {
+  async addExpense(expenseData) {
+    try {
+      const expensesRef = collection(db, 'expenses');
+      const docRef = await addDoc(expensesRef, {
+        ...expenseData,
+        createdByEmail: auth?.currentUser?.email || null,
+        createdByUid: auth?.currentUser?.uid || null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error agregando gasto:', error);
+      throw error;
+    }
+  },
+
+  async getExpensesByShift(shiftId) {
+    try {
+      const expensesRef = collection(db, 'expenses');
+      const q = query(expensesRef, where('shiftId', '==', shiftId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      console.error('❌ Error cargando gastos por turno:', error);
+      throw error;
+    }
+  },
+
+  async getExpensesByDateRange(startDate, endDate) {
+    try {
+      const expensesRef = collection(db, 'expenses');
+      const q = query(
+        expensesRef,
+        where('createdAt', '>=', startDate),
+        where('createdAt', '<=', endDate)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      console.error('❌ Error cargando gastos por rango:', error);
+      throw error;
+    }
+  }
+};
+
+// Servicio de compras
+export const purchasesService = {
+  async addPurchase(purchaseData) {
+    try {
+      const purchasesRef = collection(db, 'purchases');
+      const docRef = await addDoc(purchasesRef, {
+        ...purchaseData,
+        createdByEmail: auth?.currentUser?.email || null,
+        createdByUid: auth?.currentUser?.uid || null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      // Ajustar inventario por cada ítem comprado
+      if (Array.isArray(purchaseData.items)) {
+        for (const item of purchaseData.items) {
+          try {
+            await inventoryService.adjustInventory(item.productId, item.quantity);
+          } catch (e) {
+            console.warn('No se pudo ajustar inventario para', item.productId);
+          }
+        }
+      }
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error registrando compra:', error);
+      throw error;
+    }
+  },
+
+  async getPurchasesByDateRange(startDate, endDate) {
+    try {
+      const purchasesRef = collection(db, 'purchases');
+      const q = query(
+        purchasesRef,
+        where('createdAt', '>=', startDate),
+        where('createdAt', '<=', endDate)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      console.error('❌ Error cargando compras:', error);
+      throw error;
+    }
+  }
+};
+
+// Servicio de movimientos de inventario
+export const inventoryMovementsService = {
+  async addMovement(movement) {
+    try {
+      const movementsRef = collection(db, 'inventory_movements');
+      const docRef = await addDoc(movementsRef, {
+        ...movement,
+        createdByEmail: auth?.currentUser?.email || null,
+        createdByUid: auth?.currentUser?.uid || null,
+        timestamp: serverTimestamp()
+      });
+      // Ajustar inventario según tipo de movimiento
+      const type = movement.type;
+      const quantity = Number(movement.quantity) || 0;
+      const delta = type === 'entrada' ? quantity : type === 'salida' || type === 'merma' ? -quantity : 0;
+      if (delta !== 0 && movement.productId) {
+        try {
+          await inventoryService.adjustInventory(movement.productId, delta);
+        } catch (e) {
+          console.warn('No se pudo ajustar inventario para movimiento', movement.productId);
+        }
+      }
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error registrando movimiento de inventario:', error);
+      throw error;
+    }
+  },
+
+  async getRecentMovements(limitCount = 50) {
+    try {
+      const movementsRef = collection(db, 'inventory_movements');
+      // orderBy importado arriba no soporta dynamic limit easily; simple get all and slice
+      const snapshot = await getDocs(movementsRef);
+      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      return list.slice(0, limitCount);
+    } catch (error) {
+      console.error('❌ Error cargando movimientos:', error);
+      throw error;
+    }
+  }
+};
+
+// Servicio de proveedores (Firestore)
+export const suppliersService = {
+  async getAllSuppliers() {
+    try {
+      const cacheKey = 'suppliers';
+      const cached = smartCache.get(cacheKey);
+      if (cached) return cached;
+      const suppliersRef = collection(db, 'suppliers');
+      const snapshot = await getDocs(suppliersRef);
+      const suppliers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      smartCache.set(cacheKey, suppliers);
+      return suppliers;
+    } catch (error) {
+      console.error('❌ Error cargando proveedores:', error);
+      throw error;
+    }
+  },
+
+  async addSupplier(data) {
+    try {
+      const suppliersRef = collection(db, 'suppliers');
+      const docRef = await addDoc(suppliersRef, {
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      smartCache.invalidate('suppliers');
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error agregando proveedor:', error);
+      throw error;
+    }
+  },
+
+  async updateSupplier(id, data) {
+    try {
+      const refDoc = doc(db, 'suppliers', id);
+      await updateDoc(refDoc, { ...data, updatedAt: serverTimestamp() });
+      smartCache.invalidate('suppliers');
+      return id;
+    } catch (error) {
+      console.error('❌ Error actualizando proveedor:', error);
+      throw error;
+    }
+  },
+
+  async deleteSupplier(id) {
+    try {
+      const refDoc = doc(db, 'suppliers', id);
+      await deleteDoc(refDoc);
+      smartCache.invalidate('suppliers');
+      return id;
+    } catch (error) {
+      console.error('❌ Error eliminando proveedor:', error);
+      throw error;
+    }
   }
 };
 
@@ -564,6 +760,26 @@ export const inventoryService = {
     }
   },
 
+  async adjustInventory(productId, quantityChange) {
+    try {
+      const inventoryRef = collection(db, 'inventory');
+      const q = query(inventoryRef, where('productId', '==', productId));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const docRef = snapshot.docs[0].ref;
+        const data = snapshot.docs[0].data();
+        const newStock = Math.max(0, (data.stock ?? 0) + quantityChange);
+        await updateDoc(docRef, { stock: newStock, lastUpdated: serverTimestamp() });
+        smartCache.invalidate('inventory');
+        return newStock;
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error ajustando inventario:', error);
+      throw error;
+    }
+  },
+
   async updateInventoryItem(id, itemData) {
     try {
       const itemRef = doc(db, 'inventory', id);
@@ -843,6 +1059,31 @@ export const employeeService = {
     } catch (error) {
       console.error('❌ Error eliminando empleado:', error);
       throw error;
+    }
+  }
+};
+
+// Servicio de autorización (permisos por email)
+export const authzService = {
+  async getUserPermissionsByEmail(email) {
+    try {
+      const employeesRef = collection(db, 'employees');
+      const q = query(employeesRef, where('email', '==', email));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        const permissions = Array.isArray(data.permissions) ? data.permissions : [];
+        // Si es admin, otorgar todos
+        if (permissions.includes('admin')) {
+          return ['admin', 'sales', 'inventory', 'purchases', 'expenses', 'reports', 'customers', 'suppliers', 'products'];
+        }
+        return permissions;
+      }
+      // Si no hay registro en empleados, permisos básicos de lectura
+      return [];
+    } catch (error) {
+      console.error('❌ Error obteniendo permisos:', error);
+      return [];
     }
   }
 };

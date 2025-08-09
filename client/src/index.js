@@ -4,22 +4,29 @@ import './index.css';
 import App from './App';
 import './utils/consoleTesting';
 
-// Registrar Service Worker para optimización
+// Registrar Service Worker para optimización con control de actualizaciones
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('Service Worker registrado exitosamente:', registration.scope);
-        
-        // Verificar actualizaciones del Service Worker
+        console.log('Service Worker registrado:', registration.scope);
+
+        // Forzar check de update tras 30s en segundo plano
+        setTimeout(() => registration.update().catch(() => {}), 30000);
+
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
+          if (!newWorker) return;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // Nueva versión disponible
-              console.log('Nueva versión del Service Worker disponible');
+              console.log('Nueva versión disponible');
             }
           });
+        });
+
+        // Escuchar cambios de controlador
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('Service Worker actualizado y activado');
         });
       })
       .catch((error) => {

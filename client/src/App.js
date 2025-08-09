@@ -1,12 +1,15 @@
 import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback, memo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Settings, Sun, Moon, Bug } from 'lucide-react';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Settings, Sun, Moon, Bug, CreditCard } from 'lucide-react';
 import RealtimeNotifications from './components/RealtimeNotifications';
 import DebugPanel from './components/DebugPanel';
 import { auth } from './firebase';
+import { authzService } from './services/firebaseService';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import FirebaseAuth from './components/FirebaseAuth';
+import ErrorBoundary from './components/ErrorBoundary';
+import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
 
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
@@ -19,6 +22,8 @@ const Inventory = lazy(() => import('./components/Inventory'));
 const Categories = lazy(() => import('./components/Categories'));
 const Reports = lazy(() => import('./components/Reports'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
+const Purchases = lazy(() => import('./components/Purchases'));
+const Expenses = lazy(() => import('./components/Expenses'));
 
 // Componente de carga optimizado con memo
 const LoadingSpinner = memo(() => (
@@ -37,15 +42,20 @@ const LoadingSpinner = memo(() => (
 ));
 
 // NavItem optimizado con memo y useCallback
-const NavItem = memo(({ icon: Icon, label, to, onClick, isActive, badge }) => {
+const NavItem = memo(({ icon: Icon, label, to, onClick, onHover, isActive, badge }) => {
   const handleClick = useCallback((e) => {
     if (onClick) onClick(e);
   }, [onClick]);
+
+  const handleMouseEnter = useCallback((e) => {
+    if (onHover) onHover(e);
+  }, [onHover]);
 
   return (
     <Link
       to={to}
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 relative group ${
         isActive 
           ? 'text-orange-700 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50 shadow-lg transform scale-105' 
@@ -64,13 +74,14 @@ const NavItem = memo(({ icon: Icon, label, to, onClick, isActive, badge }) => {
 });
 
 // Layout optimizado con memo y useMemo
-const Layout = memo(({ children }) => {
+const Layout = memo(({ children, onPrefetchRoute }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [activeRoute, setActiveRoute] = useState('/');
   const [lowStockAlerts] = useState(3);
   const [darkMode, setDarkMode] = useState(false);
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
+  const permissions = usePermissions();
 
   // Optimizar useEffect para auth
   useEffect(() => {
@@ -106,24 +117,39 @@ const Layout = memo(({ children }) => {
   }, []);
 
   // Optimizar navigation con useMemo
-  const navigation = useMemo(() => [
-    { icon: Home, label: 'Menú Principal', to: '/' },
-    { icon: DollarSign, label: 'Caja', to: '/caja' },
-    { icon: Package, label: 'Productos', to: '/productos' },
-    { icon: ShoppingCart, label: 'Ventas', to: '/ventas' },
-    { icon: Building, label: 'Inventario', to: '/inventario', badge: lowStockAlerts > 0 ? lowStockAlerts : null },
-    { icon: Users, label: 'Clientes', to: '/clientes' },
-    { icon: UserCheck, label: 'Empleados', to: '/empleados' },
-    { icon: Truck, label: 'Proveedores', to: '/proveedores' },
-    { icon: Tag, label: 'Categorías', to: '/categorias' },
-    { icon: BarChart3, label: 'Reportes', to: '/reportes' },
-  ], [lowStockAlerts]);
+  const navigation = useMemo(() => {
+    const base = [
+      { icon: Home, label: 'Menú Principal', to: '/' },
+      { icon: DollarSign, label: 'Caja', to: '/caja' },
+      { icon: Package, label: 'Productos', to: '/productos' },
+      { icon: ShoppingCart, label: 'Ventas', to: '/ventas' },
+      { icon: Building, label: 'Inventario', to: '/inventario', badge: lowStockAlerts > 0 ? lowStockAlerts : null },
+      { icon: Users, label: 'Clientes', to: '/clientes' },
+      { icon: UserCheck, label: 'Empleados', to: '/empleados' },
+      { icon: Truck, label: 'Proveedores', to: '/proveedores' },
+      { icon: Tag, label: 'Categorías', to: '/categorias' },
+      { icon: BarChart3, label: 'Reportes', to: '/reportes' },
+    ];
+    // Insertar entradas condicionales por permisos
+    const result = [...base];
+    if (permissions && (permissions.includes('purchases') || permissions.includes('admin'))) {
+      result.splice(5, 0, { icon: Truck, label: 'Compras', to: '/compras' });
+    }
+    if (permissions && (permissions.includes('expenses') || permissions.includes('admin'))) {
+      result.splice(6, 0, { icon: CreditCard, label: 'Gastos', to: '/gastos' });
+    }
+    return result;
+  }, [lowStockAlerts, permissions]);
 
   // Optimizar handlers de navegación
   const handleNavClick = useCallback((route) => {
     setActiveRoute(route);
     closeSidebar();
   }, [closeSidebar]);
+
+  const handleNavHover = useCallback((route) => {
+    if (onPrefetchRoute) onPrefetchRoute(route);
+  }, [onPrefetchRoute]);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex ${darkMode ? 'dark' : ''}`}>
@@ -212,6 +238,7 @@ const Layout = memo(({ children }) => {
                 label={item.label}
                 to={item.to}
                 onClick={() => handleNavClick(item.to)}
+                onHover={() => handleNavHover(item.to)}
                 isActive={activeRoute === item.to}
                 badge={item.badge}
               />
@@ -254,7 +281,7 @@ const Layout = memo(({ children }) => {
       </div>
 
       {/* Main content optimizado */}
-      <div className="flex-1 w-full lg:pl-72">
+      <div className="flex-1 w-full min-w-0">
         <div className="min-h-screen w-full pt-20 lg:pt-0 px-4 lg:px-6">
           <Suspense fallback={<LoadingSpinner />}>
             {children}
@@ -275,6 +302,30 @@ const Layout = memo(({ children }) => {
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [permissions, setPermissions] = useState([]);
+  
+  // Prefetch de rutas en idle/hover
+  const prefetchMap = useMemo(() => ({
+    '/': () => import('./components/Dashboard'),
+    '/caja': () => import('./components/EnhancedCashRegister'),
+    '/productos': () => import('./components/Products'),
+    '/ventas': () => import('./components/Sales'),
+    '/inventario': () => import('./components/Inventory'),
+    '/compras': () => import('./components/Purchases'),
+    '/gastos': () => import('./components/Expenses'),
+    '/clientes': () => import('./components/Customers'),
+    '/empleados': () => import('./components/Employees'),
+    '/proveedores': () => import('./components/Suppliers'),
+    '/categorias': () => import('./components/Categories'),
+    '/reportes': () => import('./components/Reports'),
+  }), []);
+
+  const prefetchRoute = useCallback((route) => {
+    const prefetch = prefetchMap[route];
+    if (typeof prefetch === 'function') {
+      prefetch().catch(() => {});
+    }
+  }, [prefetchMap]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -283,6 +334,41 @@ function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Cargar permisos del usuario autenticado
+  useEffect(() => {
+    (async () => {
+      if (user?.email) {
+        const perms = await authzService.getUserPermissionsByEmail(user.email);
+        setPermissions(perms);
+      } else {
+        setPermissions([]);
+      }
+    })();
+  }, [user]);
+
+  // Prefetch en idle de las rutas más usadas luego de cargar
+  useEffect(() => {
+    if (!user) return;
+    const idle = (cb) => {
+      if ('requestIdleCallback' in window) {
+        // @ts-ignore
+        return window.requestIdleCallback(cb);
+      }
+      return setTimeout(cb, 1000);
+    };
+    const cancel = (id) => {
+      if ('cancelIdleCallback' in window) {
+        // @ts-ignore
+        return window.cancelIdleCallback(id);
+      }
+      clearTimeout(id);
+    };
+    const id = idle(() => {
+      ['/caja', '/productos', '/inventario', '/compras', '/gastos'].forEach((r) => prefetchRoute(r));
+    });
+    return () => cancel(id);
+  }, [user, prefetchRoute]);
 
   // Optimizar loading screen
   if (loading) {
@@ -294,7 +380,7 @@ function App() {
             <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-2 border-white animate-ping"></div>
           </div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-            Carnicería Monteros
+            Carnicería Muñoz
           </h2>
           <p className="text-gray-600 mb-4">Cargando sistema...</p>
           <div className="loading-spinner mx-auto"></div>
@@ -310,21 +396,31 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/caja" element={<CashRegister />} />
-            <Route path="/productos" element={<Products />} />
-            <Route path="/ventas" element={<Sales />} />
-            <Route path="/inventario" element={<Inventory />} />
-            <Route path="/clientes" element={<Customers />} />
-            <Route path="/empleados" element={<Employees />} />
-            <Route path="/proveedores" element={<Suppliers />} />
-            <Route path="/categorias" element={<Categories />} />
-            <Route path="/reportes" element={<Reports />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Layout>
+        <ErrorBoundary>
+          <PermissionsProvider permissions={permissions}>
+            <Layout onPrefetchRoute={prefetchRoute}>
+              <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/caja" element={<CashRegister />} />
+              <Route path="/productos" element={<Products />} />
+              <Route path="/ventas" element={<Sales />} />
+              <Route path="/inventario" element={<Inventory />} />
+              {permissions.includes('purchases') || permissions.includes('admin') ? (
+                <Route path="/compras" element={<Purchases />} />
+              ) : null}
+              {permissions.includes('expenses') || permissions.includes('admin') ? (
+                <Route path="/gastos" element={<Expenses />} />
+              ) : null}
+              <Route path="/clientes" element={<Customers />} />
+              <Route path="/empleados" element={<Employees />} />
+              <Route path="/proveedores" element={<Suppliers />} />
+              <Route path="/categorias" element={<Categories />} />
+              <Route path="/reportes" element={<Reports />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          </PermissionsProvider>
+        </ErrorBoundary>
         <Toaster 
           position="top-right"
           toastOptions={{

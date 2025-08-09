@@ -3,7 +3,16 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
- // Habilitar modo oscuro
+  safelist: [
+    // Colores dinámicos usados en strings (Dashboard, Inventory, Products)
+    // Text colors
+    { pattern: /text-(red|green|blue|purple|yellow|orange|cyan|gray)-(100|200|300|400|500|600|700|800|900)/ },
+    // Background colors
+    { pattern: /bg-(red|green|blue|purple|yellow|orange|cyan|gray)-(50|100|200|300|400|500|600|700|800|900)/ },
+    // Border colors (por si se usan dinámicos)
+    { pattern: /border-(red|green|blue|purple|yellow|orange|cyan|gray)-(100|200|300|400|500|600|700|800|900)/ },
+  ],
+  // Nota: darkMode intencionalmente no activado por pedido del usuario
   theme: {
     extend: {
       colors: {

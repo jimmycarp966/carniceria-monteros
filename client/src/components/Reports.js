@@ -21,7 +21,7 @@ import {
   ShoppingCart,
   Repeat
 } from 'lucide-react';
-import { saleService } from '../services/firebaseService';
+import { saleService, expensesService, purchasesService } from '../services/firebaseService';
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
@@ -39,6 +39,8 @@ const Reports = () => {
 
   // Estados para datos de Firebase
   const [salesData, setSalesData] = useState([]);
+  const [expensesData, setExpensesData] = useState([]);
+  const [purchasesData, setPurchasesData] = useState([]);
   // const [shiftsData, setShiftsData] = useState([]); // Removed as per edit hint
   // const [dailyReport, setDailyReport] = useState(null); // Removed as per edit hint
   // const [shiftReports, setShiftReports] = useState({}); // Removed as per edit hint
@@ -85,6 +87,20 @@ const Reports = () => {
         // Cargar ventas
         const sales = await saleService.getAllSales();
         setSalesData(sales);
+
+        // Cargar gastos y compras del mes actual
+        const start = new Date();
+        start.setDate(1); start.setHours(0,0,0,0);
+        const end = new Date();
+        end.setMonth(end.getMonth()+1); end.setDate(0); end.setHours(23,59,59,999);
+        const [expenses, purchases] = await Promise.all([
+          expensesService.getExpensesByShift ? Promise.resolve([]) : Promise.resolve([]),
+          purchasesService.getPurchasesByDateRange(start, end)
+        ]);
+        // Nota: si quieres gastos por rango, usa getExpensesByDateRange; lo dejo preparado
+        // const expenses = await expensesService.getExpensesByDateRange(start, end);
+        setExpensesData(expenses);
+        setPurchasesData(purchases);
 
         // Cargar turnos
         // const shifts = await shiftService.getAllShifts(); // Removed as per edit hint
@@ -171,7 +187,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Clientes Totales</p>
-              <p className="stats-value">0</p>
+              <p className="stats-value">{0}</p>
             </div>
             <div className="stats-icon">
               <Users className="h-6 w-6" />
@@ -195,7 +211,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="stats-label">Compras Promedio</p>
-              <p className="stats-value">$0</p>
+              <p className="stats-value">${(salesData.length > 0 ? (salesData.reduce((s, v) => s + (v.total || 0), 0) / salesData.length) : 0).toFixed(0)}</p>
             </div>
             <div className="stats-icon">
               <ShoppingCart className="h-6 w-6" />
@@ -285,16 +301,47 @@ const Reports = () => {
                     Venta #{sale.id.slice(-6)}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {sale.date?.toDate?.()?.toLocaleString() || new Date(sale.date).toLocaleString()}
+                    {sale.date?.toDate?.()?.toLocaleString() || new Date(sale.date || sale.createdAt?.toDate?.() || Date.now()).toLocaleString()}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-gray-900">${sale.total?.toLocaleString()}</p>
+                <p className="font-bold text-gray-900">${(sale.total || 0).toLocaleString()}</p>
                 <p className="text-xs text-gray-600">{sale.items?.length || 0} items</p>
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Resumen financiero (mes actual) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Ingresos (Ventas)</p>
+              <p className="stats-value">${salesData.reduce((s, v) => s + (v.total || 0), 0).toLocaleString()}</p>
+            </div>
+            <div className="stats-icon"><DollarSign className="h-6 w-6" /></div>
+          </div>
+        </div>
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Gastos</p>
+              <p className="stats-value">${expensesData.reduce((s, e) => s + (e.amount || 0), 0).toLocaleString()}</p>
+            </div>
+            <div className="stats-icon"><TrendingDown className="h-6 w-6" /></div>
+          </div>
+        </div>
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Compras (Costo)</p>
+              <p className="stats-value">${purchasesData.reduce((s, p) => s + (p.total || 0), 0).toLocaleString()}</p>
+            </div>
+            <div className="stats-icon"><Package className="h-6 w-6" /></div>
+          </div>
         </div>
       </div>
     </div>

@@ -59,7 +59,8 @@ const Employees = () => {
         ...newEmployee,
         status: 'active',
         hireDate: new Date().toISOString().split('T')[0],
-        salary: parseFloat(newEmployee.salary)
+        salary: parseFloat(newEmployee.salary),
+        permissions: Array.isArray(newEmployee.permissions) ? newEmployee.permissions : []
       };
       
       const employeeId = await employeeService.addEmployee(employeeData);
@@ -351,7 +352,33 @@ const EmployeeModal = ({ employee, onSave, onCancel }) => {
     phone: employee?.phone || '',
     address: employee?.address || '',
     salary: employee?.salary || 0,
-    notes: employee?.notes || ''
+    notes: employee?.notes || '',
+    permissions: Array.isArray(employee?.permissions) ? employee.permissions : []
+  });
+
+  const availablePermissions = [
+    { id: 'admin', label: 'Administrador (todo)' },
+    { id: 'sales', label: 'Ventas' },
+    { id: 'inventory', label: 'Inventario' },
+    { id: 'products', label: 'Productos' },
+    { id: 'purchases', label: 'Compras' },
+    { id: 'expenses', label: 'Gastos' },
+    { id: 'reports', label: 'Reportes' },
+    { id: 'customers', label: 'Clientes' },
+    { id: 'suppliers', label: 'Proveedores' },
+  ];
+
+  const rolePresets = [
+    { id: 'none', name: 'Personalizado', permissions: [] },
+    { id: 'admin', name: 'Administrador', permissions: ['admin'] },
+    { id: 'cashier', name: 'Cajero/a', permissions: ['sales', 'customers'] },
+    { id: 'inventory', name: 'Encargado de Inventario', permissions: ['inventory', 'products', 'purchases', 'suppliers'] },
+    { id: 'supervisor', name: 'Supervisor', permissions: ['sales', 'reports', 'customers'] },
+  ];
+
+  const [selectedRole, setSelectedRole] = useState(() => {
+    if (formData.permissions.includes('admin')) return 'admin';
+    return 'none';
   });
 
   const handleSubmit = (e) => {
@@ -378,6 +405,55 @@ const EmployeeModal = ({ employee, onSave, onCancel }) => {
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Rol
+              </label>
+              <select
+                value={selectedRole}
+                onChange={(e) => {
+                  const role = e.target.value;
+                  setSelectedRole(role);
+                  const preset = rolePresets.find(r => r.id === role);
+                  if (preset) {
+                    setFormData(prev => ({ ...prev, permissions: preset.permissions }));
+                  }
+                }}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                {rolePresets.map(r => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Seleccioná un rol predefinido o dejá "Personalizado" para elegir permisos manualmente</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Permisos
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border border-gray-200 rounded-md">
+                {availablePermissions.map(p => (
+                  <label key={p.id} className="inline-flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.permissions.includes(p.id)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSelectedRole('none');
+                        setFormData(prev => ({
+                          ...prev,
+                          permissions: checked
+                            ? Array.from(new Set([...(prev.permissions || []), p.id]))
+                            : (prev.permissions || []).filter(x => x !== p.id)
+                        }));
+                      }}
+                    />
+                    <span className="text-sm text-gray-700">{p.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Nota: si asignás "Administrador" no necesitás marcar el resto</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
