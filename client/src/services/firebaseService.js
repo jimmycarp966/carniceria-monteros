@@ -1088,7 +1088,7 @@ export const authzService = {
   }
 };
 
-// Datos simulados para demostración - PRODUCTOS MEJORADOS
+/* Datos simulados deshabilitados
 const sampleProducts = [
   {
     name: "Asado de Tira",
@@ -1332,7 +1332,6 @@ const sampleProducts = [
   }
 ];
 
-// Datos simulados para clientes
 const sampleCustomers = [
   {
     name: "Juan Pérez",
@@ -1386,7 +1385,6 @@ const sampleCustomers = [
   }
 ];
 
-// Datos simulados para turnos
 const sampleShifts = [
   {
     type: "morning",
@@ -1446,7 +1444,6 @@ const sampleShifts = [
   }
 ];
 
-// Datos simulados para empleados
 const sampleEmployees = [
   {
     name: "Pedro Martínez",
@@ -1499,6 +1496,7 @@ const sampleEmployees = [
     address: "Independencia 500, Monteros"
   }
 ];
+*/
 
 // Función para cargar datos simulados en Firebase
 export const loadSampleData = async () => {
