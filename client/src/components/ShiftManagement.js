@@ -46,9 +46,10 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
       
       // Verificar si se puede abrir turno tarde
       const today = new Date().toISOString().split('T')[0];
-      const todayShifts = allShifts.filter(shift => 
-        shift.date === today
-      );
+      const todayShifts = allShifts.filter(shift => {
+        const d = shift.date || (shift.startTime?.toDate?.()?.toISOString()?.split('T')[0]);
+        return d === today;
+      });
       
       const morningShift = todayShifts.find(shift => shift.type === 'morning');
       const afternoonShift = todayShifts.find(shift => shift.type === 'afternoon');

@@ -284,23 +284,27 @@ export const realtimeService = {
     syncState.listeners.set('customers', unsubscribe);
   },
 
-  // Listener para turnos optimizado
+  // Listener para turnos: escuchar todos los turnos (activos y cerrados)
   listenToShifts() {
     const shiftsRef = collection(db, 'shifts');
     const q = query(
-      shiftsRef, 
-      where('status', '==', 'active'),
-      limit(5)
+      shiftsRef,
+      limit(50)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const shifts = snapshot.docs.map(doc => ({
+      let shifts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      // Ordenar por startTime/createdAt descendente si existe
+      shifts = shifts.sort((a, b) => {
+        const ta = a.startTime?.toDate?.()?.getTime?.() || a.createdAt?.toDate?.()?.getTime?.() || 0;
+        const tb = b.startTime?.toDate?.()?.getTime?.() || b.createdAt?.toDate?.()?.getTime?.() || 0;
+        return tb - ta;
+      });
       
-      // Cachear datos
-      dataCache.set('active_shifts', {
+      dataCache.set('shifts', {
         data: shifts,
         timestamp: Date.now()
       });

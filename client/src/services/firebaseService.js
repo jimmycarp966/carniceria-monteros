@@ -658,10 +658,16 @@ export const shiftService = {
       const shiftsRef = collection(db, 'shifts');
       const snapshot = await getDocs(shiftsRef);
       
-      const shifts = snapshot.docs.map(doc => ({
+      let shifts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      // Ordenar por startTime/createdAt desc en cliente
+      shifts = shifts.sort((a, b) => {
+        const ta = a.startTime?.toDate?.()?.getTime?.() || a.createdAt?.toDate?.()?.getTime?.() || 0;
+        const tb = b.startTime?.toDate?.()?.getTime?.() || b.createdAt?.toDate?.()?.getTime?.() || 0;
+        return tb - ta;
+      });
 
       smartCache.set(cacheKey, shifts);
       return shifts;
@@ -719,6 +725,9 @@ export const shiftService = {
       const shiftsRef = collection(db, 'shifts');
       const docRef = await addDoc(shiftsRef, {
         ...shiftData,
+        // Guardar fecha adicional para filtros/orden sin índices compuestos
+        date: shiftData.date || new Date().toISOString().split('T')[0],
+        startTime: shiftData.startTime || serverTimestamp(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
