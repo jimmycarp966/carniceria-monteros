@@ -25,6 +25,8 @@ import { saleService, expensesService, purchasesService } from '../services/fire
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('sales');
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   
   // Estados mejorados para filtros
   const [periodFilter, setPeriodFilter] = useState('month');
@@ -80,15 +82,15 @@ const Reports = () => {
     { name: 'Frigorífico Regional', totalOrdered: 1800000, totalPaid: 1600000, reliability: 89, lastOrder: '2024-01-15' }
   ];
 
-  // Cargar datos desde Firebase
+  // Cargar datos desde Firebase con estados de carga/errores
   useEffect(() => {
+    let isMounted = true;
     const loadData = async () => {
       try {
-        // Cargar ventas
         const sales = await saleService.getAllSales();
-        setSalesData(sales);
+        if (!isMounted) return;
+        setSalesData(Array.isArray(sales) ? sales : []);
 
-        // Cargar gastos y compras del mes actual
         const start = new Date();
         start.setDate(1); start.setHours(0,0,0,0);
         const end = new Date();
@@ -97,36 +99,22 @@ const Reports = () => {
           expensesService.getExpensesByShift ? Promise.resolve([]) : Promise.resolve([]),
           purchasesService.getPurchasesByDateRange(start, end)
         ]);
-        // Nota: si quieres gastos por rango, usa getExpensesByDateRange; lo dejo preparado
-        // const expenses = await expensesService.getExpensesByDateRange(start, end);
-        setExpensesData(expenses);
-        setPurchasesData(purchases);
-
-        // Cargar turnos
-        // const shifts = await shiftService.getAllShifts(); // Removed as per edit hint
-        // setShiftsData(shifts);
-
-        // Generar reporte diario
-        // const today = new Date(); // Removed as per edit hint
-        // const dailyReportData = await reportService.generateDailyReport(today); // Removed as per edit hint
-        // setDailyReport(dailyReportData);
-
-        // Generar reportes por turno
-        // const shiftReportsData = {}; // Removed as per edit hint
-        // for (const shift of shifts) { // Removed as per edit hint
-        //   if (shift.isActive === false) { // Removed as per edit hint
-        //     const shiftReport = await reportService.generateShiftReport(shift.id); // Removed as per edit hint
-        //     shiftReportsData[shift.id] = shiftReport; // Removed as per edit hint
-        //   } // Removed as per edit hint
-        // } // Removed as per edit hint
-        // setShiftReports(shiftReportsData); // Removed as per edit hint
-
+        if (!isMounted) return;
+        setExpensesData(Array.isArray(expenses) ? expenses : []);
+        setPurchasesData(Array.isArray(purchases) ? purchases : []);
+        setHasError(false);
       } catch (error) {
+        if (!isMounted) return;
         console.error('Error cargando datos:', error);
+        setHasError(true);
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
       }
     };
 
-    loadData();
+    const id = setTimeout(loadData, 50);
+    return () => { isMounted = false; clearTimeout(id); };
   }, []);
 
   // Insights inteligentes
@@ -632,6 +620,14 @@ const Reports = () => {
 
   return (
     <div className="p-4 lg:p-6 w-full">
+      {isLoading && (
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-6 text-gray-600">Cargando reportes...</div>
+      )}
+      {(!isLoading && hasError) && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6 text-yellow-800">
+          Hubo un problema cargando los reportes. Actualizá o reintentá en unos segundos.
+        </div>
+      )}
       {/* Header Mejorado */}
       <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

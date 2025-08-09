@@ -11,9 +11,12 @@ const Inventory = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showMovementModal, setShowMovementModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   // Cargar inventario desde Firebase (source of truth: inventory)
   useEffect(() => {
+    let isMounted = true;
     const loadInventory = async () => {
       try {
         console.log('🔄 Cargando inventario desde Firebase...');
@@ -25,7 +28,7 @@ const Inventory = () => {
         console.log('📦 Ítems de inventario:', inventoryFromFirebase.length);
         
         // Normalizar campos esperados por la UI
-        const inventoryData = inventoryFromFirebase.map(item => ({
+        const inventoryData = (Array.isArray(inventoryFromFirebase) ? inventoryFromFirebase : []).map(item => ({
           id: item.id,
           productId: item.productId,
           productName: item.productName || item.name || 'Producto',
@@ -40,18 +43,58 @@ const Inventory = () => {
           supplier: item.supplier || ''
         }));
         
+        if (!isMounted) return;
         setInventoryList(inventoryData);
         
         // Por ahora, usar movimientos simulados
         setMovementsList(inventoryMovements);
+        setHasError(false);
       } catch (error) {
         console.error('❌ Error cargando inventario:', error);
+        if (!isMounted) return;
         setInventoryList(inventoryItems);
         setMovementsList(inventoryMovements);
+        setHasError(true);
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
       }
     };
-    loadInventory();
+    const id = setTimeout(loadInventory, 50);
+    return () => { isMounted = false; clearTimeout(id); };
   }, []);
+
+  const retryLoad = () => {
+    setIsLoading(true);
+    setHasError(false);
+    (async () => {
+      try {
+        await loadSampleData();
+        const inv = await inventoryService.getAllInventory();
+        const mapped = (Array.isArray(inv) ? inv : []).map(item => ({
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName || item.name || 'Producto',
+          category: item.category || 'Sin categoría',
+          currentStock: item.stock ?? item.currentStock ?? 0,
+          minStock: item.minStock ?? 10,
+          cost: item.cost ?? 0,
+          status: getStockStatus(item.stock ?? item.currentStock ?? 0, item.minStock ?? 10),
+          lastUpdated: item.lastUpdated || new Date().toISOString(),
+          unit: item.unit || 'unidad',
+          location: item.location || '-',
+          supplier: item.supplier || ''
+        }));
+        setInventoryList(mapped);
+        setMovementsList(inventoryMovements);
+      } catch (e) {
+        console.error(e);
+        setHasError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  };
 
   // Función para determinar el estado del stock
   const getStockStatus = (currentStock, minStock) => {
@@ -123,6 +166,15 @@ const Inventory = () => {
 
   return (
     <div className="space-y-6">
+      {isLoading && (
+        <div className="bg-white rounded-lg shadow p-6 text-gray-600">Cargando inventario...</div>
+      )}
+      {(!isLoading && hasError) && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-800 flex items-center justify-between">
+          <span>No se pudo cargar el inventario. Intentá nuevamente.</span>
+          <button onClick={retryLoad} className="btn btn-secondary">Reintentar</button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

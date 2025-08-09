@@ -13,9 +13,12 @@ const Sales = () => {
   const [sales, setSales] = useState([]);
   const [showSalesHistory, setShowSalesHistory] = useState(false);
   const [allProducts, setAllProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   // Cargar productos y ventas desde Firebase
   useEffect(() => {
+    let isMounted = true;
     const loadData = async () => {
       try {
         console.log('🔄 Cargando datos en componente Sales...');
@@ -26,20 +29,50 @@ const Sales = () => {
         // Cargar productos desde Firebase
         const productsFromFirebase = await productService.getAllProducts();
         console.log('📦 Productos cargados en Sales:', productsFromFirebase.length);
-        setAllProducts(productsFromFirebase);
+        if (!isMounted) return;
+        setAllProducts(Array.isArray(productsFromFirebase) ? productsFromFirebase : []);
         
         // Cargar ventas desde Firebase
         const salesFromFirebase = await saleService.getAllSales();
         console.log('💰 Ventas cargadas en Sales:', salesFromFirebase.length);
-        setSales(salesFromFirebase);
+        if (!isMounted) return;
+        setSales(Array.isArray(salesFromFirebase) ? salesFromFirebase : []);
+        setHasError(false);
       } catch (error) {
         console.error('❌ Error cargando datos en Sales:', error);
         // Fallback a datos locales
-        setAllProducts(products);
+        if (!isMounted) return;
+        setAllProducts(products || []);
+        setHasError(true);
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
       }
     };
-    loadData();
+    // Pequeño timeout para evitar sensación de congelado
+    const id = setTimeout(loadData, 50);
+    return () => { isMounted = false; clearTimeout(id); };
   }, []);
+
+  const retryLoad = () => {
+    setIsLoading(true);
+    setHasError(false);
+    // Re-disparar efecto
+    (async () => {
+      try {
+        await loadSampleData();
+        const prods = await productService.getAllProducts();
+        const s = await saleService.getAllSales();
+        setAllProducts(Array.isArray(prods) ? prods : []);
+        setSales(Array.isArray(s) ? s : []);
+      } catch (e) {
+        console.error(e);
+        setHasError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -143,6 +176,15 @@ const Sales = () => {
   return (
     <ErrorBoundary>
       <div className="p-4 lg:p-6 space-y-4">
+      {isLoading && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-gray-600">Cargando ventas...</div>
+      )}
+      {(!isLoading && hasError) && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-800 flex items-center justify-between">
+          <span>Hubo un problema cargando los datos. Intentá nuevamente.</span>
+          <button onClick={retryLoad} className="btn btn-secondary">Reintentar</button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
