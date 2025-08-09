@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { products, categories } from '../data/products';
+import { categories } from '../data/products';
 import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List, RefreshCw, AlertTriangle, TrendingUp, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { productService, loadSampleData } from '../services/firebaseService';
+import { productService } from '../services/firebaseService';
 
 // Componente de producto optimizado con memo
 const ProductCard = memo(({ product, onEdit, onDelete, getCategoryColor, getStockStatus }) => {
@@ -380,19 +380,14 @@ const Products = () => {
     try {
       setLoading(true);
       console.log('🔄 Cargando productos optimizado...');
-      
-      // Cargar datos simulados si Firebase está vacío
-      console.log('📦 Verificando datos de muestra...');
-      await loadSampleData();
-      
+
       const productsFromFirebase = await productService.getAllProducts(page, ITEMS_PER_PAGE);
       console.log('📦 Productos cargados desde Firebase:', productsFromFirebase.length);
       
       if (productsFromFirebase.length === 0) {
-        console.log('⚠️ No se encontraron productos en Firebase, usando datos locales');
-        const localProducts = products.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-        setProductList(localProducts);
-        setTotalPages(Math.ceil(products.length / ITEMS_PER_PAGE));
+        console.log('⚠️ No se encontraron productos en Firebase');
+        setProductList([]);
+        setTotalPages(1);
       } else {
         setProductList(productsFromFirebase);
         // Para simplificar, asumimos que hay más productos
@@ -400,10 +395,9 @@ const Products = () => {
       }
     } catch (error) {
       console.error('❌ Error cargando productos:', error);
-      console.log('📦 Usando datos locales como fallback');
-      const localProducts = products.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-      setProductList(localProducts);
-      setTotalPages(Math.ceil(products.length / ITEMS_PER_PAGE));
+      toast.error('No se pudieron cargar productos');
+      setProductList([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
