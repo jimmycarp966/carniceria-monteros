@@ -1,128 +1,110 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas para usuarios autenticados
-    function isAuthenticated() {
-      return request.auth != null;
+    function isAuth() { return request.auth != null; }
+    function hasPerm(p) {
+      return isAuth() && (
+        (request.auth.token.permissions != null && p in request.auth.token.permissions) ||
+        (request.auth.token.role == 'admin')
+      );
     }
-    
-    // Reglas para administradores
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.role == 'admin' || 
-         request.auth.token.email == 'admin@carniceria.com');
+      return isAuth() && (
+        request.auth.token.role == 'admin' ||
+        (request.auth.token.permissions != null && 'admin' in request.auth.token.permissions) ||
+        request.auth.token.email == 'admin@carniceria.com'
+      );
     }
-    
-    // Reglas para empleados
-    function isEmployee() {
-      return isAuthenticated() && 
-        (request.auth.token.role == 'empleado' || 
-         request.auth.token.role == 'admin');
+
+    // Productos
+    match /products/{id} {
+      allow read: if isAuth();
+      allow create, update, delete: if hasPerm('products') || isAdmin();
     }
-    
-    // Colección de productos
-    match /products/{productId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
-    }
-    
-    // Colección de ventas
-    match /sales/{saleId} {
-      allow read: if isAuthenticated();
-      allow create: if isEmployee();
-      allow update: if isEmployee() && resource.data.createdBy == request.auth.uid;
+
+    // Ventas
+    match /sales/{id} {
+      allow read: if isAuth();
+      allow create: if hasPerm('sales') || isAdmin();
+      allow update: if (hasPerm('sales') || isAdmin()) && resource.data.createdByUid == request.auth.uid;
       allow delete: if isAdmin();
     }
-    
-    // Colección de inventario
-    match /inventory/{itemId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
-    }
-    
-    // Colección de clientes
-    match /customers/{customerId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
-    }
-    
-    // Colección de empleados
-    match /employees/{employeeId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    
-    // Colección de proveedores
-    match /suppliers/{supplierId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
-    }
-    
-    // Colección de categorías
-    match /categories/{categoryId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
-    }
-    
-    // Colección de turnos
-    match /shifts/{shiftId} {
-      allow read: if isAuthenticated();
-      allow create: if isEmployee();
-      allow update: if isEmployee() && 
-        (resource.data.createdBy == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
-    }
-    
-    // Colección de notificaciones
-    match /notifications/{notificationId} {
-      allow read: if isAuthenticated();
-      allow create: if isEmployee();
-      allow update: if isAuthenticated() && 
-        (resource.data.userId == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
-    }
-    
-    // Colección de alertas
-    match /alerts/{alertId} {
-      allow read: if isAuthenticated();
-      allow create: if isEmployee();
-      allow update: if isEmployee();
-      allow delete: if isAdmin();
-    }
-    
-    // Colección de estadísticas
-    match /stats/{statId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
-    }
-    
-    // Colección de configuraciones
-    match /settings/{settingId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    
-    // Reglas para subcolecciones
     match /sales/{saleId}/items/{itemId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
+      allow read: if isAuth();
+      allow write: if hasPerm('sales') || isAdmin();
     }
-    
-    match /products/{productId}/images/{imageId} {
-      allow read: if isAuthenticated();
-      allow write: if isEmployee();
+
+    // Inventario
+    match /inventory/{id} {
+      allow read: if isAuth();
+      allow create, update, delete: if hasPerm('inventory') || isAdmin();
     }
-    
-    // Reglas para datos en tiempo real
-    match /realtime/{docId} {
-      allow read, write: if isAuthenticated();
+
+    // Movimientos de inventario
+    match /inventory_movements/{id} {
+      allow read: if isAuth();
+      allow create: if hasPerm('inventory') || isAdmin();
+      allow update, delete: if isAdmin();
     }
-    
-    // Reglas para logs de actividad
-    match /activity_logs/{logId} {
-      allow read: if isAuthenticated();
-      allow create: if isEmployee();
+
+    // Clientes
+    match /customers/{id} {
+      allow read: if isAuth();
+      allow create, update, delete: if hasPerm('customers') || isAdmin();
+    }
+
+    // Empleados
+    match /employees/{id} {
+      allow read: if hasPerm('employees') || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Proveedores
+    match /suppliers/{id} {
+      allow read: if isAuth();
+      allow create, update, delete: if hasPerm('suppliers') || isAdmin();
+    }
+
+    // Categorías
+    match /categories/{id} {
+      allow read: if isAuth();
+      allow create, update, delete: if hasPerm('products') || isAdmin();
+    }
+
+    // Turnos
+    match /shifts/{id} {
+      allow read: if isAuth();
+      allow create: if hasPerm('sales') || isAdmin();
+      allow update: if hasPerm('sales') || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Gastos
+    match /expenses/{id} {
+      allow read: if hasPerm('expenses') || isAdmin();
+      allow create: if hasPerm('expenses') || isAdmin();
+      allow update: if (hasPerm('expenses') || isAdmin()) && resource.data.createdByUid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // Compras
+    match /purchases/{id} {
+      allow read: if hasPerm('purchases') || isAdmin();
+      allow create: if hasPerm('purchases') || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // Notificaciones y actividad
+    match /notifications/{id} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update, delete: if isAdmin();
+    }
+    match /activity_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if isAuth();
       allow update, delete: if isAdmin();
     }
   }
 }
+

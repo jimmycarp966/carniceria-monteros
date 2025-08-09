@@ -95,4 +95,4 @@ ehthumbs.db
 Thumbs.db
 
 # Vercel
-.vercel 
+.vercel server/credentials/*.json
