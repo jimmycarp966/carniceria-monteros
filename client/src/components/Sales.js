@@ -87,15 +87,15 @@ const Sales = () => {
     const product = allProducts.find(p => String(p.id) === String(selectedProduct));
     if (!product) return;
 
-    const existingItem = cart.find(item => item.id === product.id);
+    const existingItem = cart.find(item => String(item.id) === String(product.id));
     if (existingItem) {
-      setCart(cart.map(item => 
-        item.id === product.id 
-          ? { ...item, quantity: item.quantity + quantity }
+      setCart(cart.map(item => (
+        String(item.id) === String(product.id)
+          ? { ...item, quantity: (Number(item.quantity) || 0) + (Number(quantity) || 1) }
           : item
-      ));
+      )));
     } else {
-      setCart([...cart, { ...product, quantity }]);
+      setCart([...cart, { ...product, quantity: Number(quantity) || 1 }]);
     }
 
     setSelectedProduct('');
