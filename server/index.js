@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 // Inicializar base de datos
@@ -15,6 +16,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 console.log('🚀 Iniciando servidor de Carnicería Monteros...');
 console.log('📊 Entorno:', process.env.NODE_ENV);
 console.log('🔧 Puerto:', PORT);
+console.log('🔐 Admin creds inline:', !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+console.log('🔐 Admin creds b64:', !!process.env.GOOGLE_APPLICATION_CREDENTIALS_B64);
+console.log('🔐 Admin creds path:', process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS_PATH || 'N/A');
 
 // Middleware
 app.use(helmet());
@@ -28,15 +32,28 @@ let admin;
 try {
   admin = require('firebase-admin');
   if (!admin.apps.length) {
-    const serviceAccountJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    if (serviceAccountJson) {
-      const serviceAccount = JSON.parse(serviceAccountJson);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
+    let serviceAccount = null;
+    const jsonInline = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    const jsonB64 = process.env.GOOGLE_APPLICATION_CREDENTIALS_B64;
+    const jsonPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS_PATH;
+    const fallbackPath = path.join(__dirname, 'credentials', 'service-account.json');
+
+    if (jsonInline) {
+      serviceAccount = JSON.parse(jsonInline);
+    } else if (jsonB64) {
+      const decoded = Buffer.from(jsonB64, 'base64').toString('utf8');
+      serviceAccount = JSON.parse(decoded);
+    } else if (jsonPath && fs.existsSync(jsonPath)) {
+      serviceAccount = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    } else if (fs.existsSync(fallbackPath)) {
+      serviceAccount = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+    }
+
+    if (serviceAccount) {
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
       console.log('✅ Firebase Admin inicializado');
     } else {
-      console.warn('⚠️ No se encontró GOOGLE_APPLICATION_CREDENTIALS_JSON; endpoints de claims no estarán activos.');
+      console.warn('⚠️ Credenciales de Firebase Admin no encontradas; endpoints de claims no estarán activos.');
     }
   }
 } catch (e) {
