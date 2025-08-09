@@ -13,7 +13,9 @@ import {
   where,
   orderBy,
   limit,
-  getDocs
+  getDocs,
+  doc,
+  increment
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getDatabase } from 'firebase/database';
@@ -59,12 +61,14 @@ const debounce = (func, wait, key) => {
 window.addEventListener('online', () => {
   syncState.isOnline = true;
   console.log('🌐 Conexión restaurada - Sincronizando...');
+  notifyListeners('network_status', { isOnline: true });
   processOfflineQueue();
 });
 
 window.addEventListener('offline', () => {
   syncState.isOnline = false;
   console.log('📴 Modo offline activado');
+  notifyListeners('network_status', { isOnline: false });
 });
 
 // Procesar cola offline optimizada
@@ -95,6 +99,7 @@ const processOfflineQueue = async () => {
   
   // Notificar a todos los listeners
   notifyListeners('sync_completed', { timestamp: Date.now() });
+  notifyListeners('network_status', { isOnline: syncState.isOnline });
 };
 
 // Agregar operación a la cola offline optimizada
@@ -109,6 +114,7 @@ const addToOfflineQueue = (operation) => {
   if (syncState.isOnline) {
     processOfflineQueue();
   }
+  notifyListeners('network_status', { isOnline: syncState.isOnline });
 };
 
 // Notificar a todos los listeners con debouncing
@@ -472,6 +478,24 @@ export const dataSyncService = {
         // Actualizar inventario y también stock en products si existe
         for (const item of saleData.items) {
           await this.updateInventoryStock(item.productId, -Math.abs(Number(item.quantity) || 0));
+        }
+
+        // Métricas por turno en Firestore (idempotentes a nivel agregado)
+        try {
+          if (cleanSale.shiftId) {
+            const shiftRef = doc(db, 'shifts', String(cleanSale.shiftId));
+            const amount = Number(cleanSale.finalTotal ?? cleanSale.total) || 0;
+            const method = String(cleanSale.paymentMethod || 'cash');
+            const updates = {
+              salesCount: increment(1),
+              updatedAt: serverTimestamp(),
+              'totals.overall': increment(amount)
+            };
+            updates[`totals.${method}`] = increment(amount);
+            await updateDoc(shiftRef, updates);
+          }
+        } catch (e) {
+          console.warn('No se pudieron actualizar métricas de turno:', e);
         }
 
         // Actualizar estadísticas en tiempo real (no bloquear venta si falla RTDB)
