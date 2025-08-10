@@ -14,8 +14,8 @@ import realtimeService from './services/realtimeService';
 
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
-const Sales = lazy(() => import('./components/Sales'));
-const CashRegister = lazy(() => import('./components/EnhancedCashRegister'));
+const Sales = lazy(() => import('./components/SalesReports'));
+const CashRegister = lazy(() => import('./components/SimpleCashRegister'));
 const Customers = lazy(() => import('./components/Customers'));
 const Employees = lazy(() => import('./components/Employees'));
 const Suppliers = lazy(() => import('./components/Suppliers'));
