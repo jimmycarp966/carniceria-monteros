@@ -7,10 +7,20 @@ import {
   Activity,
   Database,
   Wifi,
-  WifiOff
+  WifiOff,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { realtimeService } from '../services/realtimeService';
 import { runSystemTests, testRealtimeSync, checkSystemHealth } from '../utils/testing';
+import { 
+  productService, 
+  customerService, 
+  saleService, 
+  shiftService,
+  employeeService,
+  suppliersService
+} from '../services/firebaseService';
 import toast from 'react-hot-toast';
 
 const DebugPanel = () => {
@@ -18,6 +28,8 @@ const DebugPanel = () => {
   const [systemHealth, setSystemHealth] = useState({});
   const [testResults, setTestResults] = useState({});
   const [isRunningTests, setIsRunningTests] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [realtimeEvents, setRealtimeEvents] = useState([]);
 
   useEffect(() => {
@@ -69,6 +81,179 @@ const DebugPanel = () => {
   const runRealtimeTest = () => {
     testRealtimeSync();
     toast.success('Prueba de tiempo real iniciada');
+  };
+
+  const resetAllData = async () => {
+    setIsResetting(true);
+    const resetResults = {
+      sales: false,
+      shifts: false,
+      customers: false,
+      products: false,
+      inventory: false,
+      movements: false,
+      expenses: false,
+      employees: false,
+      suppliers: false
+    };
+
+    // Función auxiliar para borrar documentos
+    const deleteDocuments = async (collectionName, documents) => {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      for (const document of documents) {
+        await deleteDoc(doc(db, collectionName, document.id));
+      }
+    };
+
+    try {
+      toast.loading('Iniciando reset completo del sistema...', { id: 'reset' });
+
+      // 1. Borrar todas las ventas
+      try {
+        console.log('🗑️ Borrando ventas...');
+        const sales = await saleService.getAllSales();
+        await deleteDocuments('sales', sales);
+        resetResults.sales = true;
+        console.log('✅ Ventas borradas');
+      } catch (error) {
+        console.error('❌ Error borrando ventas:', error);
+      }
+
+      // 2. Borrar todos los turnos/cajas
+      try {
+        console.log('🗑️ Borrando turnos...');
+        const shifts = await shiftService.getAllShifts();
+        await deleteDocuments('shifts', shifts);
+        resetResults.shifts = true;
+        console.log('✅ Turnos borrados');
+      } catch (error) {
+        console.error('❌ Error borrando turnos:', error);
+      }
+
+      // 3. Borrar todos los clientes
+      try {
+        console.log('🗑️ Borrando clientes...');
+        const customers = await customerService.getAllCustomers();
+        await deleteDocuments('customers', customers);
+        resetResults.customers = true;
+        console.log('✅ Clientes borrados');
+      } catch (error) {
+        console.error('❌ Error borrando clientes:', error);
+      }
+
+      // 4. Borrar todos los productos e inventario
+      try {
+        console.log('🗑️ Borrando productos...');
+        const products = await productService.getAllProducts();
+        await deleteDocuments('products', products);
+        await deleteDocuments('inventory', products); // Borrar inventario relacionado
+        resetResults.products = true;
+        resetResults.inventory = true;
+        console.log('✅ Productos e inventario borrados');
+      } catch (error) {
+        console.error('❌ Error borrando productos:', error);
+      }
+
+      // 5. Borrar movimientos de inventario
+      try {
+        console.log('🗑️ Borrando movimientos de inventario...');
+        const { collection, getDocs } = await import('firebase/firestore');
+        const { db } = await import('../firebase');
+        const snapshot = await getDocs(collection(db, 'inventory_movements'));
+        const movements = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        await deleteDocuments('inventory_movements', movements);
+        resetResults.movements = true;
+        console.log('✅ Movimientos borrados');
+      } catch (error) {
+        console.error('❌ Error borrando movimientos:', error);
+      }
+
+      // 6. Borrar gastos
+      try {
+        console.log('🗑️ Borrando gastos...');
+        const { collection, getDocs } = await import('firebase/firestore');
+        const { db } = await import('../firebase');
+        const snapshot = await getDocs(collection(db, 'expenses'));
+        const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        await deleteDocuments('expenses', expenses);
+        resetResults.expenses = true;
+        console.log('✅ Gastos borrados');
+      } catch (error) {
+        console.error('❌ Error borrando gastos:', error);
+      }
+
+      // 7. Borrar empleados (excepto admin)
+      try {
+        console.log('🗑️ Borrando empleados (excepto admin)...');
+        const employees = await employeeService.getAllEmployees();
+        
+        const nonAdminEmployees = employees.filter(employee => 
+          employee.email !== 'admin@carniceria.com' && 
+          employee.role !== 'admin' && 
+          !employee.email?.includes('admin')
+        );
+        
+        await deleteDocuments('employees', nonAdminEmployees);
+        resetResults.employees = true;
+        console.log('✅ Empleados borrados (admin preservado)');
+      } catch (error) {
+        console.error('❌ Error borrando empleados:', error);
+      }
+
+      // 8. Borrar proveedores
+      try {
+        console.log('🗑️ Borrando proveedores...');
+        const suppliers = await suppliersService.getAllSuppliers();
+        await deleteDocuments('suppliers', suppliers);
+        resetResults.suppliers = true;
+        console.log('✅ Proveedores borrados');
+      } catch (error) {
+        console.error('❌ Error borrando proveedores:', error);
+      }
+
+      // 9. Limpiar cache y reiniciar listeners
+      try {
+        console.log('🔄 Limpiando cache y reiniciando sistema...');
+        realtimeService.cleanup();
+        realtimeService.initializeRealtimeListeners();
+        
+        // Limpiar localStorage
+        localStorage.removeItem('offlineQueue_v1');
+        
+        console.log('✅ Sistema reiniciado');
+      } catch (error) {
+        console.error('❌ Error reiniciando sistema:', error);
+      }
+
+      // Mostrar resultados
+      const successful = Object.values(resetResults).filter(Boolean).length;
+      const total = Object.keys(resetResults).length;
+      
+      console.log('\n📊 RESULTADOS DEL RESET:');
+      console.log('========================');
+      Object.entries(resetResults).forEach(([category, success]) => {
+        console.log(`${success ? '✅' : '❌'} ${category}: ${success ? 'BORRADO' : 'ERROR'}`);
+      });
+      
+      if (successful === total) {
+        toast.success('🎉 Reset completo exitoso! Todos los datos borrados.', { id: 'reset' });
+      } else {
+        toast.success(`⚠️ Reset parcial: ${successful}/${total} categorías borradas.`, { id: 'reset' });
+      }
+
+      // Recargar la página después de 2 segundos para refrescar todo
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
+    } catch (error) {
+      console.error('💥 Error en reset completo:', error);
+      toast.error('Error durante el reset del sistema', { id: 'reset' });
+    } finally {
+      setIsResetting(false);
+      setShowResetConfirm(false);
+    }
   };
 
   const getHealthIcon = (status) => {
@@ -133,7 +318,7 @@ const DebugPanel = () => {
                 <div className={`text-lg font-bold ${getHealthColor(systemHealth.firebase)}`}>
                   {systemHealth.firebase ? 'Conectado' : 'Error'}
                 </div>
-              </div>
+            </div>
 
               <div className="bg-gray-50 p-4 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
@@ -149,10 +334,10 @@ const DebugPanel = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Cache</span>
                   {getHealthIcon(systemHealth.cache)}
-                </div>
+                    </div>
                 <div className={`text-lg font-bold ${getHealthColor(systemHealth.cache)}`}>
                   {systemHealth.cache ? 'Activo' : 'Vacío'}
-                </div>
+                  </div>
               </div>
             </div>
           </div>
@@ -175,25 +360,33 @@ const DebugPanel = () => {
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={runTests}
-                disabled={isRunningTests}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRunningTests ? 'animate-spin' : ''}`} />
-                {isRunningTests ? 'Ejecutando...' : 'Ejecutar Pruebas'}
-              </button>
-              <button
-                onClick={runRealtimeTest}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center"
-              >
-                <Activity className="h-4 w-4 mr-2" />
-                Probar Tiempo Real
-              </button>
-            </div>
-          </div>
+              </div>
+                         <div className="flex gap-2 flex-wrap">
+               <button
+                 onClick={runTests}
+                 disabled={isRunningTests}
+                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
+               >
+                 <RefreshCw className={`h-4 w-4 mr-2 ${isRunningTests ? 'animate-spin' : ''}`} />
+                 {isRunningTests ? 'Ejecutando...' : 'Ejecutar Pruebas'}
+               </button>
+               <button
+                 onClick={runRealtimeTest}
+                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center"
+               >
+                 <Activity className="h-4 w-4 mr-2" />
+                 Probar Tiempo Real
+               </button>
+                  <button
+                 onClick={() => setShowResetConfirm(true)}
+                 disabled={isResetting}
+                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center"
+                  >
+                 <Trash2 className={`h-4 w-4 mr-2 ${isResetting ? 'animate-pulse' : ''}`} />
+                 {isResetting ? 'Borrando...' : 'Reset Completo'}
+                  </button>
+             </div>
+                </div>
 
           {/* Eventos de Tiempo Real */}
           <div className="mb-8">
@@ -205,22 +398,22 @@ const DebugPanel = () => {
               {realtimeEvents.length === 0 ? (
                 <div className="text-gray-500 text-center py-8">
                   No hay eventos recientes
-                </div>
-              ) : (
+                  </div>
+                ) : (
                 <div className="space-y-2">
                   {realtimeEvents.map((event, index) => (
                     <div key={index} className="bg-white p-3 rounded-lg border">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-blue-600">{event.event}</span>
                         <span className="text-xs text-gray-500">{event.timestamp}</span>
-                      </div>
+                          </div>
                       <div className="text-sm text-gray-600 font-mono">
                         {event.data}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
           </div>
 
@@ -244,8 +437,76 @@ const DebugPanel = () => {
               </div>
             </div>
           </div>
+         </div>
+       </div>
+
+       {/* Modal de Confirmación de Reset */}
+       {showResetConfirm && (
+         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
+             <div className="p-6">
+               <div className="flex items-center mb-4">
+                 <AlertTriangle className="h-8 w-8 text-red-600 mr-3" />
+                 <h3 className="text-xl font-bold text-gray-900">⚠️ Reset Completo del Sistema</h3>
+               </div>
+               
+               <div className="mb-6">
+                 <p className="text-gray-700 mb-4">
+                   <strong>¡CUIDADO!</strong> Esta acción eliminará permanentemente:
+                 </p>
+                 <ul className="text-sm text-gray-600 space-y-1 mb-4">
+                   <li>🗑️ Todas las ventas e historial</li>
+                   <li>🗑️ Todos los turnos/cajas</li>
+                   <li>🗑️ Todos los clientes</li>
+                   <li>🗑️ Todos los productos e inventario</li>
+                   <li>🗑️ Todos los movimientos de inventario</li>
+                   <li>🗑️ Todos los gastos</li>
+                   <li>🗑️ Todos los empleados (excepto admin)</li>
+                   <li>🗑️ Todos los proveedores</li>
+                 </ul>
+                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                   <p className="text-sm text-green-700">
+                     ✅ <strong>Se preservará:</strong> Usuario administrador
+                   </p>
+                 </div>
+               </div>
+
+               <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
+                 <p className="text-sm text-red-700">
+                   <strong>⚠️ Esta acción NO se puede deshacer.</strong> 
+                   Úsala solo para pruebas o para empezar desde cero.
+                 </p>
+        </div>
+
+               <div className="flex gap-3">
+                 <button
+                   onClick={() => setShowResetConfirm(false)}
+                   className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                 >
+                   ❌ Cancelar
+                 </button>
+                 <button
+                   onClick={resetAllData}
+                   disabled={isResetting}
+                   className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                 >
+                   {isResetting ? (
+                     <>
+                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                       Borrando...
+                     </>
+                   ) : (
+                     <>
+                       <Trash2 className="h-4 w-4 mr-2" />
+                       🔥 Confirmar Reset
+                     </>
+                   )}
+                 </button>
+            </div>
+          </div>
         </div>
       </div>
+       )}
     </div>
   );
 };
