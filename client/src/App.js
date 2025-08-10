@@ -16,6 +16,7 @@ import realtimeService from './services/realtimeService';
 const Products = lazy(() => import('./components/Products'));
 const Sales = lazy(() => import('./components/SalesReports'));
 const SalesModule = lazy(() => import('./components/SalesModule'));
+const Ventas = lazy(() => import('./components/Ventas'));
 const CashRegister = lazy(() => import('./components/CashRegister'));
 const Customers = lazy(() => import('./components/Customers'));
 const Employees = lazy(() => import('./components/Employees'));
@@ -120,6 +121,7 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
       { icon: DollarSign, label: 'Caja', to: '/caja' },
       { icon: Package, label: 'Productos', to: '/productos' },
       { icon: ShoppingCart, label: 'Punto de Venta', to: '/punto-venta' },
+      { icon: ShoppingCart, label: 'Ventas', to: '/registrar-venta' },
       { icon: BarChart3, label: 'Reportes de Ventas', to: '/ventas' },
       { icon: Building, label: 'Inventario', to: '/inventario' },
       { icon: Users, label: 'Clientes', to: '/clientes' },
@@ -479,6 +481,7 @@ function App() {
               <Route path="/caja" element={<CashRegister />} />
               <Route path="/productos" element={<Products />} />
               <Route path="/punto-venta" element={<SalesModule />} />
+              <Route path="/registrar-venta" element={<Ventas />} />
               <Route path="/ventas" element={<Sales />} />
               <Route path="/inventario" element={<Inventory />} />
               {permissions.includes('purchases') || permissions.includes('admin') ? (
