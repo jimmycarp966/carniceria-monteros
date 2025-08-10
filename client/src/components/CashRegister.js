@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Clock, 
   DollarSign, 
@@ -191,51 +191,7 @@ const CashRegister = () => {
 
 
 
-  // Abrir turno
-  const openShift = async () => {
-    if (!canOpenShift) {
-      toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
-        return;
-      }
 
-    try {
-      const shiftData = {
-        type: shiftType,
-        date: new Date().toISOString().split('T')[0],
-        startTime: new Date(),
-        openingAmount: parseFloat(openingAmount) || 0,
-        employeeName: currentUser?.name,
-        employeeEmail: currentUser?.email,
-        employeeId: currentUser?.employeeId || currentUser?.id,
-        employeeRole: currentUser?.role,
-        notes: notes.trim(),
-        status: 'active',
-        totalSales: 0,
-        salesCount: 0,
-        openedBy: {
-          id: currentUser?.id,
-          name: currentUser?.name,
-          email: currentUser?.email,
-          role: currentUser?.role,
-          timestamp: new Date()
-        }
-      };
-
-      const shiftId = await shiftService.addShift(shiftData);
-      const newShift = { id: shiftId, ...shiftData };
-      
-      setCurrentShift(newShift);
-      setShowOpenShiftModal(false);
-      setOpeningAmount(0);
-      setNotes('');
-      
-      toast.success(`Turno ${shiftType === 'morning' ? 'mañana' : 'tarde'} abierto exitosamente`);
-      
-    } catch (error) {
-      console.error('Error abriendo turno:', error);
-      toast.error('Error al abrir el turno');
-    }
-  };
 
   // Cerrar turno
   const closeShift = async () => {
@@ -336,8 +292,61 @@ const CashRegister = () => {
     }
   };
 
-  // Modal para abrir turno
-  const OpenShiftModal = () => (
+  // Función para abrir turno
+  const openShift = useCallback(async () => {
+    if (!canOpenShift) {
+      toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
+      return;
+    }
+
+    if (!openingAmount || openingAmount < 0) {
+      toast.error('Ingrese un monto de apertura válido');
+      return;
+    }
+
+    try {
+      const shiftData = {
+        employeeName: currentUser?.name,
+        employeeEmail: currentUser?.email,
+        employeeId: currentUser?.employeeId || currentUser?.id,
+        employeeRole: userRole?.name,
+        employeePosition: userRole?.displayName,
+        openedBy: `${currentUser?.name} (${userRole?.displayName})`,
+        type: shiftType,
+        openingAmount: parseFloat(openingAmount),
+        notes,
+        openTime: new Date(),
+        date: new Date().toISOString().split('T')[0],
+        status: 'active'
+      };
+
+      const shiftId = await shiftService.addShift(shiftData);
+      
+      // Sincronizar en tiempo real
+      await realtimeService.syncShift({ ...shiftData, id: shiftId });
+      
+      setShowOpenShiftModal(false);
+      setOpeningAmount(0);
+      setNotes('');
+      setShiftType('morning');
+      
+      toast.success('Turno abierto exitosamente');
+      
+      // Recargar datos
+      const shifts = await shiftService.getAllShifts();
+      const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+      if (activeShift) {
+        setCurrentShift(activeShift);
+        loadShiftData(activeShift);
+      }
+    } catch (error) {
+      console.error('Error abriendo turno:', error);
+      toast.error('Error al abrir el turno');
+    }
+  }, [canOpenShift, userRole, currentUser, openingAmount, shiftType, notes]);
+
+  // Modal para abrir turno - usar useCallback para evitar re-renders
+  const OpenShiftModal = useCallback(() => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
@@ -411,7 +420,7 @@ const CashRegister = () => {
             </div>
           </div>
         </div>
-  );
+  ), [shiftType, openingAmount, notes, currentUser, userRole, openShift]);
 
   // Modal para cerrar turno
   const CloseShiftModal = () => (

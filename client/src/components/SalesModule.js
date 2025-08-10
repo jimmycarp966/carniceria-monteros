@@ -1,0 +1,624 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  ShoppingCart, 
+  Plus, 
+  Minus, 
+  Trash2, 
+  DollarSign, 
+  CreditCard, 
+  Receipt, 
+  Users, 
+  Search,
+  Calculator,
+  CheckCircle,
+  AlertTriangle,
+  Package,
+  X
+} from 'lucide-react';
+import { productService, saleService, customerService, shiftService } from '../services/firebaseService';
+import { realtimeService } from '../services/realtimeService';
+import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
+import toast from 'react-hot-toast';
+
+const SalesModule = () => {
+  // Estados principales
+  const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [currentShift, setCurrentShift] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Estados del pago
+  const [paymentMethod, setPaymentMethod] = useState('efectivo');
+  const [receivedAmount, setReceivedAmount] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [discountType, setDiscountType] = useState('percentage'); // 'percentage' or 'fixed'
+  const [notes, setNotes] = useState('');
+
+  // Estados de UI
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // const [showCustomerModal, setShowCustomerModal] = useState(false); // TODO: Implementar modal de cliente
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Hook de acceso
+  const { currentUser, userRole } = useCashRegisterAccess();
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Cargar productos
+      const productsData = await productService.getAllProducts();
+      setProducts(productsData.filter(p => p.status === 'active' && p.stock > 0));
+      
+      // Cargar clientes
+      const customersData = await customerService.getAllCustomers();
+      setCustomers(customersData);
+      
+      // Buscar turno activo
+      const shifts = await shiftService.getAllShifts();
+      const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+      setCurrentShift(activeShift);
+      
+      if (!activeShift) {
+        toast.error('No hay turno activo. Debe abrir un turno para realizar ventas.');
+      }
+      
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+      toast.error('Error al cargar los datos');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filtrar productos
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.barcode?.includes(searchTerm)
+  );
+
+  // Agregar producto al carrito
+  const addToCart = (product) => {
+    const existingItem = cart.find(item => item.id === product.id);
+    
+    if (existingItem) {
+      setCart(cart.map(item =>
+        item.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCart([...cart, {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        unit: product.unit || 'kg',
+        quantity: 1,
+        stock: product.stock
+      }]);
+    }
+    
+    toast.success(`${product.name} agregado al carrito`);
+  };
+
+  // Actualizar cantidad en carrito
+  const updateQuantity = (productId, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    
+    const product = cart.find(item => item.id === productId);
+    if (product && newQuantity > product.stock) {
+      toast.error(`Stock insuficiente. Disponible: ${product.stock}`);
+      return;
+    }
+    
+    setCart(cart.map(item =>
+      item.id === productId
+        ? { ...item, quantity: newQuantity }
+        : item
+    ));
+  };
+
+  // Remover del carrito
+  const removeFromCart = (productId) => {
+    setCart(cart.filter(item => item.id !== productId));
+  };
+
+  // Limpiar carrito
+  const clearCart = () => {
+    setCart([]);
+    setSelectedCustomer(null);
+    setDiscount(0);
+    setNotes('');
+    setReceivedAmount(0);
+  };
+
+  // Calcular totales
+  const calculateTotals = () => {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discountAmount = discountType === 'percentage' 
+      ? (subtotal * discount / 100)
+      : discount;
+    const total = Math.max(0, subtotal - discountAmount);
+    
+    return { subtotal, discountAmount, total };
+  };
+
+  // Procesar venta
+  const processSale = async () => {
+    if (!currentShift) {
+      toast.error('No hay turno activo');
+      return;
+    }
+    
+    if (cart.length === 0) {
+      toast.error('El carrito está vacío');
+      return;
+    }
+    
+    const { total } = calculateTotals();
+    
+    if (paymentMethod === 'efectivo' && receivedAmount < total) {
+      toast.error('El monto recibido es insuficiente');
+      return;
+    }
+    
+    setProcessingPayment(true);
+    
+    try {
+      const saleData = {
+        products: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          unit: item.unit,
+          total: item.price * item.quantity
+        })),
+        subtotal: calculateTotals().subtotal,
+        discount: calculateTotals().discountAmount,
+        total: total,
+        paymentMethod,
+        receivedAmount: paymentMethod === 'efectivo' ? receivedAmount : total,
+        change: paymentMethod === 'efectivo' ? Math.max(0, receivedAmount - total) : 0,
+        customerId: selectedCustomer?.id,
+        customerName: selectedCustomer?.name,
+        shiftId: currentShift.id,
+        employeeName: currentUser?.name,
+        employeeId: currentUser?.employeeId || currentUser?.id,
+        employeeRole: userRole?.name,
+        notes,
+        timestamp: new Date(),
+        date: new Date().toISOString().split('T')[0],
+        status: 'completed',
+        processedBy: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: userRole?.name
+        }
+      };
+      
+      // Guardar venta
+      const saleId = await saleService.addSale(saleData);
+      
+      // Actualizar stock de productos
+      for (const item of cart) {
+        const product = products.find(p => p.id === item.id);
+        if (product) {
+          await productService.updateProduct(item.id, {
+            stock: product.stock - item.quantity
+          });
+        }
+      }
+      
+      // Sincronizar en tiempo real
+      await realtimeService.syncSale(saleData);
+      
+      toast.success(`Venta procesada exitosamente - ID: ${saleId}`);
+      
+      // Limpiar formulario
+      clearCart();
+      setShowPaymentModal(false);
+      
+      // Recargar productos para actualizar stock
+      loadInitialData();
+      
+    } catch (error) {
+      console.error('Error procesando venta:', error);
+      toast.error('Error al procesar la venta');
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  // Modal de pago
+  const PaymentModal = () => {
+    const { subtotal, discountAmount, total } = calculateTotals();
+    const change = paymentMethod === 'efectivo' ? Math.max(0, receivedAmount - total) : 0;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Procesar Pago</h3>
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* Resumen del carrito */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <h4 className="font-medium text-gray-900 mb-3">Resumen de Compra</h4>
+            <div className="space-y-2">
+              {cart.map(item => (
+                <div key={item.id} className="flex justify-between text-sm">
+                  <span>{item.name} x {item.quantity}{item.unit}</span>
+                  <span>${(item.price * item.quantity).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+            
+            <div className="border-t mt-3 pt-3 space-y-1">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>${subtotal.toLocaleString()}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Descuento:</span>
+                  <span>-${discountAmount.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg">
+                <span>Total:</span>
+                <span>${total.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Método de pago */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Método de Pago:</label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { value: 'efectivo', label: 'Efectivo', icon: DollarSign },
+                { value: 'tarjeta', label: 'Tarjeta', icon: CreditCard },
+                { value: 'transferencia', label: 'Transferencia', icon: Receipt }
+              ].map(method => (
+                <button
+                  key={method.value}
+                  onClick={() => setPaymentMethod(method.value)}
+                  className={`p-3 rounded-lg border-2 transition-colors flex flex-col items-center ${
+                    paymentMethod === method.value
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <method.icon className="h-6 w-6 mb-1" />
+                  <span className="text-sm font-medium">{method.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Monto recibido (solo para efectivo) */}
+          {paymentMethod === 'efectivo' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Monto Recibido:</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  value={receivedAmount}
+                  onChange={(e) => setReceivedAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="0"
+                />
+              </div>
+              {change > 0 && (
+                <p className="mt-2 text-sm text-green-600 font-medium">
+                  Cambio: ${change.toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Notas */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notas (opcional):</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows="2"
+              placeholder="Observaciones de la venta..."
+            />
+          </div>
+
+          {/* Botones */}
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={processSale}
+              disabled={processingPayment || (paymentMethod === 'efectivo' && receivedAmount < total)}
+              className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {processingPayment ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirmar Venta
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!currentShift) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+        <h3 className="text-xl font-medium text-gray-900 mb-2">No hay turno activo</h3>
+        <p className="text-gray-600">Debe abrir un turno en la caja registradora para realizar ventas.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Módulo de Ventas</h1>
+          <p className="text-gray-600">Gestiona las ventas y procesa pagos</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Panel izquierdo - Productos */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Productos</h2>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar productos..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 w-64"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filteredProducts.map(product => (
+                  <div
+                    key={product.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => addToCart(product)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+                      <Package className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Stock: {product.stock} {product.unit || 'kg'}
+                    </p>
+                    <p className="text-lg font-bold text-primary-600">
+                      ${product.price?.toLocaleString()} / {product.unit || 'kg'}
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(product);
+                      }}
+                      className="w-full mt-3 bg-primary-600 text-white py-2 px-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {filteredProducts.length === 0 && (
+                <div className="text-center py-12">
+                  <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">
+                    {searchTerm ? 'No se encontraron productos' : 'No hay productos disponibles'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Panel derecho - Carrito */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sticky top-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  Carrito ({cart.length})
+                </h2>
+                {cart.length > 0 && (
+                  <button
+                    onClick={clearCart}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {cart.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">El carrito está vacío</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
+                    {cart.map(item => (
+                      <div key={item.id} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-gray-900 text-sm">{item.name}</h4>
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="text-sm font-medium w-8 text-center">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <span className="text-sm font-bold text-primary-600">
+                            ${(item.price * item.quantity).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Descuento */}
+                  <div className="mb-4 p-3 border border-gray-200 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Descuento:</label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="number"
+                        value={discount}
+                        onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                        placeholder="0"
+                      />
+                      <select
+                        value={discountType}
+                        onChange={(e) => setDiscountType(e.target.value)}
+                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="percentage">%</option>
+                        <option value="fixed">$</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Cliente */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cliente:</label>
+                    <div className="flex space-x-2">
+                      <select
+                        value={selectedCustomer?.id || ''}
+                        onChange={(e) => {
+                          const customer = customers.find(c => c.id === e.target.value);
+                          setSelectedCustomer(customer || null);
+                        }}
+                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Cliente General</option>
+                        {customers.map(customer => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => toast.info('Funcionalidad próximamente')}
+                        className="px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700"
+                      >
+                        <Users className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Totales */}
+                  <div className="border-t pt-4 mb-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal:</span>
+                        <span>${calculateTotals().subtotal.toLocaleString()}</span>
+                      </div>
+                      {calculateTotals().discountAmount > 0 && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Descuento:</span>
+                          <span>-${calculateTotals().discountAmount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total:</span>
+                        <span>${calculateTotals().total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botón de pago */}
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center font-medium"
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Proceder al Pago
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modales */}
+      {showPaymentModal && <PaymentModal />}
+    </div>
+  );
+};
+
+export default SalesModule;
