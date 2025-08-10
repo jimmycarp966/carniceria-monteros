@@ -7,7 +7,6 @@ import {
   DollarSign, 
   CreditCard, 
   Receipt, 
-  Users, 
   Search,
   Calculator,
   CheckCircle,
