@@ -12,7 +12,7 @@ import {
   ShoppingCart
 } from 'lucide-react';
 import { realtimeService } from '../services/realtimeService';
-import { productService, saleService } from '../services/firebaseService';
+import { productService, saleService, customerService } from '../services/firebaseService';
 import toast from 'react-hot-toast';
 
 // Componentes memoizados para evitar re-renders
@@ -232,6 +232,21 @@ const Dashboard = () => {
     }));
   }, []);
 
+  const updateCustomerStats = useCallback((customers) => {
+    const thisMonth = new Date();
+    const startOfMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
+    
+    const newCustomersThisMonth = customers.filter(customer => {
+      const createdDate = new Date(customer.createdAt?.toDate?.() || customer.createdAt || customer.fechaRegistro);
+      return createdDate >= startOfMonth;
+    });
+    
+    setRealtimeStats(prev => ({
+      ...prev,
+      clientesNuevos: newCustomersThisMonth.length
+    }));
+  }, []);
+
   const generateChartData = useCallback((sales) => {
     // Datos para gráfico de ventas por hora optimizado
     const hourlyData = Array.from({ length: 24 }, (_, hour) => {
@@ -272,14 +287,16 @@ const Dashboard = () => {
       setIsLoading(true);
       
       // Cargar datos en paralelo con cache
-      const [products, sales] = await Promise.all([
+      const [products, sales, customers] = await Promise.all([
         productService.getAllProducts(1, 50), // Solo primera página
-        saleService.getAllSales(1, 100) // Solo últimas 100 ventas
+        saleService.getAllSales(1, 100), // Solo últimas 100 ventas
+        customerService.getAllCustomers(1, 50) // Solo primera página de clientes
       ]);
       
       updateSalesStats(sales);
       updateRecentSales(sales);
       updateProductStats(products);
+      updateCustomerStats(customers);
       
       // Generar datos de gráficos de forma optimizada
       generateChartData(sales);
@@ -290,14 +307,43 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [updateSalesStats, updateProductStats, generateChartData, updateRecentSales]);
+  }, [updateSalesStats, updateProductStats, updateCustomerStats, generateChartData, updateRecentSales]);
 
-  // Inicializar: usar carga puntual; listeners solo para eventos críticos
+  // Inicializar con carga de datos y listeners en tiempo real
   useEffect(() => {
-    console.log('🚀 Inicializando Dashboard optimizado...');
+    console.log('🚀 Inicializando Dashboard con tiempo real...');
     loadInitialData();
     
-    // Actualizar estado de conexión cada 60 segundos (reducido de 30)
+    // Registrar listeners para actualizaciones en tiempo real
+    realtimeService.on('sales_updated', (data) => {
+      console.log('📈 Dashboard: Ventas actualizadas', data);
+      if (data.sales) {
+        updateSalesStats(data.sales);
+        updateRecentSales(data.sales);
+      }
+    });
+
+    realtimeService.on('inventory_updated', (data) => {
+      console.log('📦 Dashboard: Inventario actualizado', data);
+      if (data.inventory) {
+        updateProductStats(data.inventory);
+      }
+    });
+
+    realtimeService.on('customers_updated', (data) => {
+      console.log('👥 Dashboard: Clientes actualizados', data);
+      if (data.customers) {
+        updateCustomerStats(data.customers);
+      }
+    });
+
+    realtimeService.on('sale_synced', (data) => {
+      console.log('💰 Dashboard: Nueva venta sincronizada', data);
+      // Recargar datos para reflejar la nueva venta
+      loadInitialData();
+    });
+    
+    // Actualizar estado de conexión cada 30 segundos
     const connectionInterval = setInterval(() => {
       const syncState = realtimeService.getSyncState();
       setConnectionStatus({
@@ -305,13 +351,17 @@ const Dashboard = () => {
         pendingOperations: syncState.offlineQueueSize,
         lastSync: syncState.lastSync
       });
-    }, 60000);
+    }, 30000);
     
     return () => {
       clearInterval(connectionInterval);
-      // sin off: no registramos listeners en este componente ahora
+      // Limpiar listeners
+      realtimeService.off('sales_updated');
+      realtimeService.off('inventory_updated');
+      realtimeService.off('customers_updated');
+      realtimeService.off('sale_synced');
     };
-  }, [loadInitialData, updateSalesStats, updateProductStats, updateRecentSales]);
+  }, [loadInitialData, updateSalesStats, updateProductStats, updateCustomerStats, updateRecentSales]);
 
   // Handlers optimizados
   const handleForceSync = useCallback(async () => {

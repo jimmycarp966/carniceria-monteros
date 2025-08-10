@@ -12,11 +12,44 @@ const Sales = () => {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [sales, setSales] = useState([]);
+  const [filteredSales, setFilteredSales] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showSalesHistory, setShowSalesHistory] = useState(false);
   const [allProducts, setAllProducts] = useState([]);
+  const [todayShifts, setTodayShifts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Sin carga inicial con servicios ni datos simulados; todo por onSnapshot
+  // Función para filtrar ventas por fecha
+  const filterSalesByDate = (salesList, date) => {
+    const targetDate = new Date(date);
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
+    
+    return salesList.filter(sale => {
+      const saleDate = sale.createdAt?.toDate?.() || new Date(sale.createdAt || sale.timestamp);
+      return saleDate >= startOfDay && saleDate < endOfDay;
+    });
+  };
+
+  // Función para cargar turnos de la fecha seleccionada
+  const loadShiftsForDate = async (date) => {
+    try {
+      const shifts = await shiftService.getAllShifts();
+      const targetDate = new Date(date);
+      const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+      const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
+      
+      const dayShifts = shifts.filter(shift => {
+        const shiftDate = shift.startTime?.toDate?.() || new Date(shift.startTime || shift.createdAt);
+        return shiftDate >= startOfDay && shiftDate < endOfDay;
+      });
+      
+      setTodayShifts(dayShifts);
+    } catch (error) {
+      console.error('Error cargando turnos:', error);
+      setTodayShifts([]);
+    }
+  };
 
   // Listeners directos a Firestore para productos y ventas (sin depender de servicios)
   useEffect(() => {
@@ -34,23 +67,52 @@ const Sales = () => {
     } catch {}
   }, []);
 
+  // Efecto para filtrar ventas cuando cambian las ventas o la fecha seleccionada
+  useEffect(() => {
+    const filtered = filterSalesByDate(sales, selectedDate);
+    setFilteredSales(filtered);
+  }, [sales, selectedDate]);
+
+  // Efecto para cargar turnos cuando cambia la fecha
+  useEffect(() => {
+    loadShiftsForDate(selectedDate);
+  }, [selectedDate]);
+
   // Suscribirse a actualizaciones en tiempo real (productos y ventas)
   useEffect(() => {
     const handleProducts = (data) => {
       if (Array.isArray(data.products)) setAllProducts(data.products);
     };
     const handleSales = (data) => {
-      if (Array.isArray(data.sales)) setSales(data.sales);
+      if (Array.isArray(data.sales)) {
+        setSales(data.sales);
+        // Filtrar automáticamente por la fecha seleccionada
+        const filtered = filterSalesByDate(data.sales, selectedDate);
+        setFilteredSales(filtered);
+      }
+    };
+    const handleNewSale = (data) => {
+      // Cuando se registra una nueva venta, verificar si es del día seleccionado
+      if (data.saleData) {
+        const saleDate = new Date(data.saleData.timestamp || Date.now());
+        const targetDate = new Date(selectedDate);
+        if (saleDate.toDateString() === targetDate.toDateString()) {
+          // Recargar turnos para actualizar totales
+          loadShiftsForDate(selectedDate);
+        }
+      }
     };
     try {
       realtimeService.on('products_updated', handleProducts);
       realtimeService.on('sales_updated', handleSales);
+      realtimeService.on('sale_synced', handleNewSale);
     } catch {}
     return () => {
       try { realtimeService.off('products_updated', handleProducts); } catch {}
       try { realtimeService.off('sales_updated', handleSales); } catch {}
+      try { realtimeService.off('sale_synced', handleNewSale); } catch {}
     };
-  }, []);
+  }, [selectedDate]);
 
   // Sin retry manual: onSnapshot es la fuente de verdad
 
@@ -152,14 +214,11 @@ const Sales = () => {
   };
 
   const stats = {
-    totalSales: sales.length,
-    totalRevenue: sales.reduce((sum, sale) => sum + sale.total, 0),
-    averageSale: sales.length > 0 ? sales.reduce((sum, sale) => sum + sale.total, 0) / sales.length : 0,
-    todaySales: sales.filter(sale => {
-      const today = new Date().toDateString();
-      const saleDate = new Date(sale.date).toDateString();
-      return today === saleDate;
-    }).length
+    totalSales: filteredSales.length,
+    totalRevenue: filteredSales.reduce((sum, sale) => sum + (sale.total || sale.finalTotal || 0), 0),
+    averageSale: filteredSales.length > 0 ? filteredSales.reduce((sum, sale) => sum + (sale.total || sale.finalTotal || 0), 0) / filteredSales.length : 0,
+    shiftsToday: todayShifts.length,
+    activeShifts: todayShifts.filter(shift => !shift.endTime).length
   };
 
   return (
@@ -173,15 +232,25 @@ const Sales = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Ventas</h1>
-          <p className="mt-2 text-gray-600">Gestiona las ventas y el carrito de compras</p>
+          <p className="mt-2 text-gray-600">Gestiona las ventas del día seleccionado</p>
         </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          {/* Selector de fecha */}
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
           <button
             onClick={() => setShowSalesHistory(!showSalesHistory)}
             className="btn btn-secondary flex items-center justify-center flex-1 sm:flex-none"
           >
-            <Calendar className="h-4 w-4 mr-2" />
-            Historial
+            <Receipt className="h-4 w-4 mr-2" />
+            {showSalesHistory ? 'Ocultar' : 'Mostrar'} Historial
           </button>
         </div>
       </div>
@@ -192,28 +261,28 @@ const Sales = () => {
           <div className="flex items-center">
             <ShoppingCart className="h-6 w-6 text-primary-600" />
             <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Ventas Hoy</p>
-              <p className="text-lg lg:text-2xl font-bold text-gray-900">{stats.todaySales}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-          <div className="flex items-center">
-            <Receipt className="h-6 w-6 text-green-600" />
-            <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Total Ventas</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Ventas del Día</p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">{stats.totalSales}</p>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
           <div className="flex items-center">
-            <DollarSign className="h-6 w-6 text-blue-600" />
+            <DollarSign className="h-6 w-6 text-green-600" />
             <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Ingresos</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Ingresos del Día</p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
-                ${(stats.totalRevenue / 1000).toFixed(0)}k
+                ${stats.totalRevenue.toLocaleString()}
               </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+          <div className="flex items-center">
+            <Receipt className="h-6 w-6 text-blue-600" />
+            <div className="ml-3">
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Turnos del Día</p>
+              <p className="text-lg lg:text-2xl font-bold text-gray-900">{stats.shiftsToday}</p>
             </div>
           </div>
         </div>
@@ -221,7 +290,7 @@ const Sales = () => {
           <div className="flex items-center">
             <DollarSign className="h-6 w-6 text-purple-600" />
             <div className="ml-3">
-              <p className="text-xs lg:text-sm font-medium text-gray-500">Promedio</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Promedio Venta</p>
               <p className="text-lg lg:text-2xl font-bold text-gray-900">
                 ${stats.averageSale.toFixed(0)}
               </p>
@@ -364,15 +433,22 @@ const Sales = () => {
       {/* Sales History */}
       {showSalesHistory && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Historial de Ventas</h3>
-          {sales.length === 0 ? (
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Historial de Ventas - {new Date(selectedDate).toLocaleDateString('es-ES', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </h3>
+          {filteredSales.length === 0 ? (
             <div className="text-center py-8">
               <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No hay ventas registradas</p>
+              <p className="text-gray-500">No hay ventas registradas para esta fecha</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {sales.map(sale => (
+              {filteredSales.map(sale => (
                 <div key={sale.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3">
                     <div>
@@ -404,6 +480,74 @@ const Sales = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Shifts of the Day */}
+      {showSalesHistory && todayShifts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Turnos del Día - {new Date(selectedDate).toLocaleDateString('es-ES', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {todayShifts.map(shift => (
+              <div key={shift.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-900">
+                    Turno #{shift.id.slice(-8)}
+                  </h4>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    shift.endTime 
+                      ? 'bg-gray-100 text-gray-700' 
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {shift.endTime ? 'Cerrado' : 'Activo'}
+                  </span>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Empleado:</span>
+                    <span className="text-gray-900">{shift.employeeName || 'No especificado'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Inicio:</span>
+                    <span className="text-gray-900">
+                      {shift.startTime?.toDate?.()?.toLocaleTimeString('es-ES', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      }) || 'No especificado'}
+                    </span>
+                  </div>
+                  {shift.endTime && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Fin:</span>
+                      <span className="text-gray-900">
+                        {shift.endTime.toDate?.()?.toLocaleTimeString('es-ES', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        }) || 'No especificado'}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ventas:</span>
+                    <span className="text-gray-900">{shift.salesCount || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total:</span>
+                    <span className="text-gray-900 font-medium">
+                      ${(shift.totals?.overall || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       </div>
