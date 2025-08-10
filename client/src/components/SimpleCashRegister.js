@@ -48,28 +48,58 @@ const SimpleCashRegister = () => {
 
   // Cargar productos al inicio
   useEffect(() => {
-    loadProducts();
-    loadCurrentShift();
-    
-    // Listeners de tiempo real
-    const unsubscribeSales = realtimeService.on('sales_updated', handleSalesUpdate);
-    const unsubscribeShifts = realtimeService.on('shifts_updated', handleShiftsUpdate);
+    const initData = async () => {
+      try {
+        const products = await productService.getAllProducts();
+        setAllProducts(products);
+      } catch (error) {
+        console.error('Error cargando productos:', error);
+        toast.error('Error cargando productos');
+      }
+    };
+
+    const initShift = async () => {
+      try {
+        const shifts = await shiftService.getAllShifts();
+        const openShift = shifts.find(shift => !shift.endTime);
+        
+        if (openShift) {
+          setCurrentShift(openShift);
+          setShiftTotal(openShift.totalSales || 0);
+        }
+      } catch (error) {
+        console.error('Error cargando turno:', error);
+      }
+    };
+
+    const setupListeners = () => {
+      // Listeners de tiempo real
+      realtimeService.on('sales_updated', (data) => {
+        if (data.sales && currentShift) {
+          const shiftSalesUpdated = data.sales.filter(sale => 
+            sale.shiftId === currentShift.id
+          );
+          setShiftTotal(shiftSalesUpdated.reduce((sum, sale) => sum + sale.total, 0));
+        }
+      });
+
+      realtimeService.on('shifts_updated', (data) => {
+        if (data.shifts) {
+          const openShift = data.shifts.find(shift => !shift.endTime);
+          setCurrentShift(openShift);
+        }
+      });
+    };
+
+    initData();
+    initShift();
+    setupListeners();
     
     return () => {
-      unsubscribeSales();
-      unsubscribeShifts();
+      realtimeService.off('sales_updated');
+      realtimeService.off('shifts_updated');
     };
-  }, []);
-
-  const loadProducts = async () => {
-    try {
-      const products = await productService.getAllProducts();
-      setAllProducts(products);
-    } catch (error) {
-      console.error('Error cargando productos:', error);
-      toast.error('Error cargando productos');
-    }
-  };
+  }, [currentShift]);
 
   const loadCurrentShift = async () => {
     try {
@@ -82,22 +112,6 @@ const SimpleCashRegister = () => {
       }
     } catch (error) {
       console.error('Error cargando turno:', error);
-    }
-  };
-
-  const handleSalesUpdate = (data) => {
-    if (data.sales && currentShift) {
-      const shiftSalesUpdated = data.sales.filter(sale => 
-        sale.shiftId === currentShift.id
-      );
-      setShiftTotal(shiftSalesUpdated.reduce((sum, sale) => sum + sale.total, 0));
-    }
-  };
-
-  const handleShiftsUpdate = (data) => {
-    if (data.shifts) {
-      const openShift = data.shifts.find(shift => !shift.endTime);
-      setCurrentShift(openShift);
     }
   };
 

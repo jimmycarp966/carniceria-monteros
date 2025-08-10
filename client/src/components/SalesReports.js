@@ -8,7 +8,7 @@ import {
   Clock,
   Percent
 } from 'lucide-react';
-import { shiftService, saleService, customerService, productService } from '../services/firebaseService';
+import { shiftService, saleService } from '../services/firebaseService';
 import { realtimeService } from '../services/realtimeService';
 import toast from 'react-hot-toast';
 
@@ -42,13 +42,52 @@ const SalesReports = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
-    loadInitialData();
-    setupRealtimeListeners();
+    const initData = async () => {
+      try {
+        setIsLoading(true);
+        
+        const [salesData] = await Promise.all([
+          saleService.getAllSales()
+          // customerService.getAllCustomers(), // Para futuras funcionalidades
+          // productService.getAllProducts()    // Para futuras funcionalidades
+        ]);
+        
+        setSales(salesData);
+        
+        const filtered = filterSalesByDate(salesData, selectedDate);
+        setFilteredSales(filtered);
+        
+        await loadShiftsForDate(selectedDate);
+        
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+        toast.error('Error cargando datos de ventas');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const setupListeners = () => {
+      realtimeService.on('sales_updated', (data) => {
+        if (data.sales) {
+          setSales(data.sales);
+        }
+      });
+
+      realtimeService.on('sale_synced', (data) => {
+        console.log('Nueva venta sincronizada:', data);
+        initData();
+      });
+    };
+
+    initData();
+    setupListeners();
     
     return () => {
-      cleanup();
+      realtimeService.off('sales_updated');
+      realtimeService.off('sale_synced');
     };
-  }, []);
+  }, [selectedDate]);
 
   // Filtrar por fecha cuando cambia la selección
   useEffect(() => {
@@ -59,48 +98,7 @@ const SalesReports = () => {
     }
   }, [sales, selectedDate]);
 
-  const loadInitialData = async () => {
-    try {
-      setIsLoading(true);
-      
-      const [salesData] = await Promise.all([
-        saleService.getAllSales()
-        // customerService.getAllCustomers(), // Para futuras funcionalidades
-        // productService.getAllProducts()    // Para futuras funcionalidades
-      ]);
-      
-      setSales(salesData);
-      
-      const filtered = filterSalesByDate(salesData, selectedDate);
-      setFilteredSales(filtered);
-      
-      await loadShiftsForDate(selectedDate);
-      
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-      toast.error('Error cargando datos de ventas');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const setupRealtimeListeners = () => {
-    realtimeService.on('sales_updated', (data) => {
-      if (data.sales) {
-        setSales(data.sales);
-      }
-    });
-
-    realtimeService.on('sale_synced', (data) => {
-      console.log('Nueva venta sincronizada:', data);
-      loadInitialData();
-    });
-  };
-
-  const cleanup = () => {
-    realtimeService.off('sales_updated');
-    realtimeService.off('sale_synced');
-  };
 
   // Función para filtrar ventas por fecha
   const filterSalesByDate = (salesList, date) => {
@@ -236,7 +234,7 @@ const SalesReports = () => {
       setDiscountValue(0);
       
       // Recargar datos
-      loadInitialData();
+      window.location.reload();
       
     } catch (error) {
       console.error('Error aplicando descuento:', error);
