@@ -13,7 +13,12 @@ import {
   CheckCircle,
   AlertTriangle,
   Package,
-  X
+  X,
+  UserPlus,
+  Edit,
+  Phone,
+  Mail,
+  MapPin
 } from 'lucide-react';
 import { productService, saleService, customerService, shiftService } from '../services/firebaseService';
 import { realtimeService } from '../services/realtimeService';
@@ -47,6 +52,18 @@ const SalesModule = () => {
   // Estados de UI
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Estados de gestión de clientes
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [customerForm, setCustomerForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    notes: ''
+  });
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
 
   // Hook de acceso
   const { currentUser, userRole } = useCashRegisterAccess();
@@ -100,6 +117,95 @@ const SalesModule = () => {
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.barcode?.includes(searchTerm)
   );
+
+  // Filtrar clientes
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+    customer.phone?.includes(customerSearchTerm)
+  );
+
+  // Gestión de clientes
+  const openCustomerModal = (customer = null) => {
+    if (customer) {
+      setEditingCustomer(customer);
+      setCustomerForm({
+        name: customer.name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        address: customer.address || '',
+        notes: customer.notes || ''
+      });
+    } else {
+      setEditingCustomer(null);
+      setCustomerForm({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        notes: ''
+      });
+    }
+    setShowCustomerModal(true);
+  };
+
+  const saveCustomer = async () => {
+    if (!customerForm.name.trim()) {
+      toast.error('El nombre del cliente es obligatorio');
+      return;
+    }
+
+    try {
+      if (editingCustomer) {
+        await customerService.updateCustomer(editingCustomer.id, customerForm);
+        toast.success('Cliente actualizado exitosamente');
+      } else {
+        const customerId = await customerService.addCustomer(customerForm);
+        toast.success('Cliente creado exitosamente');
+        
+        // Recargar clientes para incluir el nuevo
+        const updatedCustomers = await customerService.getAllCustomers();
+        setCustomers(updatedCustomers);
+        
+        // Seleccionar automáticamente el nuevo cliente
+        const newCustomer = updatedCustomers.find(c => c.id === customerId);
+        if (newCustomer) {
+          setSelectedCustomer(newCustomer);
+        }
+      }
+      
+      setShowCustomerModal(false);
+      setEditingCustomer(null);
+      setCustomerForm({ name: '', email: '', phone: '', address: '', notes: '' });
+      
+    } catch (error) {
+      console.error('Error guardando cliente:', error);
+      toast.error('Error al guardar el cliente');
+    }
+  };
+
+  const deleteCustomer = async (customerId) => {
+    if (!window.confirm('¿Está seguro de que desea eliminar este cliente?')) {
+      return;
+    }
+
+    try {
+      await customerService.deleteCustomer(customerId);
+      
+      // Remover de la lista local
+      setCustomers(customers.filter(c => c.id !== customerId));
+      
+      // Si era el cliente seleccionado, deseleccionarlo
+      if (selectedCustomer?.id === customerId) {
+        setSelectedCustomer(null);
+      }
+      
+      toast.success('Cliente eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando cliente:', error);
+      toast.error('Error al eliminar el cliente');
+    }
+  };
 
   // Seleccionar producto para agregar al carrito
   const selectProduct = (product) => {
@@ -296,6 +402,121 @@ const SalesModule = () => {
       setProcessingPayment(false);
     }
   };
+
+  // Modal de gestión de clientes
+  const CustomerModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">
+            {editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'}
+          </h3>
+          <button
+            onClick={() => {
+              setShowCustomerModal(false);
+              setEditingCustomer(null);
+              setCustomerForm({ name: '', email: '', phone: '', address: '', notes: '' });
+            }}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre * <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={customerForm.name}
+              onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              placeholder="Nombre completo del cliente"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Phone className="h-4 w-4 inline mr-1" />
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                value={customerForm.phone}
+                onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="+54 9 11 1234-5678"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Mail className="h-4 w-4 inline mr-1" />
+                Email
+              </label>
+              <input
+                type="email"
+                value={customerForm.email}
+                onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="cliente@email.com"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <MapPin className="h-4 w-4 inline mr-1" />
+              Dirección
+            </label>
+            <input
+              type="text"
+              value={customerForm.address}
+              onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              placeholder="Dirección completa"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notas
+            </label>
+            <textarea
+              value={customerForm.notes}
+              onChange={(e) => setCustomerForm({...customerForm, notes: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows="3"
+              placeholder="Información adicional del cliente..."
+            />
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
+          <button
+            onClick={() => {
+              setShowCustomerModal(false);
+              setEditingCustomer(null);
+              setCustomerForm({ name: '', email: '', phone: '', address: '', notes: '' });
+            }}
+            className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={saveCustomer}
+            className="flex-1 bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            {editingCustomer ? 'Actualizar Cliente' : 'Crear Cliente'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   // Modal de selección de producto y cantidad
   const ProductSelectionModal = () => {
@@ -583,8 +804,8 @@ const SalesModule = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Módulo de Ventas</h1>
-          <p className="text-gray-600">Gestiona las ventas y procesa pagos</p>
+          <h1 className="text-3xl font-bold text-gray-900">Punto de Venta - Carnicería</h1>
+          <p className="text-gray-600">Sistema POS completo con soporte para balanza y múltiples formas de pago</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -736,28 +957,113 @@ const SalesModule = () => {
                   {/* Cliente */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Cliente:</label>
-                    <div className="flex space-x-2">
-                      <select
-                        value={selectedCustomer?.id || ''}
-                        onChange={(e) => {
-                          const customer = customers.find(c => c.id === e.target.value);
-                          setSelectedCustomer(customer || null);
-                        }}
-                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
-                      >
-                        <option value="">Cliente General</option>
-                        {customers.map(customer => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => toast.info('Funcionalidad próximamente')}
-                        className="px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700"
-                      >
-                        <Users className="h-4 w-4" />
-                      </button>
+                    <div className="space-y-2">
+                      <div className="flex space-x-2">
+                        <select
+                          value={selectedCustomer?.id || ''}
+                          onChange={(e) => {
+                            const customer = customers.find(c => c.id === e.target.value);
+                            setSelectedCustomer(customer || null);
+                          }}
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                        >
+                          <option value="">Cliente General</option>
+                          {filteredCustomers.map(customer => (
+                            <option key={customer.id} value={customer.id}>
+                              {customer.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => openCustomerModal()}
+                          className="px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700"
+                          title="Nuevo cliente"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      {/* Búsqueda de clientes */}
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3" />
+                        <input
+                          type="text"
+                          value={customerSearchTerm}
+                          onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                          placeholder="Buscar clientes..."
+                          className="w-full pl-8 pr-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                        />
+                      </div>
+
+                      {/* Lista de clientes filtrados */}
+                      {customerSearchTerm && filteredCustomers.length > 0 && (
+                        <div className="max-h-32 overflow-y-auto border border-gray-200 rounded bg-white">
+                          {filteredCustomers.map(customer => (
+                            <div
+                              key={customer.id}
+                              className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                              onClick={() => {
+                                setSelectedCustomer(customer);
+                                setCustomerSearchTerm('');
+                              }}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">{customer.name}</p>
+                                  {customer.phone && (
+                                    <p className="text-xs text-gray-600">{customer.phone}</p>
+                                  )}
+                                </div>
+                                <div className="flex space-x-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openCustomerModal(customer);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-700"
+                                    title="Editar"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteCustomer(customer.id);
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Cliente seleccionado */}
+                      {selectedCustomer && (
+                        <div className="p-2 bg-primary-50 rounded border border-primary-200">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium text-primary-900">{selectedCustomer.name}</p>
+                              {selectedCustomer.phone && (
+                                <p className="text-xs text-primary-700">{selectedCustomer.phone}</p>
+                              )}
+                              {selectedCustomer.email && (
+                                <p className="text-xs text-primary-700">{selectedCustomer.email}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => setSelectedCustomer(null)}
+                              className="text-primary-600 hover:text-primary-700"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -799,6 +1105,7 @@ const SalesModule = () => {
       {/* Modales */}
       {showPaymentModal && <PaymentModal />}
       {showProductModal && <ProductSelectionModal />}
+      {showCustomerModal && <CustomerModal />}
     </div>
   );
 };
