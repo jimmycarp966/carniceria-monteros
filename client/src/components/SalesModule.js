@@ -30,6 +30,13 @@ const SalesModule = () => {
   const [currentShift, setCurrentShift] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Estados de selección de producto
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [weight, setWeight] = useState(0); // Para productos por peso
+  const [isWeightMode, setIsWeightMode] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+
   // Estados del pago
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [receivedAmount, setReceivedAmount] = useState(0);
@@ -39,11 +46,20 @@ const SalesModule = () => {
 
   // Estados de UI
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  // const [showCustomerModal, setShowCustomerModal] = useState(false); // TODO: Implementar modal de cliente
   const [processingPayment, setProcessingPayment] = useState(false);
 
   // Hook de acceso
   const { currentUser, userRole } = useCashRegisterAccess();
+
+  // Función para simular lectura de balanza (se puede conectar a balanza real)
+  const readFromScale = () => {
+    if (selectedProduct && isWeightMode) {
+      // Simular lectura de balanza (0.5 a 2.5 kg)
+      const simulatedWeight = (Math.random() * 2 + 0.5).toFixed(2);
+      setWeight(parseFloat(simulatedWeight));
+      toast.success(`Peso leído: ${simulatedWeight} ${selectedProduct.unit}`);
+    }
+  };
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -85,28 +101,59 @@ const SalesModule = () => {
     product.barcode?.includes(searchTerm)
   );
 
-  // Agregar producto al carrito
-  const addToCart = (product) => {
-    const existingItem = cart.find(item => item.id === product.id);
+  // Seleccionar producto para agregar al carrito
+  const selectProduct = (product) => {
+    setSelectedProduct(product);
+    setQuantity(1);
+    setWeight(0);
+    setIsWeightMode(product.unit === 'kg' || product.unit === 'g');
+    setShowProductModal(true);
+  };
+
+  // Agregar producto al carrito con cantidad específica
+  const addToCart = () => {
+    if (!selectedProduct) return;
+
+    const finalQuantity = isWeightMode ? weight : quantity;
+    const finalPrice = isWeightMode ? (selectedProduct.price * weight) : (selectedProduct.price * quantity);
+
+    if (finalQuantity <= 0) {
+      toast.error('La cantidad debe ser mayor a 0');
+      return;
+    }
+
+    if (finalQuantity > selectedProduct.stock) {
+      toast.error(`Stock insuficiente. Disponible: ${selectedProduct.stock} ${selectedProduct.unit}`);
+      return;
+    }
+
+    const existingItem = cart.find(item => item.id === selectedProduct.id);
     
     if (existingItem) {
       setCart(cart.map(item =>
-        item.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
+        item.id === selectedProduct.id
+          ? { 
+              ...item, 
+              quantity: item.quantity + finalQuantity,
+              total: (item.quantity + finalQuantity) * selectedProduct.price
+            }
           : item
       ));
     } else {
       setCart([...cart, {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        unit: product.unit || 'kg',
-        quantity: 1,
-        stock: product.stock
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        unit: selectedProduct.unit || 'kg',
+        quantity: finalQuantity,
+        total: finalPrice,
+        stock: selectedProduct.stock
       }]);
     }
     
-    toast.success(`${product.name} agregado al carrito`);
+    toast.success(`${selectedProduct.name} agregado al carrito`);
+    setShowProductModal(false);
+    setSelectedProduct(null);
   };
 
   // Actualizar cantidad en carrito
@@ -145,7 +192,7 @@ const SalesModule = () => {
 
   // Calcular totales
   const calculateTotals = () => {
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.total || (item.price * item.quantity)), 0);
     const discountAmount = discountType === 'percentage' 
       ? (subtotal * discount / 100)
       : discount;
@@ -225,6 +272,14 @@ const SalesModule = () => {
       // Sincronizar en tiempo real
       await realtimeService.syncSale(saleData);
       
+      // Notificar a la caja sobre la nueva venta
+      await realtimeService.notifySaleCompleted({
+        saleId,
+        shiftId: currentShift.id,
+        total: total,
+        employeeName: currentUser?.name
+      });
+      
       toast.success(`Venta procesada exitosamente - ID: ${saleId}`);
       
       // Limpiar formulario
@@ -240,6 +295,132 @@ const SalesModule = () => {
     } finally {
       setProcessingPayment(false);
     }
+  };
+
+  // Modal de selección de producto y cantidad
+  const ProductSelectionModal = () => {
+    const totalPrice = isWeightMode ? (selectedProduct?.price * weight) : (selectedProduct?.price * quantity);
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Agregar Producto</h3>
+            <button
+              onClick={() => {
+                setShowProductModal(false);
+                setSelectedProduct(null);
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {selectedProduct && (
+            <>
+              {/* Información del producto */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-gray-900 mb-2">{selectedProduct.name}</h4>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Precio: ${selectedProduct.price?.toLocaleString()} / {selectedProduct.unit}</span>
+                  <span>Stock: {selectedProduct.stock} {selectedProduct.unit}</span>
+                </div>
+              </div>
+
+              {/* Selección de cantidad/peso */}
+              <div className="space-y-4 mb-6">
+                {isWeightMode ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Peso ({selectedProduct.unit}):
+                    </label>
+                    <div className="flex space-x-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={weight}
+                          onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                          placeholder="0.00"
+                        />
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                          {selectedProduct.unit}
+                        </span>
+                      </div>
+                      <button
+                        onClick={readFromScale}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        title="Leer de balanza"
+                      >
+                        ⚖️
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cantidad:
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                        className="w-20 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        min="1"
+                      />
+                      <button
+                        onClick={() => setQuantity(quantity + 1)}
+                        className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Precio total */}
+                <div className="bg-primary-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-900">Precio Total:</span>
+                    <span className="text-lg font-bold text-primary-600">
+                      ${totalPrice.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setSelectedProduct(null);
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={addToCart}
+                  className="flex-1 bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  Agregar al Carrito
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Modal de pago
@@ -266,8 +447,8 @@ const SalesModule = () => {
             <div className="space-y-2">
               {cart.map(item => (
                 <div key={item.id} className="flex justify-between text-sm">
-                  <span>{item.name} x {item.quantity}{item.unit}</span>
-                  <span>${(item.price * item.quantity).toLocaleString()}</span>
+                  <span>{item.name} x {item.quantity} {item.unit}</span>
+                  <span>${(item.total || (item.price * item.quantity)).toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -429,7 +610,7 @@ const SalesModule = () => {
                   <div
                     key={product.id}
                     className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => addToCart(product)}
+                    onClick={() => selectProduct(product)}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
@@ -444,12 +625,12 @@ const SalesModule = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        addToCart(product);
+                        selectProduct(product);
                       }}
                       className="w-full mt-3 bg-primary-600 text-white py-2 px-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center"
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      Agregar
+                      Seleccionar
                     </button>
                   </div>
                 ))}
@@ -617,6 +798,7 @@ const SalesModule = () => {
 
       {/* Modales */}
       {showPaymentModal && <PaymentModal />}
+      {showProductModal && <ProductSelectionModal />}
     </div>
   );
 };

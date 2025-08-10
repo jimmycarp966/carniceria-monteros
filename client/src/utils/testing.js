@@ -22,7 +22,7 @@ export const runSystemTests = async () => {
       await productService.getAllProducts(1, 5);
       results.firebaseConnection = true;
       console.log('✅ Conexión a Firebase: OK');
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en conexión a Firebase:', error);
     }
 
@@ -33,7 +33,7 @@ export const runSystemTests = async () => {
       const syncState = realtimeService.getSyncState();
       results.realtimeService = syncState.isOnline !== undefined;
       console.log('✅ Servicio de tiempo real: OK', syncState);
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en servicio de tiempo real:', error);
     }
 
@@ -62,7 +62,7 @@ export const runSystemTests = async () => {
       const saleId = await dataSyncService.syncSale(testSaleData);
       results.dataSync = saleId !== undefined;
       console.log('✅ Sincronización de datos: OK', saleId);
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en sincronización de datos:', error);
     }
 
@@ -76,7 +76,7 @@ export const runSystemTests = async () => {
       });
       results.notifications = true;
       console.log('✅ Sistema de notificaciones: OK');
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en sistema de notificaciones:', error);
     }
 
@@ -86,7 +86,7 @@ export const runSystemTests = async () => {
       const sales = await saleService.getAllSales(1, 5);
       results.salesSystem = Array.isArray(sales);
       console.log('✅ Sistema de ventas: OK', sales.length, 'ventas encontradas');
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en sistema de ventas:', error);
     }
 
@@ -96,7 +96,7 @@ export const runSystemTests = async () => {
       const inventory = await productService.getAllProducts(1, 5);
       results.inventorySystem = Array.isArray(inventory);
       console.log('✅ Sistema de inventario: OK', inventory.length, 'productos encontrados');
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en sistema de inventario:', error);
     }
 
@@ -106,7 +106,7 @@ export const runSystemTests = async () => {
       const shifts = await shiftService.getAllShifts();
       results.shiftSystem = Array.isArray(shifts);
       console.log('✅ Sistema de turnos: OK', shifts.length, 'turnos encontrados');
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en sistema de turnos:', error);
     }
 
@@ -193,7 +193,7 @@ export const testRealtimeSync = () => {
 
       await dataSyncService.syncSale(testSale);
       console.log('✅ Venta de prueba sincronizada');
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Error en venta de prueba:', error);
     }
   }, 2000);

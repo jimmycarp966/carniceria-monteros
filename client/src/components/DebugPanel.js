@@ -265,14 +265,14 @@ const DebugPanel = () => {
   };
 
   if (!isVisible) {
-    return (
-      <button
+  return (
+          <button
         onClick={() => setIsVisible(true)}
         className="fixed bottom-4 right-4 bg-gray-800 text-white p-3 rounded-full shadow-lg hover:bg-gray-700 transition-colors z-50"
         title="Panel de Debug"
-      >
+          >
         <Bug className="h-6 w-6" />
-      </button>
+          </button>
     );
   }
 
@@ -284,13 +284,13 @@ const DebugPanel = () => {
             <Bug className="h-6 w-6 mr-2" />
             Panel de Debug - Sistema de Carnicería
           </h2>
-          <button
+              <button
             onClick={() => setIsVisible(false)}
             className="text-gray-500 hover:text-gray-700"
-          >
+              >
             <XCircle className="h-6 w-6" />
-          </button>
-        </div>
+              </button>
+            </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {/* Estado de Salud del Sistema */}
@@ -307,18 +307,18 @@ const DebugPanel = () => {
                 </div>
                 <div className={`text-lg font-bold ${getHealthColor(systemHealth.online)}`}>
                   {systemHealth.online ? 'Conectado' : 'Desconectado'}
-                </div>
               </div>
+                    </div>
 
               <div className="bg-gray-50 p-4 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Firebase</span>
                   {getHealthIcon(systemHealth.firebase)}
-                </div>
+                  </div>
                 <div className={`text-lg font-bold ${getHealthColor(systemHealth.firebase)}`}>
                   {systemHealth.firebase ? 'Conectado' : 'Error'}
-                </div>
-            </div>
+              </div>
+          </div>
 
               <div className="bg-gray-50 p-4 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
@@ -327,20 +327,20 @@ const DebugPanel = () => {
                 </div>
                 <div className={`text-lg font-bold ${getHealthColor(systemHealth.realtime)}`}>
                   {systemHealth.realtime ? 'Activo' : 'Inactivo'}
-                </div>
-              </div>
+                  </div>
+                  </div>
 
               <div className="bg-gray-50 p-4 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Cache</span>
                   {getHealthIcon(systemHealth.cache)}
-                    </div>
+                  </div>
                 <div className={`text-lg font-bold ${getHealthColor(systemHealth.cache)}`}>
                   {systemHealth.cache ? 'Activo' : 'Vacío'}
                   </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
           {/* Resultados de Pruebas */}
           <div className="mb-8">
@@ -409,13 +409,13 @@ const DebugPanel = () => {
                           </div>
                       <div className="text-sm text-gray-600 font-mono">
                         {event.data}
-                      </div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
+              </div>
             </div>
-          </div>
 
           {/* Información del Sistema */}
           <div>
@@ -427,17 +427,17 @@ const DebugPanel = () => {
                 </div>
                 <div>
                   <strong>Online:</strong> {navigator.onLine ? 'Sí' : 'No'}
-                </div>
+          </div>
                 <div>
                   <strong>Memoria:</strong> {performance.memory ? `${Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)}MB / ${Math.round(performance.memory.totalJSHeapSize / 1024 / 1024)}MB` : 'No disponible'}
-                </div>
+        </div>
                 <div>
                   <strong>Timestamp:</strong> {new Date().toLocaleString()}
-                </div>
-              </div>
+            </div>
             </div>
           </div>
-         </div>
+        </div>
+      </div>
        </div>
 
        {/* Modal de Confirmación de Reset */}

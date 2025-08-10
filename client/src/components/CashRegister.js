@@ -110,7 +110,7 @@ const CashRegister = () => {
       realtimeService.on('shifts_updated', (data) => {
         if (data.shifts) {
           const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
-          if (activeShift) {
+      if (activeShift) {
             setCurrentShift(activeShift);
             loadShiftData(activeShift);
           } else {
@@ -204,7 +204,7 @@ const CashRegister = () => {
       toast.error('No hay turno activo para cerrar');
       return;
     }
-    
+
     try {
       const updatedShift = {
         ...currentShift,
@@ -243,7 +243,7 @@ const CashRegister = () => {
       toast.error('Debe haber un turno activo para registrar ingresos');
       return;
     }
-    
+
     if (!incomeAmount || incomeAmount <= 0) {
       toast.error('Ingrese un monto válido');
       return;
@@ -286,7 +286,7 @@ const CashRegister = () => {
       
       toast.success('Ingreso registrado exitosamente');
       
-    } catch (error) {
+        } catch (error) {
       console.error('Error registrando ingreso:', error);
       toast.error('Error al registrar el ingreso');
     }
@@ -509,7 +509,7 @@ const CashRegister = () => {
         </h3>
 
         <div className="space-y-4">
-          <div>
+                      <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Monto:</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
@@ -532,9 +532,9 @@ const CashRegister = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               placeholder="¿De dónde proviene este ingreso?"
             />
-          </div>
+              </div>
 
-          <div>
+                        <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Categoría:</label>
             <select
               value={incomeCategory}
@@ -547,23 +547,23 @@ const CashRegister = () => {
               <option value="reintegro">Reintegro</option>
               <option value="otro">Otro</option>
             </select>
-          </div>
-        </div>
+                      </div>
+            </div>
 
         <div className="flex space-x-3 mt-6">
-          <button
+                  <button
             onClick={() => setShowIncomeModal(false)}
             className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-          >
+                  >
             Cancelar
-          </button>
-          <button
+                  </button>
+                  <button
             onClick={registerIncome}
             className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
           >
             Registrar Ingreso
-          </button>
-        </div>
+                  </button>
+                </div>
                   </div>
     </div>
   );
