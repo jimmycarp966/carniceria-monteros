@@ -5,13 +5,24 @@ import {
   Moon, 
   Plus, 
   X, 
-  AlertTriangle
+  AlertTriangle,
+  User,
+  Shield
 } from 'lucide-react';
 import { realtimeService } from '../services/realtimeService';
 import { shiftService, expensesService } from '../services/firebaseService';
+import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
 
 const ShiftManagement = ({ onShiftChange, currentShift }) => {
+  // Hook de control de acceso
+  const { 
+    currentUser, 
+    userRole, 
+    canOpenShift, 
+    canCloseShift 
+  } = useCashRegisterAccess();
+
   // Estados principales
   const [shifts, setShifts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,11 +30,10 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState(null);
   
-  // Estados para abrir turno
+  // Estados para abrir turno (empleado automático desde usuario logueado)
   const [shiftType, setShiftType] = useState('morning');
   const [shiftDate, setShiftDate] = useState(new Date().toISOString().split('T')[0]);
   const [openingAmount, setOpeningAmount] = useState(0);
-  const [employeeName, setEmployeeName] = useState('');
   const [notes, setNotes] = useState('');
   
   // Estados para cerrar turno
@@ -103,10 +113,16 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [shiftType, shiftDate, openingAmount, employeeName, shifts]);
+  }, [shiftType, shiftDate, openingAmount, shifts]);
 
   // Abrir turno
   const openShift = async () => {
+    // Verificar permisos
+    if (!canOpenShift) {
+      toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
+      return;
+    }
+
     if (!validateShiftOpening()) {
       return;
     }
@@ -118,13 +134,25 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
         type: shiftType,
         date: shiftDate,
         openingAmount: parseFloat(openingAmount),
-        employeeName: employeeName.trim(),
+        employeeName: currentUser?.name || 'Usuario',
+        employeeEmail: currentUser?.email,
+        employeeId: currentUser?.employeeId || currentUser?.id,
+        employeeRole: currentUser?.role,
+        employeePosition: currentUser?.position,
         notes: notes.trim(),
         status: 'active',
         startTime: new Date(),
         total: 0,
         salesCount: 0,
-        createdAt: new Date()
+        createdAt: new Date(),
+        openedBy: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: currentUser?.role,
+          position: currentUser?.position,
+          timestamp: new Date()
+        }
       };
       
       const shiftId = await shiftService.addShift(shiftData);
@@ -142,7 +170,7 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
       setShiftType('morning');
       setShiftDate(new Date().toISOString().split('T')[0]);
       setOpeningAmount(0);
-      setEmployeeName('');
+      // Usuario automático desde login
       setNotes('');
       setShowOpenShiftModal(false);
       

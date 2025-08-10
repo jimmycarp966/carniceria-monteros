@@ -15,7 +15,7 @@ import realtimeService from './services/realtimeService';
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
 const Sales = lazy(() => import('./components/SalesReports'));
-const CashRegister = lazy(() => import('./components/SimpleCashRegister'));
+const CashRegister = lazy(() => import('./components/CashRegister'));
 const Customers = lazy(() => import('./components/Customers'));
 const Employees = lazy(() => import('./components/Employees'));
 const Suppliers = lazy(() => import('./components/Suppliers'));
@@ -299,7 +299,7 @@ function App() {
   // Prefetch de rutas en idle/hover
   const prefetchMap = useMemo(() => ({
     '/': () => import('./components/Dashboard'),
-    '/caja': () => import('./components/EnhancedCashRegister'),
+    '/caja': () => import('./components/CashRegister'),
     '/productos': () => import('./components/Products'),
     '/ventas': () => import('./components/Sales'),
     '/inventario': () => import('./components/Inventory'),

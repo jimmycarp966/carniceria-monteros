@@ -1,1340 +1,802 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Trash2, 
   Clock, 
   DollarSign, 
-  CreditCard,
-  Banknote,
-  AlertTriangle,
-  BarChart3,
+  TrendingUp, 
+  TrendingDown,
+  Calculator,
   Receipt,
-  X,
-  Zap,
-  Target,
-  Check,
-  Filter,
-  Smartphone,
-  Search
+  User,
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Calendar,
+  BarChart3,
+  Eye,
+  EyeOff,
+
+  Minus,
+  LogOut,
+  LogIn
 } from 'lucide-react';
-import { products } from '../data/products';
-import { productService, saleService, shiftService, loadSampleData } from '../services/firebaseService';
+import { realtimeService } from '../services/realtimeService';
+import { shiftService, saleService, expensesService } from '../services/firebaseService';
+import CashRegisterAccessGuard from './CashRegisterAccessGuard';
+import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
 
 const CashRegister = () => {
-  const [cart, setCart] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [cashAmount, setCashAmount] = useState(0);
-  const [sales, setSales] = useState([]);
-  const [showSalesHistory, setShowSalesHistory] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  
-  // Estados para turnos mejorados
+  // Hook de control de acceso
+  const { 
+    currentUser, 
+    userRole, 
+    canOpenShift, 
+    canCloseShift 
+  } = useCashRegisterAccess();
+
+  // Estados principales
   const [currentShift, setCurrentShift] = useState(null);
-  const [shiftStartTime, setShiftStartTime] = useState(null);
-  const [shiftSales, setShiftSales] = useState([]);
-  const [shiftTotal, setShiftTotal] = useState(0);
-  
-  // Estados para filtros
-  const [periodFilter, setPeriodFilter] = useState('today');
-  const [customDate, setCustomDate] = useState('');
-  const [filteredSales, setFilteredSales] = useState([]);
-  const [periodTotal, setPeriodTotal] = useState(0);
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Estados para mejor UX
-  const [isProcessingSale, setIsProcessingSale] = useState(false);
-  
-  // Estados para inventario inteligente
-  const [lowStockAlerts, setLowStockAlerts] = useState([]);
-  const [quickActions, setQuickActions] = useState([]);
-  const [showQuickActions, setShowQuickActions] = useState(false);
-
-  // Estados para buscador de productos
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showProductDropdown, setShowProductDropdown] = useState(false);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [allProducts, setAllProducts] = useState([]);
-
-  // Estados para reporte diario
-  const [showDailyReport, setShowDailyReport] = useState(false);
-  const [dailyReport, setDailyReport] = useState({
+  const [shiftStats, setShiftStats] = useState({
     totalSales: 0,
-    cashTotal: 0,
-    cardTotal: 0,
-    transferTotal: 0,
-    debitTotal: 0,
-    totalTransactions: 0,
-    cashTransactions: 0,
-    cardTransactions: 0,
-    transferTransactions: 0,
-    debitTransactions: 0
+    totalRevenue: 0,
+    totalExpenses: 0,
+    salesCount: 0,
+    netAmount: 0
   });
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Estados para sistema de fechas y validaciones
-  const [showDateModal, setShowDateModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [pendingShift, setPendingShift] = useState(null);
+  // Estados para operaciones
+  const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showAmounts, setShowAmounts] = useState(true);
 
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const cartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const change = cashAmount - cartTotal;
+  // Estados para abrir turno
+  const [openingAmount, setOpeningAmount] = useState(0);
+  const [shiftType, setShiftType] = useState('morning');
+  const [notes, setNotes] = useState('');
 
-  // Cargar productos desde Firebase
+  // Estados para cerrar turno
+  const [closingAmount, setClosingAmount] = useState(0);
+  const [closingNotes, setClosingNotes] = useState('');
+
+  // Estados para gastos
+  const [expenseAmount, setExpenseAmount] = useState(0);
+  const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseCategory, setExpenseCategory] = useState('operativo');
+
+  // Cargar datos iniciales
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        console.log('🔄 Cargando productos desde Firebase...');
-        
-        // Intentar cargar datos simulados si Firebase está vacío
-        await loadSampleData();
-        
-        const productsFromFirebase = await productService.getAllProducts();
-        console.log('📦 Productos cargados de Firebase:', productsFromFirebase.length);
-        
-        // Siempre usar Firebase si hay datos, incluso si está vacío
-        setAllProducts(productsFromFirebase);
-        
-        // Solo usar datos locales si Firebase está completamente vacío Y hay un error
-      } catch (error) {
-        console.error('❌ Error cargando productos de Firebase:', error);
-        console.log('🔄 Usando datos locales como fallback...');
-        setAllProducts(products);
-      }
+    loadCashRegisterData();
+    setupRealtimeListeners();
+
+    return () => {
+      cleanup();
     };
-    loadProducts();
   }, []);
 
-  // Cargar ventas desde Firebase
-  useEffect(() => {
-    const loadSales = async () => {
-      try {
-        const salesFromFirebase = await saleService.getAllSales();
-        setSales(salesFromFirebase);
-      } catch (error) {
-        console.error('Error cargando ventas:', error);
-      }
-    };
-    loadSales();
-  }, []);
+  const loadCashRegisterData = async () => {
+    try {
+      setIsLoading(true);
 
-  // Filtrar productos basado en búsqueda
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredProducts(allProducts);
-    } else {
-      const filtered = allProducts.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredProducts(filtered);
-    }
-  }, [searchTerm, allProducts]);
-
-  // Verificar turno activo al cargar
-  useEffect(() => {
-    const checkActiveShift = async () => {
-      try {
-        const activeShift = await shiftService.getActiveShift();
+      // Buscar turno activo
+      const shifts = await shiftService.getAllShifts();
+      const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+      
         if (activeShift) {
           setCurrentShift(activeShift);
-          setIsOpen(true);
-          setShiftStartTime(new Date(activeShift.createdAt?.toDate() || Date.now()));
+        await loadShiftData(activeShift);
         }
+
       } catch (error) {
-        console.error('Error verificando turno activo:', error);
-      }
-    };
-    checkActiveShift();
-  }, []);
-
-  // Simular alertas de inventario inteligente
-  useEffect(() => {
-    const alerts = allProducts
-      .filter(product => product.stock <= product.minStock)
-      .map(product => ({
-        id: product.id,
-        name: product.name,
-        stock: product.stock,
-        minStock: product.minStock,
-        priority: product.stock === 0 ? 'high' : 'medium'
-      }));
-    setLowStockAlerts(alerts);
-  }, [allProducts]);
-
-  // Generar acciones rápidas basadas en ventas frecuentes
-  useEffect(() => {
-    const frequentProducts = allProducts
-      .sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))
-      .slice(0, 6)
-      .map(product => ({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        icon: product.category === 'carne' ? '🥩' : product.category === 'pollo' ? '🍗' : '🥓'
-      }));
-    setQuickActions(frequentProducts);
-  }, [allProducts]);
-
-  // Función para filtrar ventas por período
-  const filterSalesByPeriod = useCallback((period, customDateValue = null) => {
-    const now = new Date();
-    let startDate, endDate;
-
-    switch (period) {
-      case 'today':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        break;
-      case 'week':
-        const dayOfWeek = now.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToSubtract);
-        endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        break;
-      case 'custom':
-        if (customDateValue) {
-          startDate = new Date(customDateValue);
-          endDate = new Date(customDateValue);
-          endDate.setDate(endDate.getDate() + 1);
-        } else {
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        }
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      console.error('Error cargando datos de caja:', error);
+      toast.error('Error cargando datos de la caja');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const filtered = sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      return saleDate >= startDate && saleDate < endDate;
+  const loadShiftData = async (shift) => {
+    try {
+      // Cargar ventas del turno
+      const allSales = await saleService.getAllSales();
+      const shiftSales = allSales.filter(sale => sale.shiftId === shift.id);
+      
+      // Cargar gastos del turno
+      const allExpenses = await expensesService.getAllExpenses();
+      const shiftExpenses = allExpenses.filter(expense => 
+        expense.shiftId === shift.id || 
+        (expense.date === shift.date && !expense.shiftId)
+      );
+
+      // Calcular estadísticas
+      const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+      const totalExpenses = shiftExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      
+      setShiftStats({
+        totalSales: shiftSales.length,
+        totalRevenue,
+        totalExpenses,
+        salesCount: shiftSales.length,
+        netAmount: totalRevenue - totalExpenses
+      });
+
+      // Cargar actividad reciente
+      const activity = [
+        ...shiftSales.map(sale => ({
+          id: sale.id,
+          type: 'sale',
+          amount: sale.total,
+          description: `Venta - ${sale.products?.length || 0} productos`,
+          timestamp: sale.createdAt || sale.timestamp,
+          employeeName: sale.employeeName || sale.processedBy?.name
+        })),
+        ...shiftExpenses.map(expense => ({
+          id: expense.id,
+          type: 'expense',
+          amount: expense.amount,
+          description: expense.description || expense.concept,
+          timestamp: expense.createdAt || expense.date,
+          employeeName: expense.employeeName || expense.createdBy?.name
+        }))
+      ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
+
+      setRecentActivity(activity);
+
+    } catch (error) {
+      console.error('Error cargando datos del turno:', error);
+    }
+  };
+
+  const setupRealtimeListeners = () => {
+    // Escuchar cambios en ventas
+    realtimeService.on('sales_updated', (data) => {
+      if (currentShift && data.sales) {
+        loadShiftData(currentShift);
+      }
     });
 
-    setFilteredSales(filtered);
-    setPeriodTotal(filtered.reduce((sum, sale) => sum + sale.total, 0));
-  }, [sales]);
-
-  useEffect(() => {
-    filterSalesByPeriod(periodFilter, customDate);
-  }, [periodFilter, customDate, filterSalesByPeriod]);
-
-  const getPeriodName = (period) => {
-    switch (period) {
-      case 'today': return 'Hoy';
-      case 'week': return 'Esta Semana';
-      case 'month': return 'Este Mes';
-      case 'custom': return 'Personalizado';
-      default: return 'Hoy';
-    }
-  };
-
-  const openCashRegister = async (shift) => {
-    try {
-      // Verificar si ya hay un turno activo
-      const activeShift = await shiftService.getActiveShift();
-      if (activeShift) {
-        toast.error('Ya hay un turno activo. Cierra el turno actual primero.');
-        return;
+    // Escuchar nuevas ventas
+    realtimeService.on('sale_synced', (data) => {
+      if (currentShift) {
+        loadShiftData(currentShift);
+        toast.success('Nueva venta registrada en la caja');
       }
+    });
 
-      // Para el turno tarde, verificar que exista un turno mañana del mismo día
-      if (shift === 'afternoon') {
-        const today = new Date().toISOString().split('T')[0];
-        const morningShifts = await shiftService.getShiftsByDate(today);
-        const morningShift = morningShifts.find(s => s.type === 'morning');
-        
-        if (!morningShift) {
-          toast.error('No se puede abrir el turno tarde sin haber abierto el turno mañana primero.');
-          return;
+    // Escuchar cambios en turnos
+    realtimeService.on('shifts_updated', (data) => {
+      if (data.shifts) {
+        const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
+        if (activeShift) {
+          setCurrentShift(activeShift);
+          loadShiftData(activeShift);
+        } else {
+          setCurrentShift(null);
+          setShiftStats({
+            totalSales: 0,
+            totalRevenue: 0,
+            totalExpenses: 0,
+            salesCount: 0,
+            netAmount: 0
+          });
+          setRecentActivity([]);
         }
       }
+    });
+  };
 
-      // Para el turno mañana, solicitar fecha
-      if (shift === 'morning') {
-        setPendingShift(shift);
-        setShowDateModal(true);
+  const cleanup = () => {
+    realtimeService.off('sales_updated');
+    realtimeService.off('sale_synced');
+    realtimeService.off('shifts_updated');
+  };
+
+  // Abrir turno
+  const openShift = async () => {
+    if (!canOpenShift) {
+      toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
         return;
       }
 
-      // Para el turno tarde, usar la fecha actual
-      await createShift(shift, new Date().toISOString().split('T')[0]);
-    } catch (error) {
-      console.error('Error abriendo caja:', error);
-      toast.error('Error al abrir la caja');
-    }
-  };
-
-  const createShift = async (shift, date) => {
     try {
-      // Crear nuevo turno en Firebase
       const shiftData = {
-        type: shift,
-        date: date,
+        type: shiftType,
+        date: new Date().toISOString().split('T')[0],
         startTime: new Date(),
+        openingAmount: parseFloat(openingAmount) || 0,
+        employeeName: currentUser?.name,
+        employeeEmail: currentUser?.email,
+        employeeId: currentUser?.employeeId || currentUser?.id,
+        employeeRole: currentUser?.role,
+        notes: notes.trim(),
+        status: 'active',
         totalSales: 0,
-        totalItems: 0
+        salesCount: 0,
+        openedBy: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: currentUser?.role,
+          timestamp: new Date()
+        }
       };
 
       const shiftId = await shiftService.addShift(shiftData);
+      const newShift = { id: shiftId, ...shiftData };
       
-      setCurrentShift({ id: shiftId, ...shiftData });
-      setShiftStartTime(new Date());
-      setIsOpen(true);
-      toast.success(`Caja abierta - Turno ${getShiftName(shift)} - ${date}`);
+      setCurrentShift(newShift);
+      setShowOpenShiftModal(false);
+      setOpeningAmount(0);
+      setNotes('');
+      
+      toast.success(`Turno ${shiftType === 'morning' ? 'mañana' : 'tarde'} abierto exitosamente`);
+      
     } catch (error) {
-      console.error('Error creando turno:', error);
-      toast.error('Error al crear el turno');
+      console.error('Error abriendo turno:', error);
+      toast.error('Error al abrir el turno');
     }
   };
 
-  const handleDateSubmit = async () => {
-    if (!selectedDate) {
-      toast.error('Por favor selecciona una fecha');
+  // Cerrar turno
+  const closeShift = async () => {
+    if (!canCloseShift) {
+      toast.error(`Su rol de ${userRole?.displayName} no puede cerrar turnos`);
       return;
     }
 
-    setShowDateModal(false);
-    await createShift(pendingShift, selectedDate);
-    setPendingShift(null);
-    setSelectedDate('');
-  };
-
-  const closeCashRegister = async () => {
-    if (cart.length > 0) {
-      toast.error('No se puede cerrar la caja con productos en el carrito');
+    if (!currentShift) {
+      toast.error('No hay turno activo para cerrar');
       return;
     }
     
     try {
-      if (currentShift) {
-        const closingData = {
+      const updatedShift = {
+        ...currentShift,
           endTime: new Date(),
-          totalSales: shiftTotal,
-          totalItems: shiftSales.reduce((sum, sale) => sum + sale.items.length, 0),
-          salesCount: shiftSales.length
-        };
+        closingAmount: parseFloat(closingAmount) || 0,
+        closingNotes: closingNotes.trim(),
+        status: 'closed',
+        finalTotal: shiftStats.netAmount,
+        closedBy: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: currentUser?.role,
+          timestamp: new Date()
+        }
+      };
 
-        await shiftService.closeShift(currentShift.id, closingData);
-      }
+      await shiftService.updateShift(currentShift.id, updatedShift);
       
       setCurrentShift(null);
-      setShiftStartTime(null);
-      setShiftSales([]);
-      setShiftTotal(0);
-      setIsOpen(false);
-      toast.success('Caja cerrada correctamente');
-    } catch (error) {
-      console.error('Error cerrando caja:', error);
-      toast.error('Error al cerrar la caja');
-    }
-  };
-
-  const getShiftName = (shift) => {
-    return shift === 'morning' ? 'Mañana' : 'Tarde';
-  };
-
-  const getShiftTime = (shift) => {
-    return shift === 'morning' ? '8:00 - 14:00' : '18:00 - 22:00';
-  };
-
-  const getShiftDuration = () => {
-    if (!shiftStartTime) return '00:00:00';
-    const now = new Date();
-    const diff = now - shiftStartTime;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const addToCart = () => {
-    if (!isOpen) {
-      toast.error('La caja debe estar abierta para vender');
-      return;
-    }
-
-    if (!selectedProduct) {
-      toast.error('Selecciona un producto');
-      return;
-    }
-
-    const product = allProducts.find(p => p.id === selectedProduct);
-    if (!product) {
-      toast.error('Producto no encontrado');
-      return;
-    }
-
-    if (product.stock < quantity) {
-      toast.error(`Stock insuficiente. Solo hay ${product.stock} unidades disponibles`);
-      return;
-    }
-
-    const existingItem = cart.find(item => item.id === selectedProduct);
-    
-    if (existingItem) {
-      setCart(cart.map(item => 
-        item.id === selectedProduct 
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
-      ));
-    } else {
-      setCart([...cart, { ...product, quantity }]);
-    }
-
-    setSelectedProduct('');
-    setQuantity(1);
-    setSearchTerm('');
-    setShowProductDropdown(false);
-    toast.success(`${product.name} agregado al carrito`);
-  };
-
-  const removeFromCart = (productId) => {
-    setCart(cart.filter(item => item.id !== productId));
-    toast.success('Producto removido del carrito');
-  };
-
-  const updateQuantity = (productId, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeFromCart(productId);
-      return;
-    }
-    
-    setCart(cart.map(item => 
-      item.id === productId ? { ...item, quantity: newQuantity } : item
-    ));
-  };
-
-  const completeSale = async () => {
-    if (!isOpen) {
-      toast.error('La caja debe estar abierta para vender');
-      return;
-    }
-
-    if (cart.length === 0) {
-      toast.error('El carrito está vacío');
-      return;
-    }
-
-    // Solo validar monto en efectivo si el método de pago es efectivo
-    if (paymentMethod === 'cash' && cashAmount < cartTotal) {
-      toast.error('El monto en efectivo es menor al total');
-      return;
-    }
-
-    setIsProcessingSale(true);
-
-    try {
-      // Crear objeto de venta
-      const sale = {
-        items: [...cart],
-        total: cartTotal,
-        paymentMethod,
-        cashAmount: paymentMethod === 'cash' ? cashAmount : 0,
-        change: paymentMethod === 'cash' ? change : 0,
-        date: new Date(),
-        shiftId: currentShift?.id,
-        shiftType: currentShift?.type,
-        createdAt: new Date()
-      };
-
-      // Guardar venta en Firebase
-      const saleId = await saleService.addSale(sale);
-
-      // Actualizar stock de productos
-      for (const item of cart) {
-        const product = allProducts.find(p => p.id === item.id);
-        if (product && product.id) {
-          try {
-            const newStock = Math.max(0, product.stock - item.quantity);
-            // Convertir ID a string si es numérico
-            const productId = typeof product.id === 'number' ? product.id.toString() : product.id;
-            await productService.updateProductStock(productId, newStock);
-            
-            // Actualizar el estado local del producto
-            setAllProducts(prevProducts => 
-              prevProducts.map(p => 
-                p.id === product.id 
-                  ? { ...p, stock: newStock }
-                  : p
-              )
-            );
-          } catch (error) {
-            console.error(`Error actualizando stock de ${product.name}:`, error);
-            // Continuar con la venta aunque falle la actualización de stock
-          }
-        }
-      }
-
-      // Actualizar estado local con la nueva venta
-      const saleWithId = { id: saleId, ...sale };
-      
-      // Actualizar ventas generales
-      setSales(prevSales => [saleWithId, ...prevSales]);
-      
-      // Actualizar ventas del turno actual
-      setShiftSales(prevShiftSales => [saleWithId, ...prevShiftSales]);
-      setShiftTotal(prevTotal => prevTotal + cartTotal);
-
-      // Actualizar el turno en Firebase con el nuevo total
-      if (currentShift) {
-        try {
-          await shiftService.updateShiftTotal(currentShift.id, shiftTotal + cartTotal);
-        } catch (error) {
-          console.error('Error actualizando total del turno:', error);
-        }
-      }
-
-      // Limpiar carrito y resetear valores
-      setCart([]);
-      setCashAmount(0);
-      setPaymentMethod('cash');
-      setSelectedProduct('');
-      setQuantity(1);
-      setSearchTerm('');
-      setShowProductDropdown(false);
-
-      // Mensaje de éxito según método de pago
-      const methodNames = {
-        cash: 'Efectivo',
-        card: 'Tarjeta de Crédito',
-        transfer: 'Transferencia',
-        debit: 'Débito'
-      };
-
-      toast.success(`Venta completada exitosamente - ${methodNames[paymentMethod] || 'Otro método'}`);
-    } catch (error) {
-      console.error('Error completando venta:', error);
-      toast.error('Error al completar la venta');
-    } finally {
-      setIsProcessingSale(false);
-    }
-  };
-
-  const addQuickAction = (product) => {
-    if (!isOpen) {
-      toast.error('La caja debe estar abierta para vender');
-      return;
-    }
-
-    const existingItem = cart.find(item => item.id === product.id);
-    
-    if (existingItem) {
-      setCart(cart.map(item => 
-        item.id === product.id 
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
-    } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
-    }
-
-    toast.success(`${product.name} agregado al carrito`);
-  };
-
-  const handleProductSearch = (term) => {
-    setSearchTerm(term);
-    setShowProductDropdown(true);
-  };
-
-  const selectProductFromDropdown = (product) => {
-    setSelectedProduct(product.id);
-    setSearchTerm(product.name);
-    setShowProductDropdown(false);
-  };
-
-  // Función para generar reporte diario
-  const generateDailyReport = (sales) => {
-    const report = {
-      totalSales: 0,
-      cashTotal: 0,
-      cardTotal: 0,
-      transferTotal: 0,
-      debitTotal: 0,
-      totalTransactions: sales.length,
-      cashTransactions: 0,
-      cardTransactions: 0,
-      transferTransactions: 0,
-      debitTransactions: 0
-    };
-
-    sales.forEach(sale => {
-      report.totalSales += sale.total;
-      
-      switch (sale.paymentMethod) {
-        case 'cash':
-          report.cashTotal += sale.total;
-          report.cashTransactions++;
-          break;
-        case 'card':
-          report.cardTotal += sale.total;
-          report.cardTransactions++;
-          break;
-        case 'transfer':
-          report.transferTotal += sale.total;
-          report.transferTransactions++;
-          break;
-        case 'debit':
-          report.debitTotal += sale.total;
-          report.debitTransactions++;
-          break;
-        default:
-          report.cashTotal += sale.total;
-          report.cashTransactions++;
-      }
-    });
-
-    return report;
-  };
-
-  // Función para cerrar turno con reporte
-  const closeShiftWithReport = async () => {
-    if (!currentShift) {
-      toast.error('No hay turno activo');
-      return;
-    }
-
-    try {
-      // Generar reporte del turno actual
-      const shiftReport = generateDailyReport(shiftSales);
-      setDailyReport(shiftReport);
-      
-      // Si es el turno tarde, mostrar reporte diario completo
-      if (currentShift.type === 'afternoon') {
-        // Obtener todas las ventas del día
-        const todaySales = sales.filter(sale => {
-          const saleDate = new Date(sale.date);
-          const today = new Date();
-          return saleDate.toDateString() === today.toDateString();
-        });
-        
-        const dailyReportData = generateDailyReport(todaySales);
-        setDailyReport(dailyReportData);
-        setShowDailyReport(true);
-      }
-
-      // Cerrar turno
-      await closeCashRegister();
+      setShowCloseShiftModal(false);
+      setClosingAmount(0);
+      setClosingNotes('');
       
       toast.success('Turno cerrado exitosamente');
+      
     } catch (error) {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
     }
   };
 
-  return (
-    <div className="p-4 lg:p-6 w-full">
-      {/* Header Mejorado */}
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+  // Registrar gasto
+  const registerExpense = async () => {
+    if (!currentShift) {
+      toast.error('Debe haber un turno activo para registrar gastos');
+      return;
+    }
+    
+    if (!expenseAmount || expenseAmount <= 0) {
+      toast.error('Ingrese un monto válido');
+      return;
+    }
+
+    if (!expenseDescription.trim()) {
+      toast.error('Ingrese una descripción del gasto');
+      return;
+    }
+
+    try {
+      const expenseData = {
+        amount: parseFloat(expenseAmount),
+        description: expenseDescription.trim(),
+        category: expenseCategory,
+        date: new Date().toISOString().split('T')[0],
+        timestamp: new Date(),
+        shiftId: currentShift.id,
+        employeeName: currentUser?.name,
+        employeeId: currentUser?.employeeId || currentUser?.id,
+        createdBy: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: currentUser?.role
+        }
+      };
+
+      await expensesService.addExpense(expenseData);
+      
+      setShowExpenseModal(false);
+      setExpenseAmount(0);
+      setExpenseDescription('');
+      setExpenseCategory('operativo');
+      
+      // Recargar datos del turno
+      loadShiftData(currentShift);
+      
+      toast.success('Gasto registrado exitosamente');
+      
+        } catch (error) {
+      console.error('Error registrando gasto:', error);
+      toast.error('Error al registrar el gasto');
+    }
+  };
+
+  // Modal para abrir turno
+  const OpenShiftModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <LogIn className="h-6 w-6 mr-2 text-green-600" />
+          Abrir Turno
+        </h3>
+        
+        {/* Usuario actual */}
+        <div className="bg-gray-50 rounded-lg p-3 mb-4">
+          <div className="flex items-center">
+            <User className="h-4 w-4 mr-2 text-gray-500" />
+            <span className="font-medium">{currentUser?.name}</span>
+            <span className="mx-2 text-gray-400">•</span>
+            <span className="text-sm text-gray-600">{userRole?.displayName}</span>
+          </div>
+        </div>
+
+        <div className="space-y-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Caja Registradora</h1>
-            <p className="text-gray-600">Gestión de ventas y transacciones</p>
-          </div>
-          <div className="mt-4 sm:mt-0 flex space-x-2">
-            <button 
-              onClick={() => setShowQuickActions(!showQuickActions)}
-              className="btn btn-secondary"
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Turno:</label>
+            <select
+              value={shiftType}
+              onChange={(e) => setShiftType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             >
-              <Zap className="h-4 w-4 mr-2" />
-              Acciones Rápidas
-            </button>
-            <button 
-              onClick={() => setShowSalesHistory(!showSalesHistory)}
-              className="btn btn-primary"
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Historial
-            </button>
+              <option value="morning">Mañana</option>
+              <option value="afternoon">Tarde</option>
+              <option value="night">Noche</option>
+            </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Monto de Apertura:</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={openingAmount}
+                onChange={(e) => setOpeningAmount(parseFloat(e.target.value) || 0)}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="0"
+              />
         </div>
       </div>
 
-      {/* Alertas de Inventario Inteligente */}
-      {lowStockAlerts.length > 0 && (
-        <div className="mb-6">
-          <div className="bg-red-50 border border-red-200 rounded-3xl p-4">
-            <div className="flex items-center mb-3">
-              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-              <h3 className="text-lg font-semibold text-red-800">Alertas de Stock</h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {lowStockAlerts.map(alert => (
-                <div key={alert.id} className="bg-white rounded-2xl p-3 border border-red-200">
-                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900">{alert.name}</p>
-                      <p className="text-sm text-red-600">
-                        Stock: {alert.stock} (Mín: {alert.minStock})
-                      </p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notas (opcional):</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows="2"
+              placeholder="Observaciones del turno..."
+            />
                     </div>
-                    <div className={`badge ${alert.priority === 'high' ? 'badge-danger' : 'badge-warning'}`}>
-                      {alert.priority === 'high' ? 'Agotado' : 'Bajo Stock'}
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Acciones Rápidas */}
-      {showQuickActions && (
-        <div className="mb-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-3xl p-4">
-            <div className="flex items-center mb-3">
-              <Target className="h-5 w-5 text-blue-600 mr-2" />
-              <h3 className="text-lg font-semibold text-blue-800">Productos Frecuentes</h3>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {quickActions.map(product => (
+        <div className="flex space-x-3 mt-6">
                 <button
-                  key={product.id}
-                  onClick={() => addQuickAction(product)}
-                  className="bg-white rounded-2xl p-3 border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 transform hover:scale-105"
-                >
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">{product.icon}</div>
-                    <p className="text-xs font-medium text-gray-900 truncate">{product.name}</p>
-                    <p className="text-xs text-gray-600">${(Number(product.price) || 0).toLocaleString()}</p>
-                  </div>
+            onClick={() => setShowOpenShiftModal(false)}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+          >
+            Cancelar
                 </button>
-              ))}
+                <button
+            onClick={openShift}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Abrir Turno
+                </button>
             </div>
           </div>
         </div>
-      )}
+  );
 
-      {/* Estado de la Caja */}
-      {!isOpen ? (
-        <div className="card">
-          <div className="text-center">
-            <div className="p-4 bg-primary-100 rounded-3xl w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-              <DollarSign className="h-10 w-10 text-primary-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Caja Cerrada</h2>
-            <p className="text-gray-600 mb-6">Selecciona un turno para abrir la caja</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {['morning', 'afternoon'].map(shift => (
-                <button
-                  key={shift}
-                  onClick={() => openCashRegister(shift)}
-                  className={`relative overflow-hidden rounded-3xl p-6 border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl ${
-                    shift === 'morning' 
-                      ? 'bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-200 hover:border-orange-300 hover:from-orange-100 hover:to-yellow-100' 
-                      : 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200 hover:border-blue-300 hover:from-blue-100 hover:to-purple-100'
-                  }`}
-                >
-                  <div className={`absolute top-0 right-0 w-20 h-20 opacity-10 ${
-                    shift === 'morning' ? 'bg-orange-400' : 'bg-blue-400'
-                  } rounded-full -translate-y-10 translate-x-10`}></div>
-                  <div className="relative z-10 text-center">
-                    <div className={`p-4 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center ${
-                      shift === 'morning' 
-                        ? 'bg-orange-100 text-orange-600' 
-                        : 'bg-blue-100 text-blue-600'
-                    }`}>
-                      <Clock className="h-8 w-8" />
-                    </div>
-                    <h3 className={`text-xl font-bold mb-2 ${
-                      shift === 'morning' ? 'text-orange-800' : 'text-blue-800'
-                    }`}>
-                      {getShiftName(shift)}
-                    </h3>
-                    <p className={`text-sm font-medium ${
-                      shift === 'morning' ? 'text-orange-600' : 'text-blue-600'
-                    }`}>
-                      {getShiftTime(shift)}
-                    </p>
-                    <div className={`mt-3 text-xs px-3 py-1 rounded-full ${
-                      shift === 'morning' 
-                        ? 'bg-orange-200 text-orange-700' 
-                        : 'bg-blue-200 text-blue-700'
-                    }`}>
-                      Toca para abrir
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Panel de Productos */}
-          <div className="space-y-6">
-            {/* Información del Turno */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Turno Activo</h3>
-                  <p className="text-sm text-gray-600">{getShiftName(currentShift?.type)}</p>
+  // Modal para cerrar turno
+  const CloseShiftModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <LogOut className="h-6 w-6 mr-2 text-red-600" />
+          Cerrar Turno
+        </h3>
+
+        {/* Resumen del turno */}
+        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+          <h4 className="font-medium text-gray-900 mb-2">Resumen del Turno</h4>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>Ventas:</span>
+              <span className="font-medium">{shiftStats.salesCount}</span>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Duración</p>
-                  <p className="text-lg font-bold text-primary-600">{getShiftDuration()}</p>
+            <div className="flex justify-between">
+              <span>Ingresos:</span>
+              <span className="font-medium text-green-600">${shiftStats.totalRevenue.toLocaleString()}</span>
                 </div>
+            <div className="flex justify-between">
+              <span>Gastos:</span>
+              <span className="font-medium text-red-600">${shiftStats.totalExpenses.toLocaleString()}</span>
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={closeShiftWithReport}
-                  className="btn btn-danger flex-1"
-                >
-                  Cerrar Caja
-                </button>
-                <div className="caja-status open">
-                  <Check className="h-4 w-4 mr-1" />
-                  Abierta
+            <div className="flex justify-between border-t pt-1">
+              <span className="font-medium">Total Neto:</span>
+              <span className="font-bold text-primary-600">${shiftStats.netAmount.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
-            {/* Selección de Productos con Buscador */}
-            <div className="card">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Agregar Producto</h3>
               <div className="space-y-4">
-                <div className="form-group relative">
-                  <label className="form-label">Buscar Producto</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Monto en Caja:</label>
                   <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                     <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => handleProductSearch(e.target.value)}
-                      placeholder="Buscar productos..."
-                      className="form-input pr-10"
-                      onFocus={() => setShowProductDropdown(true)}
-                    />
-                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                type="number"
+                value={closingAmount}
+                onChange={(e) => setClosingAmount(parseFloat(e.target.value) || 0)}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="Contar dinero en caja"
+              />
+            </div>
                   </div>
                   
-                  {/* Dropdown de productos */}
-                  {showProductDropdown && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto">
-                      {filteredProducts.length > 0 ? (
-                        filteredProducts.map(product => (
-                          <button
-                            key={product.id}
-                            onClick={() => selectProductFromDropdown(product)}
-                            className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between"
-                          >
                             <div>
-                              <p className="font-medium text-gray-900">{product.name}</p>
-                              <p className="text-sm text-gray-600">{product.category}</p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones:</label>
+            <textarea
+              value={closingNotes}
+              onChange={(e) => setClosingNotes(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows="2"
+              placeholder="Notas del cierre..."
+            />
                             </div>
-                            <div className="text-right">
-                              <p className="font-bold text-primary-600">${(Number(product.price) || 0).toLocaleString()}</p>
-                              <p className="text-xs text-gray-500">Stock: {product.stock}</p>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-gray-500 text-center">
-                          No se encontraron productos
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Cantidad</label>
-                  <div className="flex items-center space-x-2">
+        <div className="flex space-x-3 mt-6">
                     <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+            onClick={() => setShowCloseShiftModal(false)}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
                     >
-                      <Minus className="h-4 w-4" />
+            Cancelar
                     </button>
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="form-input text-center"
-                      min="1"
-                    />
                     <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+            onClick={closeShift}
+            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
                     >
-                      <Plus className="h-4 w-4" />
+            Cerrar Turno
                     </button>
                   </div>
                 </div>
-
-                <button
-                  onClick={addToCart}
-                  className="btn btn-primary w-full"
-                  disabled={!selectedProduct}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar al Carrito
-                </button>
               </div>
-            </div>
+  );
 
-            {/* Acciones Rápidas */}
-            <div className="card">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones Rápidas</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {quickActions.map(product => (
-                  <button
-                    key={product.id}
-                    onClick={() => addQuickAction(product)}
-                    className="p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-200 text-left"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span className="text-2xl">{product.icon}</span>
+  // Modal para registrar gasto
+  const ExpenseModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <Minus className="h-6 w-6 mr-2 text-red-600" />
+          Registrar Gasto
+        </h3>
+
+        <div className="space-y-4">
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">{product.name}</p>
-                        <p className="text-primary-600 font-bold">${(Number(product.price) || 0).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Monto:</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={expenseAmount}
+                onChange={(e) => setExpenseAmount(parseFloat(e.target.value) || 0)}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="0"
+              />
             </div>
           </div>
 
-          {/* Panel de Carrito y Pago */}
-          <div className="space-y-6">
-            {/* Carrito */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Carrito</h3>
-                <div className="flex items-center space-x-2">
-                  <ShoppingCart className="h-5 w-5 text-primary-600" />
-                  <span className="text-sm font-medium text-gray-600">{cartItems} items</span>
-                </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Descripción:</label>
+            <input
+              type="text"
+              value={expenseDescription}
+              onChange={(e) => setExpenseDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              placeholder="¿En qué se gastó?"
+            />
               </div>
 
-              {cart.length === 0 ? (
-                <div className="text-center py-8">
-                  <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">El carrito está vacío</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {cart.map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                          <span className="text-sm font-bold text-primary-600">{item.category?.charAt(0).toUpperCase()}</span>
-                        </div>
                         <div>
-                          <p className="font-medium text-gray-900">{item.name}</p>
-                          <p className="text-sm text-gray-600">${(Number(item.price) || 0).toLocaleString()} c/u</p>
-                        </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Categoría:</label>
+            <select
+              value={expenseCategory}
+              onChange={(e) => setExpenseCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="operativo">Operativo</option>
+              <option value="mantenimiento">Mantenimiento</option>
+              <option value="suministros">Suministros</option>
+              <option value="servicios">Servicios</option>
+              <option value="otro">Otro</option>
+            </select>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="p-1 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="font-medium text-gray-900 min-w-[2rem] text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="p-1 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          className="p-1 rounded-lg bg-red-100 hover:bg-red-200 transition-colors text-red-600"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Método de Pago */}
-            <div className="card">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Método de Pago</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+        <div className="flex space-x-3 mt-6">
                   <button
-                    onClick={() => setPaymentMethod('cash')}
-                    className={`payment-method-card ${paymentMethod === 'cash' ? 'selected' : ''}`}
+            onClick={() => setShowExpenseModal(false)}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
                   >
-                    <DollarSign className="h-6 w-6" />
-                    <span>Efectivo</span>
+            Cancelar
                   </button>
                   <button
-                    onClick={() => setPaymentMethod('card')}
-                    className={`payment-method-card ${paymentMethod === 'card' ? 'selected' : ''}`}
-                  >
-                    <CreditCard className="h-6 w-6" />
-                    <span>Tarjeta Crédito</span>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('transfer')}
-                    className={`payment-method-card ${paymentMethod === 'transfer' ? 'selected' : ''}`}
-                  >
-                    <Banknote className="h-6 w-6" />
-                    <span>Transferencia</span>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('debit')}
-                    className={`payment-method-card ${paymentMethod === 'debit' ? 'selected' : ''}`}
-                  >
-                    <Smartphone className="h-6 w-6" />
-                    <span>Débito</span>
+            onClick={registerExpense}
+            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
+          >
+            Registrar Gasto
                   </button>
                 </div>
-
-                {paymentMethod === 'cash' && (
-                  <div className="form-group">
-                    <label className="form-label">Monto Recibido</label>
-                    <input
-                      type="number"
-                      value={cashAmount}
-                      onChange={(e) => setCashAmount(parseFloat(e.target.value) || 0)}
-                      className="form-input"
-                      placeholder="0"
-                    />
-                    {change > 0 && (
-                      <p className="text-sm text-green-600 mt-1">Cambio: ${(Number(change) || 0).toLocaleString()}</p>
-                    )}
                   </div>
-                )}
+    </div>
+  );
 
-                {paymentMethod !== 'cash' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-800">
-                      <strong>Método:</strong> {
-                        paymentMethod === 'card' ? 'Tarjeta de Crédito' :
-                        paymentMethod === 'transfer' ? 'Transferencia' :
-                        paymentMethod === 'debit' ? 'Débito' : 'Otro'
-                      }
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      El monto se registrará en la caja correspondiente
-                    </p>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando caja registradora...</p>
                   </div>
-                )}
               </div>
-            </div>
+    );
+  }
 
-            {/* Total y Completar Venta */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Total</h3>
-                <p className="text-2xl font-bold text-primary-600">${(Number(cartTotal) || 0).toLocaleString()}</p>
+  return (
+    <CashRegisterAccessGuard>
+      <div className="p-4 lg:p-6 w-full max-w-7xl mx-auto">
+        {/* Header con información del usuario y estado */}
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Caja Registradora</h1>
+              <div className="flex items-center text-sm text-gray-600">
+                <User className="h-4 w-4 mr-2" />
+                <span className="font-medium">{currentUser?.name}</span>
+                <span className="mx-2">•</span>
+                <Shield className="h-3 w-3 mr-1" />
+                <span>{userRole?.displayName}</span>
+                <span className="mx-2">•</span>
+                <Calendar className="h-3 w-3 mr-1" />
+                <span>{new Date().toLocaleDateString('es-ES')}</span>
               </div>
-              
+                  </div>
+
+            <div className="mt-4 lg:mt-0 flex items-center space-x-4">
+              {/* Toggle para mostrar/ocultar montos */}
               <button
-                onClick={completeSale}
-                disabled={cart.length === 0 || isProcessingSale}
-                className="btn btn-primary w-full"
+                onClick={() => setShowAmounts(!showAmounts)}
+                className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                {isProcessingSale ? (
-                  <div className="flex items-center">
-                    <div className="loading-spinner mr-2"></div>
-                    Procesando...
-                  </div>
-                ) : (
-                  <>
-                    <Receipt className="h-4 w-4 mr-2" />
-                    Completar Venta
-                  </>
-                )}
+                {showAmounts ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="text-sm">{showAmounts ? 'Ocultar' : 'Mostrar'} Montos</span>
               </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Historial de Ventas */}
-      {showSalesHistory && (
-        <div className="mt-6">
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Historial de Ventas</h3>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="btn btn-secondary"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filtros
-              </button>
-            </div>
-
-            {showFilters && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-2xl">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                  <div>
-                    <label className="form-label">Período</label>
-                    <select
-                      value={periodFilter}
-                      onChange={(e) => setPeriodFilter(e.target.value)}
-                      className="form-select"
-                    >
-                      <option value="today">Hoy</option>
-                      <option value="week">Esta Semana</option>
-                      <option value="month">Este Mes</option>
-                      <option value="quarter">Este Trimestre</option>
-                      <option value="custom">Personalizado</option>
-                    </select>
+              {/* Estado del turno */}
+              {currentShift ? (
+                <div className="flex items-center space-x-2">
+                  <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Turno Activo
                   </div>
-                  {periodFilter === 'custom' && (
-                    <div>
-                      <label className="form-label">Fecha</label>
-                      <input
-                        type="date"
-                        value={customDate}
-                        onChange={(e) => setCustomDate(e.target.value)}
-                        className="form-input"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="mb-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  {getPeriodName(periodFilter)} - {filteredSales.length} ventas
-                </p>
-                <p className="text-lg font-bold text-primary-600">
-                  Total: ${periodTotal.toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {filteredSales.length === 0 ? (
-                <div className="text-center py-8">
-                  <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No hay ventas en este período</p>
+                  <span className="text-sm text-gray-500">
+                    desde {currentShift.startTime?.toDate?.()?.toLocaleTimeString() || 'N/A'}
+                  </span>
                 </div>
               ) : (
-                filteredSales.map(sale => (
-                  <div key={sale.id} className="history-item">
-                    <div className="history-header">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          Venta #{sale.id}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(sale.date || Date.now()).toLocaleString()}
-                        </p>
+                <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Sin Turno Activo
                       </div>
-                      <div className="text-right">
-                        <p className="history-amount">${(Number(sale.total) || 0).toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">
-                          {sale.paymentMethod === 'cash' ? 'Efectivo' : 
-                           sale.paymentMethod === 'card' ? 'Tarjeta Crédito' :
-                           sale.paymentMethod === 'transfer' ? 'Transferencia' :
-                           sale.paymentMethod === 'debit' ? 'Débito' : 'Otro'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
               )}
             </div>
           </div>
         </div>
-      )}
 
-      {/* Overlay de Procesamiento */}
-      {isProcessingSale && (
-        <div className="processing-overlay">
-          <div className="processing-content">
-            <div className="processing-spinner"></div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Procesando Venta</h3>
-            <p className="text-gray-600">Por favor espera...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Reporte Diario */}
-      {showDailyReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Reporte Diario</h3>
+        {!currentShift ? (
+          /* Sin turno activo - Mostrar opciones para abrir */
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
+            <AlertTriangle className="h-16 w-16 text-orange-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">No hay turno activo</h2>
+            <p className="text-gray-600 mb-6">Para comenzar a operar la caja debe abrir un turno</p>
+            
               <button
-                onClick={() => setShowDailyReport(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
+              onClick={() => {
+                if (!canOpenShift) {
+                  toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
+                  return;
+                }
+                setShowOpenShiftModal(true);
+              }}
+              disabled={!canOpenShift}
+              className={`px-6 py-3 rounded-lg font-medium flex items-center mx-auto ${
+                canOpenShift 
+                  ? 'bg-primary-600 text-white hover:bg-primary-700' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <LogIn className="h-5 w-5 mr-2" />
+              {canOpenShift ? 'Abrir Turno' : 'Sin Permisos para Abrir Turno'}
               </button>
             </div>
-            
-            <div className="space-y-6">
-              {/* Resumen General */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-blue-900 mb-3">Resumen del Día</h4>
-                <div className="grid grid-cols-2 gap-4">
+        ) : (
+          /* Con turno activo - Dashboard de caja */
+          <>
+            {/* Estadísticas principales */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-blue-700">Total de Ventas</p>
-                    <p className="text-2xl font-bold text-blue-900">${(Number(dailyReport.totalSales) || 0).toLocaleString()}</p>
+                    <p className="text-sm font-medium text-gray-600">Ventas del Turno</p>
+                    <p className="text-2xl font-bold text-gray-900">{shiftStats.salesCount}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-blue-700">Total de Transacciones</p>
-                    <p className="text-2xl font-bold text-blue-900">{dailyReport.totalTransactions}</p>
-                  </div>
+                  <Receipt className="h-8 w-8 text-primary-600" />
                 </div>
               </div>
 
-              {/* Desglose por Método de Pago */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900">Desglose por Método de Pago</h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Efectivo */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="h-5 w-5 text-green-600" />
-                        <span className="font-semibold text-green-900">Efectivo</span>
-                      </div>
-                      <span className="text-sm text-green-600">{dailyReport.cashTransactions} trans.</span>
-                    </div>
-                    <p className="text-2xl font-bold text-green-900">${(Number(dailyReport.cashTotal) || 0).toLocaleString()}</p>
-                    <p className="text-xs text-green-600 mt-1">Para arqueo de caja</p>
-                  </div>
-
-                  {/* Tarjeta de Crédito */}
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <CreditCard className="h-5 w-5 text-purple-600" />
-                        <span className="font-semibold text-purple-900">Tarjeta Crédito</span>
-                      </div>
-                      <span className="text-sm text-purple-600">{dailyReport.cardTransactions} trans.</span>
-                    </div>
-                    <p className="text-2xl font-bold text-purple-900">${(Number(dailyReport.cardTotal) || 0).toLocaleString()}</p>
-                  </div>
-
-                  {/* Transferencia */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Banknote className="h-5 w-5 text-blue-600" />
-                        <span className="font-semibold text-blue-900">Transferencia</span>
-                      </div>
-                      <span className="text-sm text-blue-600">{dailyReport.transferTransactions} trans.</span>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-900">${(Number(dailyReport.transferTotal) || 0).toLocaleString()}</p>
-                  </div>
-
-                  {/* Débito */}
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Smartphone className="h-5 w-5 text-orange-600" />
-                        <span className="font-semibold text-orange-900">Débito</span>
-                      </div>
-                      <span className="text-sm text-orange-600">{dailyReport.debitTransactions} trans.</span>
-                    </div>
-                    <p className="text-2xl font-bold text-orange-900">${(Number(dailyReport.debitTotal) || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Arqueo de Caja */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-yellow-900 mb-3">Arqueo de Caja</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-yellow-700">Total en Efectivo:</span>
-                    <span className="font-bold text-yellow-900">${(Number(dailyReport.cashTotal) || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-yellow-700">Transacciones en Efectivo:</span>
-                    <span className="font-bold text-yellow-900">{dailyReport.cashTransactions}</span>
-                  </div>
-                  <div className="border-t border-yellow-200 pt-2 mt-2">
-                    <p className="text-sm text-yellow-600">
-                      <strong>Importante:</strong> Este es el monto que debe estar físicamente en la caja al final del día.
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Ingresos</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {showAmounts ? `$${shiftStats.totalRevenue.toLocaleString()}` : '••••••'}
                     </p>
+                      </div>
+                  <TrendingUp className="h-8 w-8 text-green-600" />
+                    </div>
                   </div>
+
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Gastos</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {showAmounts ? `$${shiftStats.totalExpenses.toLocaleString()}` : '••••••'}
+                    </p>
+                      </div>
+                  <TrendingDown className="h-8 w-8 text-red-600" />
+                    </div>
+                  </div>
+
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Neto</p>
+                    <p className={`text-2xl font-bold ${shiftStats.netAmount >= 0 ? 'text-primary-600' : 'text-red-600'}`}>
+                      {showAmounts ? `$${shiftStats.netAmount.toLocaleString()}` : '••••••'}
+                    </p>
+                      </div>
+                  <DollarSign className="h-8 w-8 text-primary-600" />
+                    </div>
                 </div>
               </div>
 
-              {/* Botones de Acción */}
-              <div className="flex space-x-3 pt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Panel de acciones */}
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Calculator className="h-5 w-5 mr-2" />
+                  Acciones de Caja
+                </h3>
+
+                <div className="space-y-3">
                 <button
-                  onClick={() => setShowDailyReport(false)}
-                  className="flex-1 btn btn-secondary"
+                    onClick={() => setShowExpenseModal(true)}
+                    className="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
                 >
-                  Cerrar
+                    <Minus className="h-4 w-4 mr-2" />
+                    Registrar Gasto
                 </button>
+
                 <button
                   onClick={() => {
-                    // Aquí se podría implementar la impresión del reporte
-                    toast.success('Reporte guardado');
-                    setShowDailyReport(false);
-                  }}
-                  className="flex-1 btn btn-primary"
-                >
-                  Guardar Reporte
+                      if (!canCloseShift) {
+                        toast.error(`Su rol de ${userRole?.displayName} no puede cerrar turnos`);
+                        return;
+                      }
+                      setShowCloseShiftModal(true);
+                    }}
+                    disabled={!canCloseShift}
+                    className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center ${
+                      canCloseShift
+                        ? 'bg-orange-600 text-white hover:bg-orange-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {canCloseShift ? 'Cerrar Turno' : 'Sin Permisos'}
                 </button>
               </div>
+
+                {/* Información del turno */}
+                <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Información del Turno</h4>
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <p><strong>Tipo:</strong> {currentShift.type === 'morning' ? 'Mañana' : currentShift.type === 'afternoon' ? 'Tarde' : 'Noche'}</p>
+                    <p><strong>Inicio:</strong> {currentShift.startTime?.toDate?.()?.toLocaleString() || 'N/A'}</p>
+                    <p><strong>Apertura:</strong> {showAmounts ? `$${(currentShift.openingAmount || 0).toLocaleString()}` : '••••••'}</p>
+                    {currentShift.notes && <p><strong>Notas:</strong> {currentShift.notes}</p>}
             </div>
           </div>
         </div>
-      )}
 
-      {/* Modal de Fecha para Turno Mañana */}
-      {showDateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Fecha para el Turno Mañana</h3>
-              <button
-                onClick={() => setShowDateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              {/* Actividad reciente */}
+              <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2" />
+                  Actividad Reciente del Turno
+                </h3>
+
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Clock className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                    <p>No hay actividad registrada en este turno</p>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Por favor, selecciona la fecha para el turno mañana.
-            </p>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="form-input mb-4"
-            />
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setShowDateModal(false)}
-                className="btn btn-secondary"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDateSubmit}
-                className="btn btn-primary"
-              >
-                Aceptar
-              </button>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {recentActivity.map(activity => (
+                      <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center">
+                          {activity.type === 'sale' ? (
+                            <TrendingUp className="h-4 w-4 text-green-600 mr-3" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-red-600 mr-3" />
+                          )}
+                          <div>
+                            <p className="font-medium text-gray-900">{activity.description}</p>
+                            <p className="text-xs text-gray-500">
+                              {activity.employeeName} • {new Date(activity.timestamp).toLocaleTimeString()}
+                            </p>
             </div>
           </div>
+                        <span className={`font-bold ${activity.type === 'sale' ? 'text-green-600' : 'text-red-600'}`}>
+                          {activity.type === 'sale' ? '+' : '-'}
+                          {showAmounts ? `$${activity.amount?.toLocaleString()}` : '••••'}
+                        </span>
+                      </div>
+                    ))}
         </div>
       )}
     </div>
+            </div>
+          </>
+        )}
+
+        {/* Modales */}
+        {showOpenShiftModal && <OpenShiftModal />}
+        {showCloseShiftModal && <CloseShiftModal />}
+        {showExpenseModal && <ExpenseModal />}
+      </div>
+    </CashRegisterAccessGuard>
   );
 };
 

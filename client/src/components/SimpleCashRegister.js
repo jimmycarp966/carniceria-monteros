@@ -9,14 +9,26 @@ import {
   Check,
   X,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  User,
+  Shield
 } from 'lucide-react';
 import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
 import { productService, shiftService } from '../services/firebaseService';
 import ShiftManagement from './ShiftManagement';
+import CashRegisterAccessGuard from './CashRegisterAccessGuard';
+import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
 
 const SimpleCashRegister = () => {
+  // Hook de control de acceso
+  const { 
+    currentUser, 
+    userRole, 
+    canOpenShift, 
+    canCloseShift 
+  } = useCashRegisterAccess();
+
   // Estados principales de la venta actual
   const [currentSale, setCurrentSale] = useState({
     products: [],
@@ -266,7 +278,18 @@ const SimpleCashRegister = () => {
         shiftId: currentShift.id,
         customerId: selectedCustomer?.id,
         timestamp: new Date(),
-        employeeId: 'current-user' // TODO: obtener del contexto de auth
+        // Información del empleado que procesa la venta
+        employeeId: currentUser?.employeeId || currentUser?.id,
+        employeeName: currentUser?.name,
+        employeeEmail: currentUser?.email,
+        employeeRole: currentUser?.role,
+        processedBy: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: currentUser?.role,
+          position: currentUser?.position
+        }
       };
 
       // Sincronizar venta
@@ -455,15 +478,31 @@ const SimpleCashRegister = () => {
   };
 
   return (
-    <div className="p-4 lg:p-6 w-full max-w-7xl mx-auto">
+    <CashRegisterAccessGuard>
+      <div className="p-4 lg:p-6 w-full max-w-7xl mx-auto">
       {/* Header */}
       <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Caja Registradora</h1>
             <p className="text-gray-600">Sistema de ventas directo</p>
+            
+            {/* Información del usuario logueado */}
+            {currentUser && (
+              <div className="flex items-center mt-2 text-sm text-gray-500">
+                <User className="h-4 w-4 mr-2" />
+                <span className="font-medium">{currentUser.name}</span>
+                <span className="mx-2">•</span>
+                <span className="flex items-center">
+                  <Shield className="h-3 w-3 mr-1" />
+                  {userRole?.displayName}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="mt-4 sm:mt-0 flex space-x-2">
+          
+          <div className="mt-4 sm:mt-0 flex flex-col space-y-2">
+            {/* Estado del turno */}
             {currentShift ? (
               <div className="flex items-center space-x-2">
                 <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -476,12 +515,31 @@ const SimpleCashRegister = () => {
               </div>
             ) : (
               <button
-                onClick={() => setShowShiftManagement(true)}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
+                onClick={() => {
+                  if (!canOpenShift) {
+                    toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
+                    return;
+                  }
+                  setShowShiftManagement(true);
+                }}
+                disabled={!canOpenShift}
+                className={`px-4 py-2 rounded-lg flex items-center ${
+                  canOpenShift 
+                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <AlertTriangle className="h-4 w-4 mr-2" />
-                Abrir Turno
+                {canOpenShift ? 'Abrir Turno' : 'Sin Permisos'}
               </button>
+            )}
+            
+            {/* Información adicional del turno */}
+            {currentShift && (
+              <div className="text-xs text-gray-500 text-right">
+                <p>Turno: {currentShift.employeeName || currentUser?.name}</p>
+                <p>Desde: {currentShift.startTime?.toDate?.()?.toLocaleTimeString() || 'N/A'}</p>
+              </div>
             )}
           </div>
         </div>
@@ -757,7 +815,8 @@ const SimpleCashRegister = () => {
           onShiftUpdate={loadCurrentShift}
         />
       )}
-    </div>
+      </div>
+    </CashRegisterAccessGuard>
   );
 };
 
