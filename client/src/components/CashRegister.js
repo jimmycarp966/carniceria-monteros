@@ -69,34 +69,76 @@ const CashRegister = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
-    loadCashRegisterData();
-    setupRealtimeListeners();
+    const initCashRegister = async () => {
+      try {
+        setIsLoading(true);
 
-    return () => {
-      cleanup();
-    };
-  }, []);
-
-  const loadCashRegisterData = async () => {
-    try {
-      setIsLoading(true);
-
-      // Buscar turno activo
-      const shifts = await shiftService.getAllShifts();
-      const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
-      
+        // Buscar turno activo
+        const shifts = await shiftService.getAllShifts();
+        const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+        
         if (activeShift) {
           setCurrentShift(activeShift);
-        await loadShiftData(activeShift);
+          await loadShiftData(activeShift);
         }
 
       } catch (error) {
-      console.error('Error cargando datos de caja:', error);
-      toast.error('Error cargando datos de la caja');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        console.error('Error cargando datos de caja:', error);
+        toast.error('Error cargando datos de la caja');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const setupListeners = () => {
+      // Escuchar cambios en ventas
+      realtimeService.on('sales_updated', (data) => {
+        if (currentShift && data.sales) {
+          loadShiftData(currentShift);
+        }
+      });
+
+      // Escuchar nuevas ventas
+      realtimeService.on('sale_synced', (data) => {
+        if (currentShift) {
+          loadShiftData(currentShift);
+          toast.success('Nueva venta registrada en la caja');
+        }
+      });
+
+      // Escuchar cambios en turnos
+      realtimeService.on('shifts_updated', (data) => {
+        if (data.shifts) {
+          const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
+          if (activeShift) {
+            setCurrentShift(activeShift);
+            loadShiftData(activeShift);
+          } else {
+            setCurrentShift(null);
+            setShiftStats({
+              totalSales: 0,
+              totalRevenue: 0,
+              totalExpenses: 0,
+              salesCount: 0,
+              netAmount: 0
+            });
+            setRecentActivity([]);
+          }
+        }
+      });
+    };
+
+    initCashRegister();
+    setupListeners();
+
+    return () => {
+      realtimeService.off('sales_updated');
+      realtimeService.off('sale_synced');
+      realtimeService.off('shifts_updated');
+    };
+  }, [currentShift]);
+
+  
 
   const loadShiftData = async (shift) => {
     try {
@@ -150,49 +192,7 @@ const CashRegister = () => {
     }
   };
 
-  const setupRealtimeListeners = () => {
-    // Escuchar cambios en ventas
-    realtimeService.on('sales_updated', (data) => {
-      if (currentShift && data.sales) {
-        loadShiftData(currentShift);
-      }
-    });
 
-    // Escuchar nuevas ventas
-    realtimeService.on('sale_synced', (data) => {
-      if (currentShift) {
-        loadShiftData(currentShift);
-        toast.success('Nueva venta registrada en la caja');
-      }
-    });
-
-    // Escuchar cambios en turnos
-    realtimeService.on('shifts_updated', (data) => {
-      if (data.shifts) {
-        const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
-        if (activeShift) {
-          setCurrentShift(activeShift);
-          loadShiftData(activeShift);
-        } else {
-          setCurrentShift(null);
-          setShiftStats({
-            totalSales: 0,
-            totalRevenue: 0,
-            totalExpenses: 0,
-            salesCount: 0,
-            netAmount: 0
-          });
-          setRecentActivity([]);
-        }
-      }
-    });
-  };
-
-  const cleanup = () => {
-    realtimeService.off('sales_updated');
-    realtimeService.off('sale_synced');
-    realtimeService.off('shifts_updated');
-  };
 
   // Abrir turno
   const openShift = async () => {
