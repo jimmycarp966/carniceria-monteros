@@ -28,6 +28,7 @@ const Ventas = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Hook de acceso
   const { currentUser, userRole } = useCashRegisterAccess();
@@ -159,10 +160,11 @@ const Ventas = () => {
       
       toast.success(`Venta registrada exitosamente - ID: ${saleId}`);
       
-      // Limpiar formulario
-      setSelectedProduct(null);
-      setQuantity(1);
-      setSearchTerm('');
+             // Limpiar formulario
+       setSelectedProduct(null);
+       setQuantity(1);
+       setSearchTerm('');
+       setShowDropdown(false);
       
       // Recargar productos para actualizar stock
       loadInitialData();
@@ -236,17 +238,49 @@ const Ventas = () => {
                 Producto
               </label>
               
-              {/* Búsqueda de productos */}
-              <div className="relative mb-4">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar productos..."
-                  className="w-full pl-12 pr-4 py-4 bg-white/80 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
+                             {/* Búsqueda de productos */}
+               <div className="relative mb-4">
+                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                 <input
+                   type="text"
+                   value={searchTerm}
+                   onChange={(e) => {
+                     setSearchTerm(e.target.value);
+                     setShowDropdown(e.target.value.length > 0);
+                   }}
+                   onFocus={() => setShowDropdown(searchTerm.length > 0)}
+                   onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                   placeholder="Buscar productos..."
+                   className="w-full pl-12 pr-4 py-4 bg-white/80 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                 />
+                 
+                 {/* Lista desplegable de productos */}
+                 {showDropdown && filteredProducts.length > 0 && (
+                   <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto">
+                     {filteredProducts.map(product => (
+                       <div
+                         key={product.id}
+                         onClick={() => {
+                           setSelectedProduct(product);
+                           setSearchTerm(product.name);
+                           setShowDropdown(false);
+                         }}
+                         className="p-4 hover:bg-orange-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                       >
+                         <div className="flex items-center justify-between">
+                           <div className="flex-1">
+                             <h4 className="font-medium text-gray-900">{product.name}</h4>
+                             <p className="text-sm text-gray-600">
+                               Stock: {product.stock} {product.unit || 'kg'} • ${product.price?.toLocaleString()}
+                             </p>
+                           </div>
+                           <Package className="h-4 w-4 text-gray-400 ml-2" />
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
 
               {/* Lista de productos */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-64 overflow-y-auto">
