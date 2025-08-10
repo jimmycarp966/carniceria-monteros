@@ -307,3 +307,5 @@ Requisitos:
   El proyecto de Firebase usado es el definido en `.firebaserc` (`carniceria-monteros`).
 
 >>>>>>> Incoming (Background Agent changes)
+
+
