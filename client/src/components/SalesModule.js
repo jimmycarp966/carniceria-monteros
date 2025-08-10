@@ -86,8 +86,8 @@ const SalesModule = () => {
     try {
       setIsLoading(true);
       
-      // Cargar productos
-      const productsData = await productService.getAllProducts();
+      // Cargar productos (sin paginación para el POS)
+      const productsData = await productService.getAllProducts(1, 1000); // Cargar hasta 1000 productos
       setProducts(productsData.filter(p => p.status === 'active' && p.stock > 0));
       
       // Cargar clientes
