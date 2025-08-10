@@ -8,6 +8,7 @@ import {
   Receipt,
   User,
   Shield,
+  Plus,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -16,12 +17,11 @@ import {
   Eye,
   EyeOff,
 
-  Minus,
   LogOut,
   LogIn
 } from 'lucide-react';
 import { realtimeService } from '../services/realtimeService';
-import { shiftService, saleService, expensesService } from '../services/firebaseService';
+import { shiftService, saleService } from '../services/firebaseService';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
@@ -40,7 +40,7 @@ const CashRegister = () => {
   const [shiftStats, setShiftStats] = useState({
     totalSales: 0,
     totalRevenue: 0,
-    totalExpenses: 0,
+    totalAdditionalIncomes: 0,
     salesCount: 0,
     netAmount: 0
   });
@@ -50,7 +50,7 @@ const CashRegister = () => {
   // Estados para operaciones
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showAmounts, setShowAmounts] = useState(true);
 
   // Estados para abrir turno
@@ -62,10 +62,10 @@ const CashRegister = () => {
   const [closingAmount, setClosingAmount] = useState(0);
   const [closingNotes, setClosingNotes] = useState('');
 
-  // Estados para gastos
-  const [expenseAmount, setExpenseAmount] = useState(0);
-  const [expenseDescription, setExpenseDescription] = useState('');
-  const [expenseCategory, setExpenseCategory] = useState('operativo');
+  // Estados para ingresos
+  const [incomeAmount, setIncomeAmount] = useState(0);
+  const [incomeDescription, setIncomeDescription] = useState('');
+  const [incomeCategory, setIncomeCategory] = useState('venta_adicional');
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -118,7 +118,7 @@ const CashRegister = () => {
             setShiftStats({
               totalSales: 0,
               totalRevenue: 0,
-              totalExpenses: 0,
+              totalAdditionalIncomes: 0,
               salesCount: 0,
               netAmount: 0
             });
@@ -146,23 +146,20 @@ const CashRegister = () => {
       const allSales = await saleService.getAllSales();
       const shiftSales = allSales.filter(sale => sale.shiftId === shift.id);
       
-      // Cargar gastos del turno
-      const allExpenses = await expensesService.getAllExpenses();
-      const shiftExpenses = allExpenses.filter(expense => 
-        expense.shiftId === shift.id || 
-        (expense.date === shift.date && !expense.shiftId)
-      );
-
+      // Cargar ingresos adicionales del turno (diferentes a las ventas)
+      // Por ahora simulamos ingresos hasta que tengamos el servicio implementado
+      const shiftIncomes = []; // TODO: Implementar incomeService
+      
       // Calcular estadísticas
       const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-      const totalExpenses = shiftExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      const totalAdditionalIncomes = shiftIncomes.reduce((sum, income) => sum + (income.amount || 0), 0);
       
       setShiftStats({
         totalSales: shiftSales.length,
         totalRevenue,
-        totalExpenses,
+        totalAdditionalIncomes,
         salesCount: shiftSales.length,
-        netAmount: totalRevenue - totalExpenses
+        netAmount: totalRevenue + totalAdditionalIncomes
       });
 
       // Cargar actividad reciente
@@ -175,13 +172,13 @@ const CashRegister = () => {
           timestamp: sale.createdAt || sale.timestamp,
           employeeName: sale.employeeName || sale.processedBy?.name
         })),
-        ...shiftExpenses.map(expense => ({
-          id: expense.id,
-          type: 'expense',
-          amount: expense.amount,
-          description: expense.description || expense.concept,
-          timestamp: expense.createdAt || expense.date,
-          employeeName: expense.employeeName || expense.createdBy?.name
+        ...shiftIncomes.map(income => ({
+          id: income.id,
+          type: 'income',
+          amount: income.amount,
+          description: income.description || income.concept,
+          timestamp: income.createdAt || income.date,
+          employeeName: income.employeeName || income.createdBy?.name
         }))
       ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
 
@@ -284,28 +281,29 @@ const CashRegister = () => {
     }
   };
 
-  // Registrar gasto
-  const registerExpense = async () => {
+  // Registrar ingreso adicional
+  const registerIncome = async () => {
     if (!currentShift) {
-      toast.error('Debe haber un turno activo para registrar gastos');
+      toast.error('Debe haber un turno activo para registrar ingresos');
       return;
     }
     
-    if (!expenseAmount || expenseAmount <= 0) {
+    if (!incomeAmount || incomeAmount <= 0) {
       toast.error('Ingrese un monto válido');
       return;
     }
 
-    if (!expenseDescription.trim()) {
-      toast.error('Ingrese una descripción del gasto');
+    if (!incomeDescription.trim()) {
+      toast.error('Ingrese una descripción del ingreso');
       return;
     }
 
     try {
-      const expenseData = {
-        amount: parseFloat(expenseAmount),
-        description: expenseDescription.trim(),
-        category: expenseCategory,
+      // Por ahora simulamos el registro hasta implementar incomeService
+      const incomeData = {
+        amount: parseFloat(incomeAmount),
+        description: incomeDescription.trim(),
+        category: incomeCategory,
         date: new Date().toISOString().split('T')[0],
         timestamp: new Date(),
         shiftId: currentShift.id,
@@ -319,21 +317,22 @@ const CashRegister = () => {
         }
       };
 
-      await expensesService.addExpense(expenseData);
+      // TODO: Implementar incomeService.addIncome(incomeData);
+      console.log('Ingreso registrado:', incomeData);
       
-      setShowExpenseModal(false);
-      setExpenseAmount(0);
-      setExpenseDescription('');
-      setExpenseCategory('operativo');
+      setShowIncomeModal(false);
+      setIncomeAmount(0);
+      setIncomeDescription('');
+      setIncomeCategory('venta_adicional');
       
       // Recargar datos del turno
       loadShiftData(currentShift);
       
-      toast.success('Gasto registrado exitosamente');
+      toast.success('Ingreso registrado exitosamente');
       
-        } catch (error) {
-      console.error('Error registrando gasto:', error);
-      toast.error('Error al registrar el gasto');
+    } catch (error) {
+      console.error('Error registrando ingreso:', error);
+      toast.error('Error al registrar el ingreso');
     }
   };
 
@@ -436,8 +435,8 @@ const CashRegister = () => {
               <span className="font-medium text-green-600">${shiftStats.totalRevenue.toLocaleString()}</span>
                 </div>
             <div className="flex justify-between">
-              <span>Gastos:</span>
-              <span className="font-medium text-red-600">${shiftStats.totalExpenses.toLocaleString()}</span>
+              <span>Ingresos Adicionales:</span>
+              <span className="font-medium text-green-600">${shiftStats.totalAdditionalIncomes.toLocaleString()}</span>
               </div>
             <div className="flex justify-between border-t pt-1">
               <span className="font-medium">Total Neto:</span>
@@ -491,24 +490,24 @@ const CashRegister = () => {
               </div>
   );
 
-  // Modal para registrar gasto
-  const ExpenseModal = () => (
+  // Modal para registrar ingreso adicional
+  const IncomeModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <Minus className="h-6 w-6 mr-2 text-red-600" />
-          Registrar Gasto
+          <Plus className="h-6 w-6 mr-2 text-green-600" />
+          Registrar Ingreso Adicional
         </h3>
 
         <div className="space-y-4">
-                      <div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Monto:</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
               <input
                 type="number"
-                value={expenseAmount}
-                onChange={(e) => setExpenseAmount(parseFloat(e.target.value) || 0)}
+                value={incomeAmount}
+                onChange={(e) => setIncomeAmount(parseFloat(e.target.value) || 0)}
                 className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 placeholder="0"
               />
@@ -519,43 +518,43 @@ const CashRegister = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Descripción:</label>
             <input
               type="text"
-              value={expenseDescription}
-              onChange={(e) => setExpenseDescription(e.target.value)}
+              value={incomeDescription}
+              onChange={(e) => setIncomeDescription(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="¿En qué se gastó?"
+              placeholder="¿De dónde proviene este ingreso?"
             />
-              </div>
+          </div>
 
-                        <div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Categoría:</label>
             <select
-              value={expenseCategory}
-              onChange={(e) => setExpenseCategory(e.target.value)}
+              value={incomeCategory}
+              onChange={(e) => setIncomeCategory(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             >
-              <option value="operativo">Operativo</option>
-              <option value="mantenimiento">Mantenimiento</option>
-              <option value="suministros">Suministros</option>
-              <option value="servicios">Servicios</option>
+              <option value="venta_adicional">Venta Adicional</option>
+              <option value="servicio_extra">Servicio Extra</option>
+              <option value="propina">Propina</option>
+              <option value="reintegro">Reintegro</option>
               <option value="otro">Otro</option>
             </select>
-                      </div>
-            </div>
+          </div>
+        </div>
 
         <div className="flex space-x-3 mt-6">
-                  <button
-            onClick={() => setShowExpenseModal(false)}
+          <button
+            onClick={() => setShowIncomeModal(false)}
             className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-                  >
-            Cancelar
-                  </button>
-                  <button
-            onClick={registerExpense}
-            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
           >
-            Registrar Gasto
-                  </button>
-                </div>
+            Cancelar
+          </button>
+          <button
+            onClick={registerIncome}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Registrar Ingreso
+          </button>
+        </div>
                   </div>
     </div>
   );
@@ -678,12 +677,12 @@ const CashRegister = () => {
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Gastos</p>
-                    <p className="text-2xl font-bold text-red-600">
-                      {showAmounts ? `$${shiftStats.totalExpenses.toLocaleString()}` : '••••••'}
+                    <p className="text-sm font-medium text-gray-600">Ingresos Adicionales</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {showAmounts ? `$${shiftStats.totalAdditionalIncomes.toLocaleString()}` : '••••••'}
                     </p>
                       </div>
-                  <TrendingDown className="h-8 w-8 text-red-600" />
+                  <TrendingUp className="h-8 w-8 text-green-600" />
                     </div>
                   </div>
 
@@ -710,11 +709,11 @@ const CashRegister = () => {
 
                 <div className="space-y-3">
                 <button
-                    onClick={() => setShowExpenseModal(true)}
-                    className="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
+                    onClick={() => setShowIncomeModal(true)}
+                    className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
                 >
-                    <Minus className="h-4 w-4 mr-2" />
-                    Registrar Gasto
+                    <Plus className="h-4 w-4 mr-2" />
+                    Registrar Ingreso
                 </button>
 
                 <button
@@ -768,6 +767,8 @@ const CashRegister = () => {
                         <div className="flex items-center">
                           {activity.type === 'sale' ? (
                             <TrendingUp className="h-4 w-4 text-green-600 mr-3" />
+                          ) : activity.type === 'income' ? (
+                            <Plus className="h-4 w-4 text-green-600 mr-3" />
                           ) : (
                             <TrendingDown className="h-4 w-4 text-red-600 mr-3" />
                           )}
@@ -794,7 +795,7 @@ const CashRegister = () => {
         {/* Modales */}
         {showOpenShiftModal && <OpenShiftModal />}
         {showCloseShiftModal && <CloseShiftModal />}
-        {showExpenseModal && <ExpenseModal />}
+        {showIncomeModal && <IncomeModal />}
       </div>
     </CashRegisterAccessGuard>
   );
