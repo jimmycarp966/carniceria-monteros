@@ -97,3 +97,4 @@ Thumbs.db
 # Vercel
 .vercel server/credentials/*.json
 server/credentials/*.json
+.vercel

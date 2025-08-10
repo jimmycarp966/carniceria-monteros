@@ -30,3 +30,4 @@ jobs:
           firebase --version
           firebase deploy --only firestore:rules,firestore:indexes --token "$FIREBASE_TOKEN"
 
+

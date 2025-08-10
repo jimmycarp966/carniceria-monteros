@@ -507,6 +507,7 @@ function App() {
             },
           }}
         />
+        <DebugPanel />
       </div>
     </Router>
   );
