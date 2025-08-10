@@ -19,7 +19,7 @@ export const runSystemTests = async () => {
     // 1. Probar conexión a Firebase
     console.log('1️⃣ Probando conexión a Firebase...');
     try {
-      const products = await productService.getAllProducts(1, 5);
+      await productService.getAllProducts(1, 5);
       results.firebaseConnection = true;
       console.log('✅ Conexión a Firebase: OK');
     } catch (error) {
@@ -239,8 +239,10 @@ export const checkSystemHealth = () => {
   return health;
 };
 
-export default {
+const testingUtils = {
   runSystemTests,
   testRealtimeSync,
   checkSystemHealth
 };
+
+export default testingUtils;
