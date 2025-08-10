@@ -245,3 +245,42 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 ---
 
 **Desarrollado con ❤️ para optimizar el rendimiento de tu carnicería** 
+
+## Configuración de Firebase
+
+1) Cliente (`client/.env`)
+
+Crea `client/.env` copiando `client/.env.example` y completa tus claves de Firebase:
+
+```
+REACT_APP_FIREBASE_API_KEY=...
+REACT_APP_FIREBASE_AUTH_DOMAIN=...
+REACT_APP_FIREBASE_PROJECT_ID=...
+REACT_APP_FIREBASE_DATABASE_URL=...
+REACT_APP_FIREBASE_STORAGE_BUCKET=...
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=...
+REACT_APP_FIREBASE_APP_ID=...
+REACT_APP_FIREBASE_MEASUREMENT_ID=...
+```
+
+2) Servidor (`server/.env` o credenciales)
+
+Crea `server/.env` copiando `server/.env.example` y elige UNA forma de proveer credenciales de Firebase Admin:
+- GOOGLE_APPLICATION_CREDENTIALS_JSON: pega el JSON completo del service account.
+- GOOGLE_APPLICATION_CREDENTIALS_B64: pega el mismo JSON pero codificado en base64.
+- GOOGLE_APPLICATION_CREDENTIALS o GOOGLE_APPLICATION_CREDENTIALS_PATH: ruta al archivo (por ejemplo `server/credentials/service-account.json`).
+
+3) Reglas de Firestore
+
+Revisa `firestore.rules` y despliega con:
+
+```
+firebase deploy --only firestore:rules
+```
+
+4) Arranque local
+
+```
+npm run install-all
+npm run dev
+``` 
