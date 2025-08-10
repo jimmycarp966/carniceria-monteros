@@ -37,7 +37,7 @@ service cloud.firestore {
     // Inventario
     match /inventory/{id} {
       allow read: if isAuth();
-      allow create, update, delete: if hasPerm('inventory') || isAdmin();
+      allow create, update, delete: if hasPerm('inventory') || hasPerm('sales') || isAdmin();
     }
 
     // Movimientos de inventario
@@ -108,3 +108,4 @@ service cloud.firestore {
   }
 }
 
+// trigger: no-op change to deploy rules via GitHub Actions

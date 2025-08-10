@@ -244,4 +244,66 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ---
 
+<<<<<<< Current (Your changes)
 **Desarrollado con ❤️ para optimizar el rendimiento de tu carnicería** 
+=======
+**Desarrollado con ❤️ para optimizar el rendimiento de tu carnicería** 
+
+## Configuración de Firebase
+
+1) Cliente (`client/.env`)
+
+Crea `client/.env` copiando `client/.env.example` y completa tus claves de Firebase:
+
+```
+REACT_APP_FIREBASE_API_KEY=...
+REACT_APP_FIREBASE_AUTH_DOMAIN=...
+REACT_APP_FIREBASE_PROJECT_ID=...
+REACT_APP_FIREBASE_DATABASE_URL=...
+REACT_APP_FIREBASE_STORAGE_BUCKET=...
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=...
+REACT_APP_FIREBASE_APP_ID=...
+REACT_APP_FIREBASE_MEASUREMENT_ID=...
+```
+
+2) Servidor (`server/.env` o credenciales)
+
+Crea `server/.env` copiando `server/.env.example` y elige UNA forma de proveer credenciales de Firebase Admin:
+- GOOGLE_APPLICATION_CREDENTIALS_JSON: pega el JSON completo del service account.
+- GOOGLE_APPLICATION_CREDENTIALS_B64: pega el mismo JSON pero codificado en base64.
+- GOOGLE_APPLICATION_CREDENTIALS o GOOGLE_APPLICATION_CREDENTIALS_PATH: ruta al archivo (por ejemplo `server/credentials/service-account.json`).
+
+3) Reglas de Firestore
+
+Revisa `firestore.rules` y despliega con:
+
+```
+firebase deploy --only firestore:rules
+```
+
+4) Arranque local
+
+```
+npm run install-all
+npm run dev
+``` 
+
+## Despliegue en Vercel (desde Git)
+
+1) Conecta tu repositorio a Vercel.
+2) Variables de entorno (Project Settings → Environment Variables):
+   - Añade todas las `REACT_APP_*` del cliente.
+3) Build & Output Settings:
+   - Build Command: `npm run vercel-build`
+   - Output Directory: `client/build`
+4) Deploy: al hacer push a `main` Vercel construirá el cliente.
+
+## CI de reglas de Firestore (sin local)
+
+Incluimos un workflow en `.github/workflows/firebase-rules.yml` que despliega `firestore.rules` e índices al hacer push a `main` cuando esos archivos cambian.
+
+Requisitos:
+- En GitHub → Settings → Secrets and variables → Actions, agrega `FIREBASE_TOKEN` (obtenido con `firebase login:ci`).
+  El proyecto de Firebase usado es el definido en `.firebaserc` (`carniceria-monteros`).
+
+>>>>>>> Incoming (Background Agent changes)

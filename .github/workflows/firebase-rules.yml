@@ -1,0 +1,32 @@
+name: Deploy Firestore Rules
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+
+jobs:
+  deploy-firestore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+
+      - name: Deploy Firestore rules and indexes
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          firebase --version
+          firebase deploy --only firestore:rules,firestore:indexes --token "$FIREBASE_TOKEN"
+
