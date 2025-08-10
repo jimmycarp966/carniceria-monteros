@@ -309,3 +309,4 @@ Requisitos:
 >>>>>>> Incoming (Background Agent changes)
 
 
+\nNota: despliegue activado desde Git a las 2025-08-10 00:58:21
