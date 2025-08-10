@@ -2,8 +2,7 @@ import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback, memo 
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Settings, Sun, Moon, Bug, CreditCard } from 'lucide-react';
-import RealtimeNotifications from './components/RealtimeNotifications';
+import { Store, LogOut, Home, Package, ShoppingCart, Users, UserCheck, Truck, Tag, Building, BarChart3, Menu, X, DollarSign, Settings, Bug, CreditCard } from 'lucide-react';
 import DebugPanel from './components/DebugPanel';
 import { auth } from './firebase';
 import { authzService } from './services/firebaseService';
@@ -80,8 +79,7 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [activeRoute, setActiveRoute] = useState('/');
-  const [lowStockAlerts] = useState(3);
-  const [darkMode, setDarkMode] = useState(false);
+  
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
   const permissions = usePermissions();
 
@@ -110,10 +108,6 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
     setSidebarOpen(false);
   }, []);
 
-  const toggleDarkMode = useCallback(() => {
-    setDarkMode(prev => !prev);
-  }, []);
-
   const toggleDebugPanel = useCallback(() => {
     setDebugPanelOpen(prev => !prev);
   }, []);
@@ -125,7 +119,7 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
       { icon: DollarSign, label: 'Caja', to: '/caja' },
       { icon: Package, label: 'Productos', to: '/productos' },
       { icon: ShoppingCart, label: 'Ventas', to: '/ventas' },
-      { icon: Building, label: 'Inventario', to: '/inventario', badge: lowStockAlerts > 0 ? lowStockAlerts : null },
+      { icon: Building, label: 'Inventario', to: '/inventario' },
       { icon: Users, label: 'Clientes', to: '/clientes' },
       { icon: UserCheck, label: 'Empleados', to: '/empleados' },
       { icon: Truck, label: 'Proveedores', to: '/proveedores' },
@@ -141,7 +135,7 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
       result.splice(6, 0, { icon: CreditCard, label: 'Gastos', to: '/gastos' });
     }
     return result;
-  }, [lowStockAlerts, permissions]);
+  }, [permissions]);
 
   // Optimizar handlers de navegación
   const handleNavClick = useCallback((route) => {
@@ -154,7 +148,7 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
   }, [onPrefetchRoute]);
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex ${darkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex`}>
       {/* Mobile menu button optimizado */}
       <div className="lg:hidden fixed top-6 left-6 z-[9999]">
         <button
@@ -167,15 +161,8 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
         </button>
       </div>
 
-      {/* Notificaciones móviles optimizadas */}
+      {/* Acciones móviles */}
       <div className="lg:hidden fixed top-6 right-6 z-[9999] flex space-x-2">
-        <RealtimeNotifications />
-        <button 
-          onClick={toggleDarkMode}
-          className="p-3 rounded-2xl bg-white/90 shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
-        >
-          {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
         <button 
           onClick={toggleDebugPanel}
           className="p-3 rounded-2xl bg-white/90 shadow-xl border border-gray-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:bg-white/95"
@@ -208,19 +195,11 @@ const Layout = memo(({ children, onPrefetchRoute }) => {
                 <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
               <div className="ml-2 sm:ml-3 min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent truncate">Carnicería Muñoz</h1>
+                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">Carnicería Monteros</h1>
                 <p className="text-xs text-gray-600 hidden sm:block">Sistema de Administración</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <RealtimeNotifications />
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
-                aria-label="Toggle dark mode"
-              >
-                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
               <button
                 onClick={closeSidebar}
                 className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 transition-all duration-200"
