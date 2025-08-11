@@ -12,6 +12,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
 import realtimeService from './services/realtimeService';
 
+// Importar diagnóstico de Firebase
+import './utils/firebaseDiagnostic';
+
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
 const Sales = lazy(() => import('./components/SalesReports'));
