@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import './utils/consoleTesting';
+import './utils/debugSales';
 
 // Registrar Service Worker con rutina de recuperación para evitar pantallas blancas por caché obsoleto
 if ('serviceWorker' in navigator) {
