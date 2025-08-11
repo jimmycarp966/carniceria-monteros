@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import './utils/consoleTesting';
 import './utils/debugSales';
+import './utils/testArqueo';
 
 // Registrar Service Worker con rutina de recuperación para evitar pantallas blancas por caché obsoleto
 if ('serviceWorker' in navigator) {
