@@ -1,13 +1,10 @@
 import React, { useState, useEffect, memo } from 'react';
 import { 
   DollarSign, 
-  CreditCard, 
-  Receipt, 
   Plus, 
   Minus, 
   X, 
   AlertTriangle,
-  CheckCircle,
   Calculator,
   Save,
   TrendingUp,
@@ -26,7 +23,6 @@ const CashCountModal = memo(({
   // Estados principales
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [salesByMethod, setSalesByMethod] = useState({});
   
   // Estados de métodos de pago
   const [paymentMethods, setPaymentMethods] = useState({
@@ -57,7 +53,6 @@ const CashCountModal = memo(({
         if (currentShift?.id) {
           // Cargar ventas del turno por método de pago
           const salesData = await cashCountService.getSalesByPaymentMethod(currentShift.id);
-          setSalesByMethod(salesData);
           
           // Pre-cargar montos esperados
           const expectedMethods = {
@@ -215,8 +210,8 @@ const CashCountModal = memo(({
       }
 
       // Calcular diferencias
-      const differences = cashCountService.calculateDifferences(cashCountData);
-      cashCountData.differences = differences;
+      const calculatedDifferences = cashCountService.calculateDifferences(cashCountData);
+      cashCountData.differences = calculatedDifferences;
 
       // Crear egresos en el módulo de Gastos
       const expensePromises = additionalExpenses.map(async (expense) => {

@@ -41,19 +41,15 @@ const CashRegister = () => {
   const [showCashCountModal, setShowCashCountModal] = useState(false);
   const [showCashCountModalForClose, setShowCashCountModalForClose] = useState(false);
 
-  // Estados para cerrar turno
-  const [closingAmount, setClosingAmount] = useState(0);
-  const [closingNotes, setClosingNotes] = useState('');
+  // Estados para cerrar turno (mantenidos para compatibilidad futura)
+  // const [closingAmount, setClosingAmount] = useState(0);
+  // const [closingNotes, setClosingNotes] = useState('');
 
   // Estados para arqueo
   const [cashCount, setCashCount] = useState({
     20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
     20: 0, 10: 0, 5: 0, 2: 0, 1: 0
   });
-  const [tarjetaDebitoAmount, setTarjetaDebitoAmount] = useState(0);
-  const [tarjetaCreditoAmount, setTarjetaCreditoAmount] = useState(0);
-  const [transferenciaAmount, setTransferenciaAmount] = useState(0);
-  const [mercadopagoAmount, setMercadopagoAmount] = useState(0);
 
   // Estados para ventas por método de pago
   const [, setSalesByPaymentMethod] = useState({
@@ -153,12 +149,6 @@ const CashRegister = () => {
         20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
         20: 0, 10: 0, 5: 0, 2: 0, 1: 0
       });
-      setTarjetaDebitoAmount(0);
-      setTarjetaCreditoAmount(0);
-      setTransferenciaAmount(0);
-      setMercadopagoAmount(0);
-      setClosingAmount(0);
-      setClosingNotes('');
       toast.success('Turnos reseteados completamente');
     };
 
@@ -176,7 +166,7 @@ const CashRegister = () => {
     };
   }, [currentShift]);
 
-  const loadShiftData = async (shift) => {
+  const loadShiftData = useCallback(async (shift) => {
     try {
       console.log(`📊 Cargando datos del turno: ${shift.id}`);
       
@@ -236,26 +226,13 @@ const CashRegister = () => {
     } catch (error) {
       console.error('Error cargando datos del turno:', error);
     }
-  };
+  }, []);
 
-  // Calcular total del arqueo de efectivo
-  const calculateCashTotal = useCallback(() => {
-    return Object.entries(cashCount).reduce((total, [denomination, count]) => {
-      return total + (parseInt(denomination) * count);
-    }, 0);
-  }, [cashCount]);
 
-  // Calcular total general del arqueo
-  const calculateArqueoTotal = useCallback(() => {
-    return calculateCashTotal() + (tarjetaDebitoAmount + tarjetaCreditoAmount) + transferenciaAmount + mercadopagoAmount;
-  }, [calculateCashTotal, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount]);
 
-  // Calcular diferencia con el esperado
-  const calculateDifference = useCallback(() => {
-    const expected = shiftStats.netAmount;
-    const actual = calculateArqueoTotal();
-    return actual - expected;
-  }, [shiftStats.netAmount, calculateArqueoTotal]);
+
+
+
 
   // Función para cerrar turno
   const closeShift = useCallback(async () => {
@@ -329,10 +306,6 @@ const CashRegister = () => {
         20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
         20: 0, 10: 0, 5: 0, 2: 0, 1: 0
       });
-      setTarjetaDebitoAmount(0);
-      setTarjetaCreditoAmount(0);
-      setTransferenciaAmount(0);
-      setMercadopagoAmount(0);
       
       toast.success('Turno cerrado exitosamente');
       
@@ -356,7 +329,7 @@ const CashRegister = () => {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
     }
-  }, [currentShift, currentUser, loadShiftData]);
+  }, [currentShift, currentUser]);
 
   // Registrar ingreso adicional
   const registerIncome = useCallback(async () => {
@@ -927,80 +900,6 @@ const IncomeModal = memo(({ registerIncome, setShowIncomeModal }) => {
             className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
           >
             Registrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// Modal para conteo de efectivo
-const CashCountModal = memo(({ updateCashCount }) => {
-  const [denomination, setDenomination] = useState(1000);
-  const [count, setCount] = useState(0);
-
-  const handleUpdateCashCount = () => {
-    updateCashCount(denomination, count);
-    setCount(0);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl">
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <DollarSign className="h-6 w-6 mr-2 text-green-600" />
-          Arqueo de Efectivo
-        </h3>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Denominación:</label>
-            <select
-              value={denomination}
-              onChange={(e) => setDenomination(parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            >
-              <option value={20000}>$20,000</option>
-              <option value={10000}>$10,000</option>
-              <option value={5000}>$5,000</option>
-              <option value={2000}>$2,000</option>
-              <option value={1000}>$1,000</option>
-              <option value={500}>$500</option>
-              <option value={200}>$200</option>
-              <option value={100}>$100</option>
-              <option value={50}>$50</option>
-              <option value={20}>$20</option>
-              <option value={10}>$10</option>
-              <option value={5}>$5</option>
-              <option value={2}>$2</option>
-              <option value={1}>$1</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad:</label>
-            <input
-              type="number"
-              value={count}
-              onChange={(e) => setCount(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="0"
-            />
-          </div>
-        </div>
-
-        <div className="flex space-x-3 mt-6">
-          <button
-            onClick={() => {/* Cerrar modal */}}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleUpdateCashCount}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
-          >
-            Actualizar
           </button>
         </div>
       </div>
