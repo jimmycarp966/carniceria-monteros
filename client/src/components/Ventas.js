@@ -82,10 +82,12 @@ const Ventas = () => {
     realtimeService.initializeRealtimeListeners();
     
     // Listener para cambios en turnos
-    const handleShiftsUpdated = (data) => {
+    const handleShiftsUpdated = async (data) => {
       console.log('🔄 Ventas: Turnos actualizados:', data);
-      if (data.shifts && Array.isArray(data.shifts)) {
-        const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
+      
+      // Usar el servicio mejorado para detectar turno activo
+      try {
+        const activeShift = await shiftService.getActiveShift();
         console.log('🔍 Ventas: Turno activo encontrado:', activeShift);
         setCurrentShift(activeShift);
         
@@ -93,6 +95,13 @@ const Ventas = () => {
           toast.success(`Turno activo detectado: ${activeShift.employeeName}`);
         } else {
           toast.error('No hay turno activo. Debe abrir un turno para realizar ventas.');
+        }
+      } catch (error) {
+        console.error('❌ Error detectando turno activo:', error);
+        // Fallback: buscar en los datos recibidos
+        if (data.shifts && Array.isArray(data.shifts)) {
+          const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
+          setCurrentShift(activeShift);
         }
       }
     };
@@ -141,13 +150,21 @@ const Ventas = () => {
         updateProductsWithoutStatus(productsData);
       }
       
-      // Buscar turno activo
-      const shifts = await shiftService.getAllShifts();
-      const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+      // Verificar y corregir status de turnos automáticamente
+      try {
+        await shiftService.verifyAndFixShiftStatus();
+      } catch (error) {
+        console.warn('⚠️ Error verificando status de turnos:', error);
+      }
+      
+      // Buscar turno activo usando el servicio mejorado
+      const activeShift = await shiftService.getActiveShift();
       setCurrentShift(activeShift);
       
       if (!activeShift) {
         toast.error('No hay turno activo. Debe abrir un turno para realizar ventas.');
+      } else {
+        console.log('✅ Turno activo detectado en Ventas:', activeShift.id, activeShift.employeeName);
       }
       
     } catch (error) {
@@ -302,7 +319,31 @@ const Ventas = () => {
       <div className="text-center py-12">
         <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
         <h3 className="text-xl font-medium text-gray-900 mb-2">No hay turno activo</h3>
-        <p className="text-gray-600">Debe abrir un turno en la caja registradora para realizar ventas.</p>
+        <p className="text-gray-600 mb-6">Debe abrir un turno en la caja registradora para realizar ventas.</p>
+        
+        {/* Botón de diagnóstico */}
+        <button
+          onClick={async () => {
+            try {
+              console.log('🔍 Ejecutando diagnóstico de turnos...');
+              const fixedCount = await shiftService.verifyAndFixShiftStatus();
+              const activeShift = await shiftService.getActiveShift();
+              
+              if (activeShift) {
+                setCurrentShift(activeShift);
+                toast.success(`Turno activo encontrado: ${activeShift.employeeName}`);
+              } else {
+                toast.error('No se encontraron turnos activos después del diagnóstico');
+              }
+            } catch (error) {
+              console.error('❌ Error en diagnóstico:', error);
+              toast.error('Error ejecutando diagnóstico');
+            }
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          🔧 Ejecutar Diagnóstico de Turnos
+        </button>
       </div>
     );
   }

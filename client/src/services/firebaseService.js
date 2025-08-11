@@ -740,6 +740,51 @@ export const shiftService = {
     }
   },
 
+  async verifyAndFixShiftStatus() {
+    try {
+      console.log('🔍 Verificando y corrigiendo status de turnos...');
+      
+      const shifts = await this.getAllShifts();
+      let fixedCount = 0;
+      
+      for (const shift of shifts) {
+        let needsUpdate = false;
+        const updates = {};
+        
+        // Si el turno no tiene endTime pero status no es 'active'
+        if (!shift.endTime && shift.status !== 'active') {
+          updates.status = 'active';
+          needsUpdate = true;
+          console.log(`🔧 Corrigiendo turno ${shift.id}: status -> active (sin endTime)`);
+        }
+        
+        // Si el turno tiene endTime pero status es 'active'
+        if (shift.endTime && shift.status === 'active') {
+          updates.status = 'closed';
+          needsUpdate = true;
+          console.log(`🔧 Corrigiendo turno ${shift.id}: status -> closed (con endTime)`);
+        }
+        
+        if (needsUpdate) {
+          await this.updateShift(shift.id, updates);
+          fixedCount++;
+        }
+      }
+      
+      if (fixedCount > 0) {
+        console.log(`✅ ${fixedCount} turnos corregidos`);
+        // toast.success(`${fixedCount} turnos corregidos automáticamente`); // toast no definido
+      } else {
+        console.log('✅ Todos los turnos tienen el status correcto');
+      }
+      
+      return fixedCount;
+    } catch (error) {
+      console.error('❌ Error verificando status de turnos:', error);
+      throw error;
+    }
+  },
+
   async getActiveShift() {
     try {
       const shiftsRef = collection(db, 'shifts');
@@ -750,6 +795,18 @@ export const shiftService = {
         const doc = snapshot.docs[0];
         return { id: doc.id, ...doc.data() };
       }
+      
+      // Si no encuentra turnos con status 'active', buscar turnos sin endTime
+      console.log('🔍 No se encontraron turnos con status "active", buscando turnos sin endTime...');
+      const allShifts = await this.getAllShifts();
+      const activeShift = allShifts.find(shift => !shift.endTime);
+      
+      if (activeShift) {
+        console.log('✅ Turno activo encontrado (sin endTime):', activeShift.id);
+        return activeShift;
+      }
+      
+      console.log('❌ No se encontraron turnos activos');
       return null;
     } catch (error) {
       console.error('❌ Error cargando turno activo:', error);

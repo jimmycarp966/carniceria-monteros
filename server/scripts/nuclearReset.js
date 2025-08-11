@@ -119,6 +119,48 @@ async function nuclearReset() {
       }
     }
     
+    // 6.1. BORRAR TODOS LOS GASTOS
+    console.log('\n🗑️ 6.1. BORRANDO TODOS LOS GASTOS...');
+    const expensesSnapshot = await db.collection('expenses').get();
+    let expensesDeleted = 0;
+    for (const doc of expensesSnapshot.docs) {
+      try {
+        await doc.ref.delete();
+        console.log(`✅ Gasto borrado: ${doc.id}`);
+        expensesDeleted++;
+      } catch (error) {
+        console.error(`❌ Error borrando gasto ${doc.id}:`, error.message);
+      }
+    }
+    
+    // 6.2. BORRAR HISTORIAL DE CAJAS (CASH_COUNTS)
+    console.log('\n🗑️ 6.2. BORRANDO HISTORIAL DE CAJAS...');
+    const cashCountsSnapshot = await db.collection('cash_counts').get();
+    let cashCountsDeleted = 0;
+    for (const doc of cashCountsSnapshot.docs) {
+      try {
+        await doc.ref.delete();
+        console.log(`✅ Arqueo de caja borrado: ${doc.id}`);
+        cashCountsDeleted++;
+      } catch (error) {
+        console.error(`❌ Error borrando arqueo ${doc.id}:`, error.message);
+      }
+    }
+    
+    // 6.3. BORRAR TODOS LOS DÍAS
+    console.log('\n🗑️ 6.3. BORRANDO TODOS LOS DÍAS...');
+    const daysSnapshot = await db.collection('days').get();
+    let daysDeleted = 0;
+    for (const doc of daysSnapshot.docs) {
+      try {
+        await doc.ref.delete();
+        console.log(`✅ Día borrado: ${doc.id}`);
+        daysDeleted++;
+      } catch (error) {
+        console.error(`❌ Error borrando día ${doc.id}:`, error.message);
+      }
+    }
+    
     // 7. LIMPIAR REFERENCIAS EN OTRAS COLECCIONES
     console.log('\n🔍 7. LIMPIANDO REFERENCIAS EN OTRAS COLECCIONES...');
     
@@ -222,6 +264,9 @@ async function nuclearReset() {
     console.log(`✅ Turnos borrados de Firestore: ${firestoreDeleted}`);
     console.log(`✅ RTDB completamente limpiado`);
     console.log(`✅ Ventas del día borradas: ${salesDeleted}`);
+    console.log(`✅ Gastos borrados: ${expensesDeleted}`);
+    console.log(`✅ Arqueos de caja borrados: ${cashCountsDeleted}`);
+    console.log(`✅ Días borrados: ${daysDeleted}`);
     console.log(`✅ Referencias limpiadas en ventas restantes: ${salesWithShifts.length}`);
     console.log(`✅ Verificación final: ${finalFirestoreSnapshot.size} turnos restantes`);
     console.log(`✅ Verificación final: ${finalTodaySales.length} ventas del día restantes`);

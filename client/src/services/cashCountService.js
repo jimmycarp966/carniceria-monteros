@@ -22,22 +22,27 @@ export const cashCountService = {
       // Obtener información del turno para el monto inicial
       let openingAmount = 0;
       try {
-        const shifts = await shiftService.getAllShifts();
-        const currentShift = shifts.find(shift => shift.id === shiftId);
-        openingAmount = currentShift?.openingAmount || 0;
-        console.log(`🔍 Turno encontrado:`, currentShift);
-      } catch (error) {
-        console.error('Error obteniendo turno:', error);
-        // Intentar obtener directamente del documento
+        // Primero intentar obtener directamente del documento para evitar problemas de cache
+        const shiftRef = doc(db, 'shifts', shiftId);
+        const shiftDoc = await getDoc(shiftRef);
+        if (shiftDoc.exists()) {
+          const shiftData = shiftDoc.data();
+          openingAmount = shiftData?.openingAmount || 0;
+          console.log(`🔍 Turno obtenido directamente:`, shiftData);
+          console.log(`💰 Monto inicial del turno: $${openingAmount.toLocaleString()}`);
+        } else {
+          console.warn(`⚠️ Turno ${shiftId} no encontrado en Firestore`);
+        }
+      } catch (directError) {
+        console.error('Error obteniendo turno directamente:', directError);
+        // Fallback: usar el servicio de turnos
         try {
-          const shiftRef = doc(db, 'shifts', shiftId);
-          const shiftDoc = await getDoc(shiftRef);
-          if (shiftDoc.exists()) {
-            openingAmount = shiftDoc.data()?.openingAmount || 0;
-            console.log(`🔍 Turno obtenido directamente:`, shiftDoc.data());
-          }
-        } catch (directError) {
-          console.error('Error obteniendo turno directamente:', directError);
+          const shifts = await shiftService.getAllShifts();
+          const currentShift = shifts.find(shift => shift.id === shiftId);
+          openingAmount = currentShift?.openingAmount || 0;
+          console.log(`🔍 Turno encontrado por servicio:`, currentShift);
+        } catch (error) {
+          console.error('Error obteniendo turno por servicio:', error);
         }
       }
       

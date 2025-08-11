@@ -14,6 +14,8 @@ import {
 import { toast } from 'react-hot-toast';
 import { cashCountService } from '../services/cashCountService';
 import { expensesService } from '../services/firebaseService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const CashCountModal = memo(({ 
   currentShift, 
@@ -598,36 +600,62 @@ const CashCountModal = memo(({
           )}
 
           {/* Monto Inicial del Turno */}
-          {openingAmount > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
-                Monto Inicial del Turno
-              </h3>
-              
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-600">Efectivo Inicial</p>
-                    <p className="text-xl font-bold text-blue-900">
-                      ${openingAmount.toLocaleString()}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
+              Monto Inicial del Turno
+            </h3>
+            
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-600">Efectivo Inicial</p>
+                  <p className="text-xl font-bold text-blue-900">
+                    ${openingAmount.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    ⚠️ IMPORTANTE: Este monto debe estar incluido en el conteo de efectivo
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    El "Total Esperado" ya incluye este monto inicial
+                  </p>
+                  {openingAmount === 0 && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      ⚠️ ADVERTENCIA: El monto inicial es $0. Verifique que esto sea correcto.
                     </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      ⚠️ IMPORTANTE: Este monto debe estar incluido en el conteo de efectivo
-                    </p>
-                    <p className="text-xs text-blue-600">
-                      El "Total Esperado" ya incluye este monto inicial
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="bg-blue-100 rounded-full p-2">
-                      <DollarSign className="h-6 w-6 text-blue-600" />
-                    </div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="bg-blue-100 rounded-full p-2">
+                    <DollarSign className="h-6 w-6 text-blue-600" />
                   </div>
                 </div>
               </div>
+              
+              {/* Botón para recargar monto inicial */}
+              <button
+                onClick={async () => {
+                  try {
+                    console.log('🔄 Recargando monto inicial del turno...');
+                    const shiftRef = doc(db, 'shifts', currentShift.id);
+                    const shiftDoc = await getDoc(shiftRef);
+                    if (shiftDoc.exists()) {
+                      const newOpeningAmount = shiftDoc.data()?.openingAmount || 0;
+                      setOpeningAmount(newOpeningAmount);
+                      console.log(`💰 Nuevo monto inicial: $${newOpeningAmount.toLocaleString()}`);
+                      toast.success(`Monto inicial actualizado: $${newOpeningAmount.toLocaleString()}`);
+                    }
+                  } catch (error) {
+                    console.error('❌ Error recargando monto inicial:', error);
+                    toast.error('Error recargando monto inicial');
+                  }
+                }}
+                className="mt-3 w-full px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+              >
+                🔄 Recargar Monto Inicial
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Ingresos y Egresos Adicionales */}
           <div className="space-y-6">

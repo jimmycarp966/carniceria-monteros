@@ -17,6 +17,8 @@ import './utils/firebaseDiagnostic';
 // Importar funciones de reset de turnos
 import './utils/resetShifts';
 import './utils/clearAllShifts';
+// Importar y ejecutar reset nuclear
+import './utils/executeNuclearReset';
 
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
