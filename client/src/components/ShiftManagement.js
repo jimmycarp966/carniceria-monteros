@@ -94,11 +94,20 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
       errors.employeeName = 'El nombre del empleado es requerido';
     }
     
+    // Verificar que no haya un turno activo del mismo tipo hoy
+    const today = new Date().toISOString().split('T')[0];
+    const todayShifts = shifts.filter(shift => {
+      const shiftDate = shift.date || (shift.startTime?.toDate?.()?.toISOString()?.split('T')[0]);
+      return shiftDate === today;
+    });
+    
+    const existingShift = todayShifts.find(shift => shift.type === shiftType);
+    if (existingShift) {
+      errors.existingShift = `Ya existe un turno ${shiftType === 'morning' ? 'mañana' : 'tarde'} para hoy`;
+    }
+    
     // Validar reglas específicas para turno tarde
     if (shiftType === 'afternoon') {
-      const today = new Date().toISOString().split('T')[0];
-      const todayShifts = shifts.filter(shift => shift.date === today);
-      
       const morningShift = todayShifts.find(shift => shift.type === 'morning');
       const afternoonShift = todayShifts.find(shift => shift.type === 'afternoon');
       
@@ -113,7 +122,7 @@ const ShiftManagement = ({ onShiftChange, currentShift }) => {
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [shiftType, shiftDate, openingAmount, shifts]);
+  }, [shiftType, shiftDate, openingAmount, employeeName, shifts]);
 
   // Abrir turno
   const openShift = async () => {

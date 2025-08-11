@@ -35,6 +35,7 @@ const CashRegister = () => {
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [showAmounts, setShowAmounts] = useState(true);
+  const [canFinalizarDia, setCanFinalizarDia] = useState(false);
 
   // Estados para modales
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
@@ -130,6 +131,53 @@ const CashRegister = () => {
     }
   }, []);
 
+  // Estados para el estado de turnos
+  const [todayShifts, setTodayShifts] = useState({
+    morning: null,
+    afternoon: null
+  });
+
+  // Función para verificar si se puede finalizar el día
+  const checkCanFinalizarDia = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const shifts = await shiftService.getAllShifts();
+      const todayShiftsData = shifts.filter(shift => {
+        const shiftDate = shift.date || (shift.startTime?.toDate?.()?.toISOString()?.split('T')[0]);
+        return shiftDate === today;
+      });
+      
+      const morningShift = todayShiftsData.find(shift => shift.type === 'morning');
+      const afternoonShift = todayShiftsData.find(shift => shift.type === 'afternoon');
+      
+      // Actualizar estado de turnos del día
+      setTodayShifts({
+        morning: morningShift,
+        afternoon: afternoonShift
+      });
+      
+      // Solo se puede finalizar el día si ambos turnos existen y están cerrados
+      const canFinalizar = morningShift && 
+                          afternoonShift && 
+                          morningShift.status === 'closed' && 
+                          afternoonShift.status === 'closed';
+      
+      setCanFinalizarDia(canFinalizar);
+      
+      if (canFinalizar) {
+        console.log('✅ Ambos turnos cerrados - Finalizar Día habilitado');
+      } else {
+        console.log('❌ Finalizar Día deshabilitado - Turnos pendientes:', {
+          morning: morningShift?.status || 'no existe',
+          afternoon: afternoonShift?.status || 'no existe'
+        });
+      }
+    } catch (error) {
+      console.error('Error verificando estado de turnos:', error);
+      setCanFinalizarDia(false);
+    }
+  }, []);
+
   // Cargar datos iniciales
   useEffect(() => {
     const initCashRegister = async () => {
@@ -151,6 +199,9 @@ const CashRegister = () => {
           console.log('❌ No hay turno activo');
           setCurrentShift(null);
         }
+
+        // Verificar si se puede finalizar el día
+        await checkCanFinalizarDia();
 
       } catch (error) {
         console.error('Error cargando datos de caja:', error);
@@ -194,6 +245,9 @@ const CashRegister = () => {
             });
             setRecentActivity([]);
           }
+          
+          // Verificar estado de finalizar día cuando cambian los turnos
+          checkCanFinalizarDia();
         }
       });
     };
@@ -290,7 +344,9 @@ const CashRegister = () => {
           id: currentUser?.id,
           name: currentUser?.name,
           email: currentUser?.email,
-          role: currentUser?.role || 'ayudante'
+          role: currentUser?.role || 'ayudante',
+          position: currentUser?.position,
+          timestamp: new Date()
         },
         cashCountId: cashCountId,
         arqueo: {
@@ -347,6 +403,9 @@ const CashRegister = () => {
         });
         setRecentActivity([]);
       }
+      
+      // Verificar estado de finalizar día después de cerrar turno
+      await checkCanFinalizarDia();
     } catch (error) {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
@@ -416,9 +475,36 @@ const CashRegister = () => {
         return;
       }
 
+      // Verificar que no haya un turno activo del mismo tipo hoy
+      const today = new Date().toISOString().split('T')[0];
+      const shifts = await shiftService.getAllShifts();
+      const todayShifts = shifts.filter(shift => {
+        const shiftDate = shift.date || (shift.startTime?.toDate?.()?.toISOString()?.split('T')[0]);
+        return shiftDate === today;
+      });
+      
+      const existingShift = todayShifts.find(shift => shift.type === shiftData.shiftType);
+      if (existingShift) {
+        toast.error(`Ya existe un turno ${shiftData.shiftType === 'morning' ? 'mañana' : 'tarde'} para hoy`);
+        return;
+      }
+
+      // Validar secuencia de turnos
+      if (shiftData.shiftType === 'afternoon') {
+        const morningShift = todayShifts.find(shift => shift.type === 'morning');
+        if (!morningShift) {
+          toast.error('Debe abrirse el turno mañana antes que el turno tarde');
+          return;
+        }
+        if (morningShift.status !== 'closed') {
+          toast.error('El turno mañana debe estar cerrado antes de abrir el turno tarde');
+          return;
+        }
+      }
+
       const shiftToCreate = {
         type: shiftData.shiftType,
-        date: new Date().toISOString().split('T')[0],
+        date: today,
         openingAmount: parseFloat(shiftData.openingAmount),
         employeeName: currentUser?.name || 'Usuario',
         employeeEmail: currentUser?.email,
@@ -601,6 +687,79 @@ const CashRegister = () => {
               </div>
             </div>
 
+            {/* Estado de turnos del día */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de Turnos del Día</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      todayShifts.morning ? 
+                        (todayShifts.morning.status === 'active' ? 'bg-green-500' : 
+                         todayShifts.morning.status === 'closed' ? 'bg-blue-500' : 'bg-gray-300') 
+                        : 'bg-gray-300'
+                    }`}></div>
+                    <div>
+                      <p className="font-medium text-gray-900">Turno Mañana</p>
+                      <p className="text-sm text-gray-600">
+                        {todayShifts.morning ? todayShifts.morning.employeeName : 'No abierto'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    todayShifts.morning ? 
+                      (todayShifts.morning.status === 'active' ? 'bg-green-100 text-green-800' : 
+                       todayShifts.morning.status === 'closed' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600')
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {todayShifts.morning ? 
+                      (todayShifts.morning.status === 'active' ? 'Activo' : 
+                       todayShifts.morning.status === 'closed' ? 'Cerrado' : 'Pendiente')
+                      : 'Pendiente'
+                    }
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      todayShifts.afternoon ? 
+                        (todayShifts.afternoon.status === 'active' ? 'bg-green-500' : 
+                         todayShifts.afternoon.status === 'closed' ? 'bg-blue-500' : 'bg-gray-300') 
+                        : 'bg-gray-300'
+                    }`}></div>
+                    <div>
+                      <p className="font-medium text-gray-900">Turno Tarde</p>
+                      <p className="text-sm text-gray-600">
+                        {todayShifts.afternoon ? todayShifts.afternoon.employeeName : 'No abierto'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    todayShifts.afternoon ? 
+                      (todayShifts.afternoon.status === 'active' ? 'bg-green-100 text-green-800' : 
+                       todayShifts.afternoon.status === 'closed' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600')
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {todayShifts.afternoon ? 
+                      (todayShifts.afternoon.status === 'active' ? 'Activo' : 
+                       todayShifts.afternoon.status === 'closed' ? 'Cerrado' : 'Pendiente')
+                      : 'Pendiente'
+                    }
+                  </div>
+                </div>
+              </div>
+              
+              {canFinalizarDia && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <p className="text-green-800 font-medium">✅ Ambos turnos completados - Puede finalizar el día</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Controles del turno */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -628,13 +787,31 @@ const CashRegister = () => {
                      Arqueo
                    </button>
 
-                                       <button
-                      onClick={() => setShowFinalizarDiaModal(true)}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Finalizar Día
-                    </button>
+                                                          <button
+                     onClick={() => setShowFinalizarDiaModal(true)}
+                     disabled={!canFinalizarDia}
+                     className={`px-4 py-2 rounded-lg flex items-center ${
+                       canFinalizarDia 
+                         ? 'bg-red-600 text-white hover:bg-red-700' 
+                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                     }`}
+                     title={canFinalizarDia 
+                       ? 'Finalizar el día (ambos turnos cerrados)' 
+                       : 'Debe cerrar ambos turnos (mañana y tarde) para finalizar el día'
+                     }
+                   >
+                     <LogOut className="h-4 w-4 mr-2" />
+                     Finalizar Día
+                     {!canFinalizarDia && (
+                       <span className="ml-2 text-xs bg-gray-400 text-white px-1 py-0.5 rounded">
+                         {!todayShifts.morning ? 'Falta turno mañana' :
+                          !todayShifts.afternoon ? 'Falta turno tarde' :
+                          todayShifts.morning.status !== 'closed' ? 'Cierre turno mañana' :
+                          todayShifts.afternoon.status !== 'closed' ? 'Cierre turno tarde' :
+                          'Espere cierre turnos'}
+                       </span>
+                     )}
+                   </button>
                  </div>
               </div>
             </div>
