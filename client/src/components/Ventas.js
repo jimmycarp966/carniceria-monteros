@@ -13,7 +13,7 @@ import {
   Calculator,
   TrendingUp
 } from 'lucide-react';
-import { productService, saleService, shiftService } from '../services/firebaseService';
+import { productService, shiftService } from '../services/firebaseService';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';

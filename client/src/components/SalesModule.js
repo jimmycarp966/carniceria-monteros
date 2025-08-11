@@ -19,7 +19,7 @@ import {
   Mail,
   MapPin
 } from 'lucide-react';
-import { productService, saleService, customerService, shiftService } from '../services/firebaseService';
+import { productService, customerService, shiftService } from '../services/firebaseService';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
