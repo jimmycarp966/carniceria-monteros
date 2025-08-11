@@ -348,7 +348,7 @@ const SalesModule = () => {
         shiftId: currentShift.id,
         employeeName: currentUser?.name,
         employeeId: currentUser?.employeeId || currentUser?.id,
-        employeeRole: userRole?.name,
+        employeeRole: currentUser?.role || 'ayudante',
         notes,
         timestamp: new Date(),
         date: new Date().toISOString().split('T')[0],
@@ -357,7 +357,7 @@ const SalesModule = () => {
           id: currentUser?.id,
           name: currentUser?.name,
           email: currentUser?.email,
-          role: userRole?.name
+          role: currentUser?.role || 'ayudante'
         }
       };
       

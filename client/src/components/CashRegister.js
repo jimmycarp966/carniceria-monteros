@@ -309,7 +309,7 @@ const CashRegister = () => {
         employeeName: currentUser?.name,
         employeeEmail: currentUser?.email,
         employeeId: currentUser?.employeeId || currentUser?.id,
-        employeeRole: userRole?.name,
+        employeeRole: currentUser?.role || 'ayudante',
         employeePosition: userRole?.displayName,
         openedBy: `${currentUser?.name} (${userRole?.displayName})`,
         type: shiftType,
