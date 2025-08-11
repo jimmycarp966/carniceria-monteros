@@ -1429,18 +1429,26 @@ export const dayService = {
   async getAllDays(limit = 30) {
     try {
       const daysRef = collection(db, 'days');
-      const q = query(
-        daysRef, 
-        where('status', '==', 'closed'),
-        orderBy('closedAt', 'desc'),
-        limit(limit)
-      );
+      // Obtener todos los días y filtrar/ordenar en memoria para evitar problemas de índice
+      const q = query(daysRef, limit(100)); // Obtener más días para tener suficientes cerrados
       const snapshot = await getDocs(q);
       
-      return snapshot.docs.map(doc => ({
+      let days = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      // Filtrar días cerrados y ordenar por fecha de cierre
+      days = days
+        .filter(day => day.status === 'closed')
+        .sort((a, b) => {
+          const dateA = a.closedAt?.toDate?.() || new Date(a.closedAt || 0);
+          const dateB = b.closedAt?.toDate?.() || new Date(b.closedAt || 0);
+          return dateB - dateA; // Orden descendente
+        })
+        .slice(0, limit); // Limitar al número solicitado
+      
+      return days;
     } catch (error) {
       console.error('❌ Error cargando historial de días:', error);
       throw error;
