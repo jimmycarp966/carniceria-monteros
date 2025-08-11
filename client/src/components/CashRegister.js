@@ -618,7 +618,7 @@ const CashRegister = () => {
                    </button>
 
                    <button
-                     onClick={() => setShowCashCountModal(true)}
+                     onClick={() => setShowCashCountModalForClose(true)}
                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
                    >
                      <DollarSign className="h-4 w-4 mr-2" />
