@@ -46,6 +46,9 @@ const CashCountModal = memo(({
   
   // Estado para gastos del turno
   const [shiftExpenses, setShiftExpenses] = useState([]);
+  
+  // Estado para monto inicial del turno
+  const [openingAmount, setOpeningAmount] = useState(0);
 
   // Función para recargar datos de ventas
   const reloadSalesData = async () => {
@@ -72,6 +75,9 @@ const CashCountModal = memo(({
         // Actualizar gastos del turno
         setShiftExpenses(salesData.shiftExpenses || []);
         
+        // Actualizar monto inicial del turno
+        setOpeningAmount(salesData.openingAmount || 0);
+        
         // Mostrar resumen de ventas cargadas
         const totalExpected = Object.values(salesData).reduce((sum, method) => {
           if (typeof method === 'object' && method.expected !== undefined) {
@@ -81,10 +87,12 @@ const CashCountModal = memo(({
         }, 0);
         
         const totalExpenses = salesData.totalExpenses || 0;
+        const openingAmount = salesData.openingAmount || 0;
         console.log(`✅ Ventas recargadas: $${totalExpected.toLocaleString()} en total`);
         console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
+        console.log(`💰 Monto inicial: $${openingAmount.toLocaleString()}`);
         
-        toast.success(`Ventas actualizadas: $${totalExpected.toLocaleString()} | Gastos: $${totalExpenses.toLocaleString()}`, { duration: 3000 });
+        toast.success(`Ventas: $${totalExpected.toLocaleString()} | Gastos: $${totalExpenses.toLocaleString()} | Inicial: $${openingAmount.toLocaleString()}`, { duration: 3000 });
       }
     } catch (error) {
       console.error('Error recargando datos de ventas:', error);
@@ -123,6 +131,9 @@ const CashCountModal = memo(({
           // Actualizar gastos del turno
           setShiftExpenses(salesData.shiftExpenses || []);
           
+          // Actualizar monto inicial del turno
+          setOpeningAmount(salesData.openingAmount || 0);
+          
           // Mostrar resumen de ventas cargadas
           const totalExpected = Object.values(salesData).reduce((sum, method) => {
             if (typeof method === 'object' && method.expected !== undefined) {
@@ -132,11 +143,13 @@ const CashCountModal = memo(({
           }, 0);
           
           const totalExpenses = salesData.totalExpenses || 0;
+          const openingAmount = salesData.openingAmount || 0;
           console.log(`✅ Ventas cargadas: $${totalExpected.toLocaleString()} en total`);
           console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
+          console.log(`💰 Monto inicial: $${openingAmount.toLocaleString()}`);
           
-          if (totalExpected > 0 || totalExpenses > 0) {
-            toast.success(`Ventas: $${totalExpected.toLocaleString()} | Gastos: $${totalExpenses.toLocaleString()}`, { duration: 3000 });
+          if (totalExpected > 0 || totalExpenses > 0 || openingAmount > 0) {
+            toast.success(`Ventas: $${totalExpected.toLocaleString()} | Gastos: $${totalExpenses.toLocaleString()} | Inicial: $${openingAmount.toLocaleString()}`, { duration: 3000 });
           }
         }
       } catch (error) {
@@ -528,6 +541,35 @@ const CashCountModal = memo(({
             </div>
           )}
 
+          {/* Monto Inicial del Turno */}
+          {openingAmount > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
+                Monto Inicial del Turno
+              </h3>
+              
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-600">Efectivo Inicial</p>
+                    <p className="text-xl font-bold text-blue-900">
+                      ${openingAmount.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Este monto debe estar incluido en el conteo de efectivo
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="bg-blue-100 rounded-full p-2">
+                      <DollarSign className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Ingresos y Egresos Adicionales */}
           <div className="space-y-6">
             {/* Ingresos Adicionales */}
@@ -656,7 +698,7 @@ const CashCountModal = memo(({
         <div className="mt-8 bg-gray-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Arqueo</h3>
           
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Esperado</p>
               <p className="text-lg font-bold text-gray-900">${totals.totalExpected.toLocaleString()}</p>
@@ -664,6 +706,10 @@ const CashCountModal = memo(({
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Contado</p>
               <p className="text-lg font-bold text-blue-600">${totals.totalCounted.toLocaleString()}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Monto Inicial</p>
+              <p className="text-lg font-bold text-blue-600">${openingAmount.toLocaleString()}</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Gastos del Turno</p>

@@ -8,7 +8,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { saleService, expensesService } from './firebaseService';
+import { saleService, expensesService, shiftService } from './firebaseService';
 
 // Servicio de arqueo de caja
 export const cashCountService = {
@@ -16,6 +16,13 @@ export const cashCountService = {
   async getSalesByPaymentMethod(shiftId, forceRefresh = false) {
     try {
       console.log(`🔄 Obteniendo ventas para turno: ${shiftId}${forceRefresh ? ' (forzando refresh)' : ''}`);
+      
+      // Obtener información del turno para el monto inicial
+      const shifts = await shiftService.getAllShifts();
+      const currentShift = shifts.find(shift => shift.id === shiftId);
+      const openingAmount = currentShift?.openingAmount || 0;
+      
+      console.log(`💰 Monto inicial del turno: $${openingAmount.toLocaleString()}`);
       
       // Usar getSalesByShift para obtener solo las ventas del turno específico
       const shiftSales = await saleService.getSalesByShift(shiftId, forceRefresh);
@@ -90,12 +97,14 @@ export const cashCountService = {
 
       console.log(`✅ Procesadas ${totalProcessed} ventas por $${totalAmount.toLocaleString()}`);
       console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
+      console.log(`💰 Monto inicial: $${openingAmount.toLocaleString()}`);
       console.log('📊 Resumen por método:', salesByMethod);
 
       return {
         ...salesByMethod,
         shiftExpenses,
-        totalExpenses
+        totalExpenses,
+        openingAmount
       };
     } catch (error) {
       console.error('Error obteniendo ventas por método de pago:', error);
