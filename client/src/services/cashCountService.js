@@ -135,6 +135,12 @@ export const cashCountService = {
         }
       });
 
+      // SUMAR EL MONTO INICIAL AL EFECTIVO ESPERADO
+      if (openingAmount > 0) {
+        salesByMethod.efectivo.expected += openingAmount;
+        console.log(`💰 Efectivo esperado ajustado por monto inicial: $${salesByMethod.efectivo.expected.toLocaleString()}`);
+      }
+
       console.log(`✅ Procesadas ${totalProcessed} ventas por $${totalAmount.toLocaleString()}`);
       console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
       console.log(`💰 Monto inicial: $${openingAmount.toLocaleString()}`);
