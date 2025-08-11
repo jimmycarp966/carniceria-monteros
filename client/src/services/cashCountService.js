@@ -37,6 +37,8 @@ export const cashCountService = {
         const paymentMethod = sale.paymentMethod;
         const saleAmount = sale.total || 0;
         
+        console.log(`🔍 Procesando venta: ${paymentMethod} - $${saleAmount} - cardType: ${sale.cardType}`);
+        
         if (paymentMethod === 'efectivo') {
           salesByMethod.efectivo.count++;
           salesByMethod.efectivo.total += saleAmount;
@@ -47,6 +49,7 @@ export const cashCountService = {
             salesByMethod.tarjetaCredito.total += saleAmount;
             salesByMethod.tarjetaCredito.expected += saleAmount;
           } else {
+            // Por defecto, si no hay cardType o es 'debito', va a tarjeta débito
             salesByMethod.tarjetaDebito.count++;
             salesByMethod.tarjetaDebito.total += saleAmount;
             salesByMethod.tarjetaDebito.expected += saleAmount;
@@ -59,6 +62,12 @@ export const cashCountService = {
           salesByMethod.mercadopago.count++;
           salesByMethod.mercadopago.total += saleAmount;
           salesByMethod.mercadopago.expected += saleAmount;
+        } else {
+          // Si no coincide con ningún método conocido, agregar a efectivo por defecto
+          console.log(`⚠️ Método de pago desconocido: ${paymentMethod}, agregando a efectivo`);
+          salesByMethod.efectivo.count++;
+          salesByMethod.efectivo.total += saleAmount;
+          salesByMethod.efectivo.expected += saleAmount;
         }
         
         totalProcessed++;
