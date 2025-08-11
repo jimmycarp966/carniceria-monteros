@@ -78,6 +78,117 @@ const DebugPanel = () => {
     toast.success('Prueba de tiempo real iniciada');
   };
 
+  // Función específica para diagnosticar y borrar turnos problemáticos
+  const diagnoseAndForceDeleteShifts = async () => {
+    console.log('🔍 DIAGNÓSTICO COMPLETO DE TURNOS...');
+    
+    try {
+      const { collection, getDocs, deleteDoc, doc, query, where } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      // 1. Verificar todos los turnos en Firestore
+      console.log('📋 Verificando turnos en Firestore...');
+      const shiftsSnapshot = await getDocs(collection(db, 'shifts'));
+      const firestoreShifts = shiftsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log(`📊 Turnos en Firestore: ${firestoreShifts.length}`);
+      firestoreShifts.forEach(shift => {
+        console.log(`  - ${shift.id}: ${shift.status} | ${shift.employeeName} | ${shift.openTime}`);
+      });
+      
+      // 2. Verificar Realtime Database
+      console.log('📋 Verificando turnos en Realtime Database...');
+      try {
+        const { ref, get } = await import('firebase/database');
+        const { realtimeDb } = await import('../firebase');
+        
+        if (realtimeDb) {
+          const rtdbSnapshot = await get(ref(realtimeDb, 'shifts'));
+          if (rtdbSnapshot.exists()) {
+            const rtdbShifts = rtdbSnapshot.val();
+            console.log(`📊 Turnos en RTDB: ${Object.keys(rtdbShifts || {}).length}`);
+            Object.entries(rtdbShifts || {}).forEach(([id, data]) => {
+              console.log(`  - ${id}: ${data.status} | ${data.employeeName}`);
+            });
+          } else {
+            console.log('📊 No hay turnos en RTDB');
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error verificando RTDB:', error);
+      }
+      
+      // 3. Verificar turnos activos específicamente
+      console.log('📋 Verificando turnos activos...');
+      const activeShiftsQuery = query(collection(db, 'shifts'), where('status', '==', 'active'));
+      const activeSnapshot = await getDocs(activeShiftsQuery);
+      const activeShifts = activeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log(`📊 Turnos activos: ${activeShifts.length}`);
+      activeShifts.forEach(shift => {
+        console.log(`  - ${shift.id}: ${shift.employeeName} | ${shift.openTime}`);
+      });
+      
+      // 4. BORRAR TODOS LOS TURNOS FORZADAMENTE
+      console.log('🔥 BORRANDO TODOS LOS TURNOS FORZADAMENTE...');
+      let deletedCount = 0;
+      
+      for (const shift of firestoreShifts) {
+        try {
+          await deleteDoc(doc(db, 'shifts', shift.id));
+          console.log(`✅ BORRADO FORZADO: ${shift.id}`);
+          deletedCount++;
+        } catch (error) {
+          console.error(`❌ Error borrando ${shift.id}:`, error);
+        }
+      }
+      
+      // 5. Limpiar RTDB completamente
+      console.log('🔥 Limpiando Realtime Database...');
+      try {
+        const { ref, remove } = await import('firebase/database');
+        const { realtimeDb } = await import('../firebase');
+        
+        if (realtimeDb) {
+          await remove(ref(realtimeDb, 'shifts'));
+          console.log('✅ RTDB limpiado completamente');
+        }
+      } catch (error) {
+        console.warn('⚠️ Error limpiando RTDB:', error);
+      }
+      
+      // 6. Limpiar localStorage
+      console.log('🔥 Limpiando localStorage...');
+      const keysToRemove = [
+        'currentShift',
+        'shiftData', 
+        'cashRegisterState',
+        'activeShift',
+        'shiftCache',
+        'shiftStats'
+      ];
+      
+      keysToRemove.forEach(key => {
+        if (localStorage.getItem(key)) {
+          localStorage.removeItem(key);
+          console.log(`✅ localStorage.${key} eliminado`);
+        }
+      });
+      
+      // 7. Disparar evento de reset
+      console.log('🔥 Disparando evento de reset...');
+      window.dispatchEvent(new CustomEvent('forceResetShifts'));
+      
+      console.log(`🎉 DIAGNÓSTICO COMPLETO: ${deletedCount} turnos borrados`);
+      toast.success(`¡${deletedCount} turnos borrados completamente!`);
+      
+      return deletedCount;
+      
+    } catch (error) {
+      console.error('💥 Error en diagnóstico:', error);
+      toast.error('Error durante el diagnóstico');
+      throw error;
+    }
+  };
+
   const resetAllData = async () => {
     setIsResetting(true);
     const resetResults = {
@@ -428,14 +539,14 @@ const DebugPanel = () => {
                 </div>
               ))}
               </div>
-                         <div className="flex gap-2 flex-wrap">
+                         <div className="flex flex-wrap gap-3">
                <button
                  onClick={runTests}
                  disabled={isRunningTests}
                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
                >
                  <RefreshCw className={`h-4 w-4 mr-2 ${isRunningTests ? 'animate-spin' : ''}`} />
-                 {isRunningTests ? 'Ejecutando...' : 'Ejecutar Pruebas'}
+                 {isRunningTests ? 'Ejecutando...' : 'Ejecutar Tests'}
                </button>
                <button
                  onClick={runRealtimeTest}
@@ -443,6 +554,13 @@ const DebugPanel = () => {
                >
                  <Activity className="h-4 w-4 mr-2" />
                  Probar Tiempo Real
+               </button>
+               <button
+                 onClick={diagnoseAndForceDeleteShifts}
+                 className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center"
+               >
+                 <AlertTriangle className="h-4 w-4 mr-2" />
+                 🔍 Diagnosticar Turnos
                </button>
                   <button
                  onClick={() => setShowResetConfirm(true)}
