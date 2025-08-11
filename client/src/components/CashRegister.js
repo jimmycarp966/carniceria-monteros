@@ -15,7 +15,7 @@ import {
   Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { shiftService, saleService } from '../services/firebaseService';
+import { shiftService, saleService, expensesService } from '../services/firebaseService';
 import CashCountModal from './CashCountModal';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
@@ -172,6 +172,15 @@ const CashRegister = () => {
         return saleDate === today;
       });
 
+      // Obtener gastos del día
+      const startDate = new Date(today);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(today);
+      endDate.setHours(23, 59, 59, 999);
+      
+      const todayExpenses = await expensesService.getExpensesByDateRange(startDate, endDate);
+      const totalExpenses = todayExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
       // Calcular totales por turno
       const shiftsWithTotals = shifts.map(shift => {
         const shiftSales = todaySales.filter(sale => sale.shiftId === shift.id);
@@ -211,6 +220,8 @@ const CashRegister = () => {
         totalShifts: shifts.length,
         totalSales: todaySales.length,
         totalRevenue: todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0),
+        totalExpenses: totalExpenses,
+        expenses: todayExpenses,
         shifts: shiftsWithTotals,
         salesByPaymentMethod
       };
@@ -1416,7 +1427,7 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
 
         {/* Resumen del día */}
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-blue-50 rounded-xl p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1446,6 +1457,28 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
                 <TrendingUp className="h-8 w-8 text-purple-600" />
               </div>
             </div>
+
+            <div className="bg-red-50 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-600">Gastos Totales</p>
+                  <p className="text-2xl font-bold text-red-900">${daySummary.totalExpenses.toLocaleString()}</p>
+                </div>
+                <CreditCard className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
+
+            <div className="bg-emerald-50 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-emerald-600">Balance Neto</p>
+                  <p className={`text-2xl font-bold ${(daySummary.totalRevenue - daySummary.totalExpenses) >= 0 ? 'text-emerald-900' : 'text-red-900'}`}>
+                    ${(daySummary.totalRevenue - daySummary.totalExpenses).toLocaleString()}
+                  </p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-emerald-600" />
+              </div>
+            </div>
           </div>
 
           {/* Métodos de pago */}
@@ -1473,6 +1506,42 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
                   <p className="text-sm font-medium text-yellow-600">MercadoPago</p>
                   <p className="text-lg font-bold text-yellow-900">${daySummary.salesByPaymentMethod.mercadopago.toLocaleString()}</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Gastos del día */}
+          {daySummary.expenses && daySummary.expenses.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Gastos del Día</h3>
+              <div className="bg-red-50 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-red-600">Total Gastos</p>
+                    <p className="text-2xl font-bold text-red-900">${daySummary.totalExpenses.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-red-600">{daySummary.expenses.length} gastos registrados</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {daySummary.expenses.map((expense) => (
+                  <div key={expense.id} className="bg-white border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{expense.reason || 'Gasto operativo'}</p>
+                        <p className="text-sm text-gray-600">
+                          {expense.createdAt?.toDate?.()?.toLocaleTimeString() || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-red-600">-${expense.amount.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">{expense.type || 'operational'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

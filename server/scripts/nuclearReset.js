@@ -11,10 +11,14 @@ const db = admin.firestore();
 const rtdb = admin.database();
 
 async function nuclearReset() {
-  console.log('🚀 INICIANDO RESET NUCLEAR DE TURNOS...');
+  console.log('🚀 INICIANDO RESET NUCLEAR COMPLETO...');
   console.log('=====================================');
   
   try {
+    // Obtener fecha actual
+    const today = new Date().toISOString().split('T')[0];
+    console.log(`📅 Fecha objetivo: ${today}`);
+    
     // 1. AUDITORÍA COMPLETA DE FIRESTORE
     console.log('\n📋 1. AUDITORÍA FIRESTORE...');
     const shiftsSnapshot = await db.collection('shifts').get();
@@ -51,8 +55,37 @@ async function nuclearReset() {
       console.log('📊 Error accediendo a RTDB:', error.message);
     }
     
-    // 3. BORRAR TODOS LOS TURNOS DE FIRESTORE
-    console.log('\n🗑️ 3. BORRANDO TODOS LOS TURNOS DE FIRESTORE...');
+    // 3. AUDITORÍA DE VENTAS DEL DÍA
+    console.log('\n📋 3. AUDITORÍA DE VENTAS DEL DÍA...');
+    const salesSnapshot = await db.collection('sales').get();
+    const todaySales = [];
+    const allSales = [];
+    
+    salesSnapshot.forEach(doc => {
+      const sale = doc.data();
+      allSales.push({ id: doc.id, ...sale });
+      
+      // Verificar si la venta es del día actual
+      const saleDate = sale.timestamp?.toDate?.()?.toISOString()?.split('T')[0] || 
+                      sale.createdAt?.toDate?.()?.toISOString()?.split('T')[0];
+      
+      if (saleDate === today) {
+        todaySales.push({ id: doc.id, ...sale });
+      }
+    });
+    
+    console.log(`📊 Ventas totales en el sistema: ${allSales.length}`);
+    console.log(`📊 Ventas del día ${today}: ${todaySales.length}`);
+    
+    if (todaySales.length > 0) {
+      console.log('📋 Detalles de ventas del día:');
+      todaySales.forEach((sale, index) => {
+        console.log(`  ${index + 1}. ID: ${sale.id} | Total: $${sale.total} | Método: ${sale.paymentMethod} | Turno: ${sale.shiftId}`);
+      });
+    }
+    
+    // 4. BORRAR TODOS LOS TURNOS DE FIRESTORE
+    console.log('\n🗑️ 4. BORRANDO TODOS LOS TURNOS DE FIRESTORE...');
     let firestoreDeleted = 0;
     for (const shift of firestoreShifts) {
       try {
@@ -64,8 +97,8 @@ async function nuclearReset() {
       }
     }
     
-    // 4. LIMPIAR COMPLETAMENTE REALTIME DATABASE
-    console.log('\n🗑️ 4. LIMPIANDO REALTIME DATABASE...');
+    // 5. LIMPIAR COMPLETAMENTE REALTIME DATABASE
+    console.log('\n🗑️ 5. LIMPIANDO REALTIME DATABASE...');
     try {
       await rtdb.ref('shifts').remove();
       console.log('✅ RTDB completamente limpiado');
@@ -73,22 +106,35 @@ async function nuclearReset() {
       console.warn('⚠️ Error limpiando RTDB:', error.message);
     }
     
-    // 5. BUSCAR Y BORRAR TURNOS EN OTRAS COLECCIONES
-    console.log('\n🔍 5. BUSCANDO TURNOS EN OTRAS COLECCIONES...');
+    // 6. BORRAR TODAS LAS VENTAS DEL DÍA
+    console.log('\n🗑️ 6. BORRANDO TODAS LAS VENTAS DEL DÍA...');
+    let salesDeleted = 0;
+    for (const sale of todaySales) {
+      try {
+        await db.collection('sales').doc(sale.id).delete();
+        console.log(`✅ Venta borrada: ${sale.id} | $${sale.total} | ${sale.paymentMethod}`);
+        salesDeleted++;
+      } catch (error) {
+        console.error(`❌ Error borrando venta ${sale.id}:`, error.message);
+      }
+    }
     
-    // Buscar en ventas que referencien turnos
-    const salesSnapshot = await db.collection('sales').get();
+    // 7. LIMPIAR REFERENCIAS EN OTRAS COLECCIONES
+    console.log('\n🔍 7. LIMPIANDO REFERENCIAS EN OTRAS COLECCIONES...');
+    
+    // Buscar en ventas restantes que referencien turnos
+    const remainingSalesSnapshot = await db.collection('sales').get();
     const salesWithShifts = [];
-    salesSnapshot.forEach(doc => {
+    remainingSalesSnapshot.forEach(doc => {
       const sale = doc.data();
       if (sale.shiftId) {
         salesWithShifts.push({ id: doc.id, shiftId: sale.shiftId });
       }
     });
     
-    console.log(`📊 Ventas con referencias a turnos: ${salesWithShifts.length}`);
+    console.log(`📊 Ventas restantes con referencias a turnos: ${salesWithShifts.length}`);
     if (salesWithShifts.length > 0) {
-      console.log('🗑️ Limpiando referencias de turnos en ventas...');
+      console.log('🗑️ Limpiando referencias de turnos en ventas restantes...');
       for (const sale of salesWithShifts) {
         try {
           await db.collection('sales').doc(sale.id).update({
@@ -102,8 +148,7 @@ async function nuclearReset() {
       }
     }
     
-    // 6. VERIFICAR COLECCIONES ADICIONALES
-    console.log('\n🔍 6. VERIFICANDO COLECCIONES ADICIONALES...');
+    // Verificar otras colecciones
     const collectionsToCheck = ['income', 'expenses', 'inventory_movements'];
     
     for (const collectionName of collectionsToCheck) {
@@ -141,8 +186,8 @@ async function nuclearReset() {
       }
     }
     
-    // 7. VERIFICACIÓN FINAL
-    console.log('\n🔍 7. VERIFICACIÓN FINAL...');
+    // 8. VERIFICACIÓN FINAL
+    console.log('\n🔍 8. VERIFICACIÓN FINAL...');
     
     // Verificar Firestore
     const finalFirestoreSnapshot = await db.collection('shifts').get();
@@ -156,19 +201,36 @@ async function nuclearReset() {
       console.log('📊 RTDB: Error en verificación final');
     }
     
-    // 8. RESULTADOS FINALES
-    console.log('\n🎉 RESULTADOS DEL RESET NUCLEAR:');
-    console.log('================================');
+    // Verificar ventas del día
+    const finalSalesSnapshot = await db.collection('sales').get();
+    const finalTodaySales = [];
+    finalSalesSnapshot.forEach(doc => {
+      const sale = doc.data();
+      const saleDate = sale.timestamp?.toDate?.()?.toISOString()?.split('T')[0] || 
+                      sale.createdAt?.toDate?.()?.toISOString()?.split('T')[0];
+      
+      if (saleDate === today) {
+        finalTodaySales.push({ id: doc.id, ...sale });
+      }
+    });
+    
+    console.log(`📊 Ventas restantes del día ${today}: ${finalTodaySales.length}`);
+    
+    // 9. RESULTADOS FINALES
+    console.log('\n🎉 RESULTADOS DEL RESET NUCLEAR COMPLETO:');
+    console.log('==========================================');
     console.log(`✅ Turnos borrados de Firestore: ${firestoreDeleted}`);
     console.log(`✅ RTDB completamente limpiado`);
-    console.log(`✅ Referencias limpiadas en ventas: ${salesWithShifts.length}`);
+    console.log(`✅ Ventas del día borradas: ${salesDeleted}`);
+    console.log(`✅ Referencias limpiadas en ventas restantes: ${salesWithShifts.length}`);
     console.log(`✅ Verificación final: ${finalFirestoreSnapshot.size} turnos restantes`);
+    console.log(`✅ Verificación final: ${finalTodaySales.length} ventas del día restantes`);
     
-    if (finalFirestoreSnapshot.size === 0) {
-      console.log('\n🎯 ¡RESET NUCLEAR COMPLETADO EXITOSAMENTE!');
-      console.log('🚀 El sistema está completamente limpio y listo para un nuevo turno.');
+    if (finalFirestoreSnapshot.size === 0 && finalTodaySales.length === 0) {
+      console.log('\n🎯 ¡RESET NUCLEAR COMPLETO EXITOSAMENTE!');
+      console.log('🚀 El sistema está completamente limpio y listo para un nuevo día.');
     } else {
-      console.log('\n⚠️ ADVERTENCIA: Aún quedan turnos en el sistema');
+      console.log('\n⚠️ ADVERTENCIA: Aún quedan datos en el sistema');
     }
     
   } catch (error) {
