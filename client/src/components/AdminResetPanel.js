@@ -5,7 +5,6 @@ import {
   Shield, 
   Clock, 
   Calendar,
-  DollarSign,
   BarChart3,
   RefreshCw,
   CheckCircle,

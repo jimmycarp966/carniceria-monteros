@@ -2,15 +2,11 @@ import { db } from '../firebase';
 import { 
   collection, 
   getDocs, 
-  deleteDoc, 
-  doc, 
   writeBatch,
   query,
   where,
-  orderBy,
   limit
 } from 'firebase/firestore';
-import { toast } from 'react-hot-toast';
 
 // Función para eliminar todos los documentos de una colección
 const deleteAllFromCollection = async (collectionName, batchSize = 500) => {
@@ -114,7 +110,6 @@ export const nuclearReset = async (options = {}) => {
     includeInventoryMovements = true,
     includeNotifications = true,
     includeActivityLogs = true,
-    dateRange = null, // { startDate, endDate }
     confirmMessage = '¿Estás seguro de que quieres eliminar TODOS los datos históricos? Esta acción es IRREVERSIBLE.'
   } = options;
 

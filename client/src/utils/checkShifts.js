@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { collection, getDocs, query, where, orderBy, limit, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 export const checkShiftsStatus = async () => {
   try {
@@ -76,7 +76,6 @@ export const createTestShifts = async () => {
   try {
     console.log('🧪 Creando turnos de prueba...');
     
-    const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     const testShifts = [
