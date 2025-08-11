@@ -264,7 +264,7 @@ const CashRegister = () => {
         return;
       }
 
-      // Mostrar modal de arqueo antes de cerrar
+      // OBLIGATORIO: Mostrar modal de arqueo antes de cerrar
       setShowCashCountModalForClose(true);
       setShowCloseShiftModal(false);
       
@@ -307,7 +307,26 @@ const CashRegister = () => {
         20: 0, 10: 0, 5: 0, 2: 0, 1: 0
       });
       
-      toast.success('Turno cerrado exitosamente');
+      // Mostrar resumen del arqueo
+      const summaryMessage = `
+        ✅ Turno cerrado exitosamente
+        
+        📊 Resumen del Arqueo:
+        • Total Esperado: $${differences.totalExpected?.toLocaleString() || 0}
+        • Total Contado: $${differences.totalCounted?.toLocaleString() || 0}
+        • Ingresos Adicionales: $${differences.totalAdditionalIncomes?.toLocaleString() || 0}
+        • Egresos Adicionales: $${differences.totalAdditionalExpenses?.toLocaleString() || 0}
+        • Total Final: $${differences.finalTotal?.toLocaleString() || 0}
+        ${differences.hasDifference ? `• Diferencia: $${Math.abs(differences.finalDifference || 0).toLocaleString()}` : '• Arqueo balanceado ✅'}
+      `;
+      
+      toast.success(summaryMessage, {
+        duration: 8000,
+        style: {
+          whiteSpace: 'pre-line',
+          fontSize: '14px'
+        }
+      });
       
       // Recargar datos
       const updatedShifts = await shiftService.getAllShifts();

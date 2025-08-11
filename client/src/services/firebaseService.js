@@ -549,15 +549,21 @@ export const saleService = {
     }
   },
 
-  async getSalesByShift(shiftId) {
+  async getSalesByShift(shiftId, forceRefresh = false) {
     try {
       const cacheKey = `sales_shift_${shiftId}`;
-      const cached = smartCache.get(cacheKey);
       
-      if (cached) {
-        return cached;
+      // Si no se fuerza refresh, intentar usar cache
+      if (!forceRefresh) {
+        const cached = smartCache.get(cacheKey);
+        if (cached) {
+          console.log(`📋 Usando cache para ventas del turno ${shiftId}: ${cached.length} ventas`);
+          return cached;
+        }
       }
 
+      console.log(`🔄 Cargando ventas del turno ${shiftId} desde Firebase...`);
+      
       const salesRef = collection(db, 'sales');
       // Evitar índice compuesto: filtrar por shiftId y ordenar en memoria
       const q = query(
@@ -570,12 +576,17 @@ export const saleService = {
         id: doc.id,
         ...doc.data()
       }));
+      
       // Ordenar por createdAt desc en cliente
       sales = sales.sort((a, b) => {
         const ta = a.createdAt?.toDate?.()?.getTime?.() || new Date(a.createdAt || 0).getTime();
         const tb = b.createdAt?.toDate?.()?.getTime?.() || new Date(b.createdAt || 0).getTime();
         return tb - ta;
       });
+      
+      // Calcular total de ventas
+      const totalAmount = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+      console.log(`✅ Ventas cargadas del turno ${shiftId}: ${sales.length} ventas por $${totalAmount.toLocaleString()}`);
       
       smartCache.set(cacheKey, sales);
       return sales;

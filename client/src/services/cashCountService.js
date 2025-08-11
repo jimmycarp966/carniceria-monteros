@@ -13,10 +13,14 @@ import { saleService } from './firebaseService';
 // Servicio de arqueo de caja
 export const cashCountService = {
   // Obtener ventas del turno por método de pago
-  async getSalesByPaymentMethod(shiftId) {
+  async getSalesByPaymentMethod(shiftId, forceRefresh = false) {
     try {
-      const allSales = await saleService.getAllSales();
-      const shiftSales = allSales.filter(sale => sale.shiftId === shiftId);
+      console.log(`🔄 Obteniendo ventas para turno: ${shiftId}${forceRefresh ? ' (forzando refresh)' : ''}`);
+      
+      // Usar getSalesByShift para obtener solo las ventas del turno específico
+      const shiftSales = await saleService.getSalesByShift(shiftId, forceRefresh);
+      
+      console.log(`📊 Ventas encontradas: ${shiftSales.length}`);
       
       const salesByMethod = {
         efectivo: { count: 0, total: 0, expected: 0 },
@@ -26,32 +30,43 @@ export const cashCountService = {
         mercadopago: { count: 0, total: 0, expected: 0 }
       };
 
+      let totalProcessed = 0;
+      let totalAmount = 0;
+
       shiftSales.forEach(sale => {
         const paymentMethod = sale.paymentMethod;
+        const saleAmount = sale.total || 0;
+        
         if (paymentMethod === 'efectivo') {
           salesByMethod.efectivo.count++;
-          salesByMethod.efectivo.total += sale.total || 0;
-          salesByMethod.efectivo.expected += sale.total || 0;
+          salesByMethod.efectivo.total += saleAmount;
+          salesByMethod.efectivo.expected += saleAmount;
         } else if (paymentMethod === 'tarjeta') {
           if (sale.cardType === 'credito') {
             salesByMethod.tarjetaCredito.count++;
-            salesByMethod.tarjetaCredito.total += sale.total || 0;
-            salesByMethod.tarjetaCredito.expected += sale.total || 0;
+            salesByMethod.tarjetaCredito.total += saleAmount;
+            salesByMethod.tarjetaCredito.expected += saleAmount;
           } else {
             salesByMethod.tarjetaDebito.count++;
-            salesByMethod.tarjetaDebito.total += sale.total || 0;
-            salesByMethod.tarjetaDebito.expected += sale.total || 0;
+            salesByMethod.tarjetaDebito.total += saleAmount;
+            salesByMethod.tarjetaDebito.expected += saleAmount;
           }
         } else if (paymentMethod === 'transferencia') {
           salesByMethod.transferencia.count++;
-          salesByMethod.transferencia.total += sale.total || 0;
-          salesByMethod.transferencia.expected += sale.total || 0;
+          salesByMethod.transferencia.total += saleAmount;
+          salesByMethod.transferencia.expected += saleAmount;
         } else if (paymentMethod === 'mercadopago') {
           salesByMethod.mercadopago.count++;
-          salesByMethod.mercadopago.total += sale.total || 0;
-          salesByMethod.mercadopago.expected += sale.total || 0;
+          salesByMethod.mercadopago.total += saleAmount;
+          salesByMethod.mercadopago.expected += saleAmount;
         }
+        
+        totalProcessed++;
+        totalAmount += saleAmount;
       });
+
+      console.log(`✅ Procesadas ${totalProcessed} ventas por $${totalAmount.toLocaleString()}`);
+      console.log('📊 Resumen por método:', salesByMethod);
 
       return salesByMethod;
     } catch (error) {
@@ -168,38 +183,53 @@ export const cashCountService = {
   validateCashCount(cashCountData) {
     const errors = [];
 
-    // Validar que al menos un método de pago tenga datos
+    // Validar que al menos un método de pago tenga datos contados
     const hasPaymentData = Object.values(cashCountData.paymentMethods || {})
       .some(data => (data.counted || 0) > 0);
     
     if (!hasPaymentData) {
-      errors.push('Debe ingresar al menos un monto contado');
+      errors.push('⚠️ DEBE ingresar al menos un monto contado para continuar');
     }
 
     // Validar que los montos sean números positivos
     Object.entries(cashCountData.paymentMethods || {}).forEach(([method, data]) => {
       if (data.counted && data.counted < 0) {
-        errors.push(`El monto contado de ${method} no puede ser negativo`);
+        errors.push(`❌ El monto contado de ${method} no puede ser negativo`);
+      }
+    });
+
+    // Validar que se hayan contado todos los métodos con ventas esperadas
+    Object.entries(cashCountData.paymentMethods || {}).forEach(([method, data]) => {
+      const methodLabels = {
+        efectivo: 'Efectivo',
+        tarjetaDebito: 'Tarjeta Débito',
+        tarjetaCredito: 'Tarjeta Crédito',
+        transferencia: 'Transferencia',
+        mercadopago: 'MercadoPago'
+      };
+      
+      if (data.expected > 0 && (data.counted || 0) === 0) {
+        errors.push(`⚠️ Debe contar ${methodLabels[method]} - Esperado: $${data.expected.toLocaleString()}`);
       }
     });
 
     // Validar ingresos adicionales
     (cashCountData.additionalIncomes || []).forEach((income, index) => {
       if (!income.description || !income.description.trim()) {
-        errors.push(`El ingreso #${index + 1} debe tener una descripción`);
+        errors.push(`❌ El ingreso #${index + 1} debe tener una descripción`);
       }
       if (!income.amount || income.amount <= 0) {
-        errors.push(`El ingreso #${index + 1} debe tener un monto válido`);
+        errors.push(`❌ El ingreso #${index + 1} debe tener un monto válido`);
       }
     });
 
     // Validar egresos adicionales
     (cashCountData.additionalExpenses || []).forEach((expense, index) => {
       if (!expense.description || !expense.description.trim()) {
-        errors.push(`El egreso #${index + 1} debe tener una descripción`);
+        errors.push(`❌ El egreso #${index + 1} debe tener una descripción`);
       }
       if (!expense.amount || expense.amount <= 0) {
-        errors.push(`El egreso #${index + 1} debe tener un monto válido`);
+        errors.push(`❌ El egreso #${index + 1} debe tener un monto válido`);
       }
     });
 

@@ -44,6 +44,42 @@ const CashCountModal = memo(({
   // Estados de validación
   const [validationErrors, setValidationErrors] = useState([]);
 
+  // Función para recargar datos de ventas
+  const reloadSalesData = async () => {
+    try {
+      setIsLoading(true);
+      
+      if (currentShift?.id) {
+        console.log('🔄 Recargando datos de ventas para arqueo...');
+        
+        // Cargar ventas del turno por método de pago (forzando refresh)
+        const salesData = await cashCountService.getSalesByPaymentMethod(currentShift.id, true);
+        
+        console.log('📊 Datos de ventas recargados:', salesData);
+        
+        // Actualizar montos esperados manteniendo los contados
+        setPaymentMethods(prev => ({
+          efectivo: { expected: salesData.efectivo.expected, counted: prev.efectivo.counted },
+          tarjetaDebito: { expected: salesData.tarjetaDebito.expected, counted: prev.tarjetaDebito.counted },
+          tarjetaCredito: { expected: salesData.tarjetaCredito.expected, counted: prev.tarjetaCredito.counted },
+          transferencia: { expected: salesData.transferencia.expected, counted: prev.transferencia.counted },
+          mercadopago: { expected: salesData.mercadopago.expected, counted: prev.mercadopago.counted }
+        }));
+        
+        // Mostrar resumen de ventas cargadas
+        const totalExpected = Object.values(salesData).reduce((sum, method) => sum + (method.expected || 0), 0);
+        console.log(`✅ Ventas recargadas: $${totalExpected.toLocaleString()} en total`);
+        
+        toast.success(`Ventas actualizadas: $${totalExpected.toLocaleString()}`, { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Error recargando datos de ventas:', error);
+      toast.error('Error recargando datos de ventas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Cargar datos iniciales
   useEffect(() => {
     const loadInitialData = async () => {
@@ -51,8 +87,12 @@ const CashCountModal = memo(({
         setIsLoading(true);
         
         if (currentShift?.id) {
+          console.log('🔄 Cargando datos de ventas para arqueo...');
+          
           // Cargar ventas del turno por método de pago
           const salesData = await cashCountService.getSalesByPaymentMethod(currentShift.id);
+          
+          console.log('📊 Datos de ventas cargados:', salesData);
           
           // Pre-cargar montos esperados
           const expectedMethods = {
@@ -63,6 +103,14 @@ const CashCountModal = memo(({
             mercadopago: { expected: salesData.mercadopago.expected, counted: 0 }
           };
           setPaymentMethods(expectedMethods);
+          
+          // Mostrar resumen de ventas cargadas
+          const totalExpected = Object.values(salesData).reduce((sum, method) => sum + (method.expected || 0), 0);
+          console.log(`✅ Ventas cargadas: $${totalExpected.toLocaleString()} en total`);
+          
+          if (totalExpected > 0) {
+            toast.success(`Ventas cargadas: $${totalExpected.toLocaleString()}`, { duration: 3000 });
+          }
         }
       } catch (error) {
         console.error('Error cargando datos iniciales:', error);
@@ -287,18 +335,39 @@ const CashCountModal = memo(({
           <div className="flex items-center space-x-3">
             <Calculator className="h-8 w-8 text-primary-600" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Arqueo de Caja</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Arqueo de Caja - OBLIGATORIO</h2>
               <p className="text-sm text-gray-600">
                 Turno {currentShift?.type === 'morning' ? 'Mañana' : 'Tarde'} - {currentUser?.name}
               </p>
+              <p className="text-xs text-orange-600 font-medium mt-1">
+                ⚠️ El arqueo es obligatorio para cerrar el turno
+              </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={reloadSalesData}
+              disabled={isLoading}
+              className="flex items-center space-x-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50"
+              title="Recargar datos de ventas"
+            >
+              <div className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}>
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                ) : (
+                  <div className="w-4 h-4 border-2 border-blue-600 rounded-full"></div>
+                )}
+              </div>
+              <span className="text-sm">Actualizar Ventas</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+              title="No se puede cancelar - debe completar el arqueo"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Errores de validación */}
@@ -564,13 +633,14 @@ const CashCountModal = memo(({
             onClick={onClose}
             disabled={isSaving}
             className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+            title="No se puede cancelar - debe completar el arqueo"
           >
-            Cancelar
+            No se puede cancelar
           </button>
           <button
             onClick={saveCashCount}
             disabled={isSaving}
-            className="flex-1 bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center"
+            className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center font-semibold"
           >
             {isSaving ? (
               <>
@@ -580,7 +650,7 @@ const CashCountModal = memo(({
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Guardar Arqueo y Continuar
+                ✅ COMPLETAR ARQUEO Y CERRAR TURNO
               </>
             )}
           </button>
@@ -591,3 +661,4 @@ const CashCountModal = memo(({
 });
 
 export default CashCountModal;
+
