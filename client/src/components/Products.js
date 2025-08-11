@@ -27,24 +27,24 @@ const ProductCard = memo(({ product, onEdit, onDelete, onView, getCategoryColor,
   const stockStatus = getStockStatus(product.stock, product.minStock);
   
   return (
-    <div className="card hover:shadow-lg transition-all duration-300 group">
+    <div className="card hover:shadow-lg transition-all duration-300 group p-5 lg:p-6">
       {/* Header del card */}
-      <div className="flex items-start justify-between mb-3 lg:mb-4">
+      <div className="flex items-start justify-between mb-4 lg:mb-5">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
-            <div className="text-2xl lg:text-3xl">{product.image}</div>
+          <div className="flex items-center space-x-3 lg:space-x-4 mb-3">
+            <div className="text-3xl lg:text-4xl flex-shrink-0">{product.image}</div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-base lg:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
-              <p className="text-xs lg:text-sm text-gray-500 truncate">{product.description}</p>
+              <h3 className="text-lg lg:text-xl font-semibold text-gray-900 truncate mb-1">{product.name}</h3>
+              <p className="text-sm lg:text-base text-gray-500 truncate leading-relaxed">{product.description}</p>
             </div>
           </div>
-          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
+          <span className={`inline-flex px-3 py-1.5 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
             {product.category}
           </span>
         </div>
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity lg:block hidden">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity lg:block hidden ml-3">
           <div className="dropdown relative">
-            <button className="p-1 rounded-full hover:bg-gray-100">
+            <button className="p-2 rounded-full hover:bg-gray-100">
               <MoreVertical className="h-4 w-4 text-gray-500" />
             </button>
             <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
@@ -75,47 +75,47 @@ const ProductCard = memo(({ product, onEdit, onDelete, onView, getCategoryColor,
       </div>
       
       {/* Información del producto */}
-      <div className="space-y-2 lg:space-y-3 mb-3 lg:mb-4">
-        <div className="flex justify-between items-center">
-          <span className="text-xs lg:text-sm text-gray-500">Precio:</span>
-          <span className="text-lg lg:text-xl font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</span>
+      <div className="space-y-4 mb-5 lg:mb-6">
+        <div className="flex justify-between items-center py-2">
+          <span className="text-sm lg:text-base text-gray-600 font-medium">Precio:</span>
+          <span className="text-xl lg:text-2xl font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</span>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-xs lg:text-sm text-gray-500">Stock:</span>
-          <div className="flex items-center space-x-1 lg:space-x-2">
-            <span className={`text-xs lg:text-sm font-medium text-${stockStatus.color}-600`}>
+        <div className="flex justify-between items-center py-2">
+          <span className="text-sm lg:text-base text-gray-600 font-medium">Stock:</span>
+          <div className="flex items-center space-x-2 lg:space-x-3">
+            <span className={`text-sm lg:text-base font-semibold text-${stockStatus.color}-600`}>
               {(Number(product.stock) || 0)} {product.unit || ''}
             </span>
-            <div className={`w-1.5 lg:w-2 h-1.5 lg:h-2 rounded-full bg-${stockStatus.color}-500`}></div>
+            <div className={`w-2 lg:w-3 h-2 lg:h-3 rounded-full bg-${stockStatus.color}-500`}></div>
           </div>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-xs lg:text-sm text-gray-500">Origen:</span>
-          <span className="text-xs lg:text-sm text-gray-700 truncate">{product.origin}</span>
+        <div className="flex justify-between items-center py-2">
+          <span className="text-sm lg:text-base text-gray-600 font-medium">Origen:</span>
+          <span className="text-sm lg:text-base text-gray-700 truncate max-w-[120px] lg:max-w-[150px]">{product.origin}</span>
         </div>
         {product.salesCount > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-xs lg:text-sm text-gray-500">Ventas:</span>
-            <span className="text-xs lg:text-sm text-blue-600 font-medium">{product.salesCount}</span>
+          <div className="flex justify-between items-center py-2">
+            <span className="text-sm lg:text-base text-gray-600 font-medium">Ventas:</span>
+            <span className="text-sm lg:text-base text-blue-600 font-semibold">{product.salesCount}</span>
           </div>
         )}
       </div>
 
       {/* Acciones rápidas - Optimizadas para móvil */}
-      <div className="flex space-x-2">
+      <div className="flex space-x-3">
         <button
           onClick={() => onEdit(product)}
-          className="flex-1 btn btn-secondary text-xs lg:text-sm py-2 flex items-center justify-center"
+          className="flex-1 btn btn-secondary text-sm lg:text-base py-3 flex items-center justify-center font-medium"
         >
-          <Edit className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
+          <Edit className="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
           <span className="hidden sm:inline">Editar</span>
           <span className="sm:hidden">Editar</span>
         </button>
         <button
           onClick={() => onDelete(product.id)}
-          className="btn btn-danger text-xs lg:text-sm py-2 px-2 lg:px-3 flex items-center justify-center"
+          className="btn btn-danger text-sm lg:text-base py-3 px-4 lg:px-5 flex items-center justify-center font-medium"
         >
-          <Trash2 className="h-3 w-3 lg:h-4 lg:w-4" />
+          <Trash2 className="h-4 w-4 lg:h-5 lg:w-5" />
         </button>
       </div>
     </div>
