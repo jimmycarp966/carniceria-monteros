@@ -20,6 +20,7 @@ import CashCountModal from './CashCountModal';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
+import { verifyDaySummary } from '../utils/verifyDaySummary';
 
 const CashRegister = () => {
   const { currentUser, userRole, canOpenShift, canCloseShift } = useCashRegisterAccess();
@@ -700,6 +701,23 @@ const CashRegister = () => {
                   Finalizar Día
                 </button>
               )}
+              
+              {/* Botón de verificación para debug */}
+              <button
+                onClick={async () => {
+                  console.log('🔍 Iniciando verificación del resumen del día...');
+                  const result = await verifyDaySummary();
+                  if (result.success) {
+                    toast.success('Verificación completada. Revisa la consola para detalles.');
+                  } else {
+                    toast.error('Error en verificación: ' + result.error);
+                  }
+                }}
+                className="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 font-medium flex items-center text-sm"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Verificar
+              </button>
             </div>
             
             {/* Mostrar estado de turnos cuando no hay turno activo */}
