@@ -14,6 +14,8 @@ import realtimeService from './services/realtimeService';
 
 // Importar diagnóstico de Firebase
 import './utils/firebaseDiagnostic';
+// Importar funciones de reset de turnos
+import './utils/resetShifts';
 
 // Lazy loading con preloading para mejorar el rendimiento
 const Products = lazy(() => import('./components/Products'));
