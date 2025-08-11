@@ -379,7 +379,7 @@ const CashRegister = () => {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
     }
-  }, [canCloseShift, userRole, currentUser, currentShift, closingAmount, closingNotes, shiftStats, cashCount, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount]);
+  }, [canCloseShift, userRole, currentUser, currentShift, closingAmount, closingNotes, shiftStats, cashCount, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount, calculateArqueoTotal, calculateCashTotal, calculateDifference]);
 
   // Registrar ingreso adicional
   const registerIncome = async () => {
