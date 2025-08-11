@@ -11,7 +11,8 @@ import {
   BarChart3,
   AlertTriangle,
   X,
-  TrendingUp
+  TrendingUp,
+  Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { shiftService, saleService } from '../services/firebaseService';
@@ -166,6 +167,8 @@ const CashRegister = () => {
       
       if (canFinalizar) {
         console.log('✅ Ambos turnos cerrados - Finalizar Día habilitado');
+        // Recargar el resumen del día cuando ambos turnos estén cerrados
+        loadDaySummary();
       } else {
         console.log('❌ Finalizar Día deshabilitado - Turnos pendientes:', {
           morning: morningShift?.status || 'no existe',
@@ -176,7 +179,7 @@ const CashRegister = () => {
       console.error('Error verificando estado de turnos:', error);
       setCanFinalizarDia(false);
     }
-  }, []);
+  }, [loadDaySummary]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -751,10 +754,40 @@ const CashRegister = () => {
               </div>
               
               {canFinalizarDia && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <p className="text-green-800 font-medium">✅ Ambos turnos completados - Puede finalizar el día</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                      <div>
+                        <p className="text-green-800 font-semibold">✅ Día Completado</p>
+                        <p className="text-green-700 text-sm">Ambos turnos cerrados - Puede finalizar el día</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowFinalizarDiaModal(true)}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Finalizar Día</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {!canFinalizarDia && (todayShifts.morning || todayShifts.afternoon) && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <Clock className="h-5 w-5 text-yellow-600" />
+                    <div>
+                      <p className="text-yellow-800 font-medium">⏳ Turnos Pendientes</p>
+                      <p className="text-yellow-700 text-sm">
+                        {!todayShifts.morning ? 'Falta abrir turno mañana' :
+                         !todayShifts.afternoon ? 'Falta abrir turno tarde' :
+                         todayShifts.morning.status !== 'closed' ? 'Cierre turno mañana' :
+                         todayShifts.afternoon.status !== 'closed' ? 'Cierre turno tarde' :
+                         'Espere cierre de turnos'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1146,38 +1179,60 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal }) =>
   const [daySummary, setDaySummary] = useState(null);
 
   useEffect(() => {
-    const loadDaySummary = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const shifts = await shiftService.getShiftsByDate(today);
+      const loadDaySummary = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const shifts = await shiftService.getShiftsByDate(today);
+      
+      // Obtener todas las ventas del día para calcular totales reales
+      const allSales = await saleService.getAllSales();
+      const todaySales = allSales.filter(sale => {
+        const saleDate = sale.timestamp?.toDate?.()?.toISOString()?.split('T')[0] || 
+                        sale.createdAt?.toDate?.()?.toISOString()?.split('T')[0];
+        return saleDate === today;
+      });
+
+      // Calcular totales por turno
+      const shiftsWithTotals = shifts.map(shift => {
+        const shiftSales = todaySales.filter(sale => sale.shiftId === shift.id);
+        const totalSales = shiftSales.length;
+        const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
         
-        const summary = {
-          date: today,
-          totalShifts: shifts.length,
-          totalSales: 0,
-          totalRevenue: 0,
-          shifts: shifts.map(shift => ({
-            id: shift.id,
-            type: shift.type,
-            employeeName: shift.employeeName,
-            startTime: shift.startTime,
-            endTime: shift.endTime,
-            totalSales: shift.totalSales || 0,
-            totalRevenue: shift.totalRevenue || 0,
-            status: shift.status
-          }))
+        return {
+          id: shift.id,
+          type: shift.type,
+          employeeName: shift.employeeName,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          totalSales,
+          totalRevenue,
+          status: shift.status
         };
+      });
 
-        // Calcular totales
-        summary.totalSales = summary.shifts.reduce((sum, shift) => sum + shift.totalSales, 0);
-        summary.totalRevenue = summary.shifts.reduce((sum, shift) => sum + shift.totalRevenue, 0);
+      const summary = {
+        date: today,
+        totalShifts: shifts.length,
+        totalSales: todaySales.length,
+        totalRevenue: todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0),
+        shifts: shiftsWithTotals,
+        // Agregar estadísticas adicionales
+        salesByPaymentMethod: {
+          efectivo: todaySales.filter(s => s.paymentMethod === 'efectivo').reduce((sum, s) => sum + (s.total || 0), 0),
+          tarjetaDebito: todaySales.filter(s => s.paymentMethod === 'tarjetaDebito').reduce((sum, s) => sum + (s.total || 0), 0),
+          tarjetaCredito: todaySales.filter(s => s.paymentMethod === 'tarjetaCredito').reduce((sum, s) => sum + (s.total || 0), 0),
+          transferencia: todaySales.filter(s => s.paymentMethod === 'transferencia').reduce((sum, s) => sum + (s.total || 0), 0),
+          mercadopago: todaySales.filter(s => s.paymentMethod === 'mercadopago').reduce((sum, s) => sum + (s.total || 0), 0)
+        }
+      };
 
-        setDaySummary(summary);
-      } catch (error) {
-        console.error('Error cargando resumen del día:', error);
-        toast.error('Error cargando datos del día');
-      }
-    };
+      setDaySummary(summary);
+      console.log('📊 Resumen del día cargado:', summary);
+    } catch (error) {
+      console.error('Error cargando resumen del día:', error);
+      toast.error('Error cargando datos del día');
+    }
+  };
 
     loadDaySummary();
   }, []);
@@ -1185,12 +1240,32 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal }) =>
   const handleFinalizarDia = async () => {
     if (!daySummary) return;
     
+    // Confirmar antes de finalizar
+    const confirmed = window.confirm(
+      `¿Está seguro que desea finalizar el día?\n\n` +
+      `📅 Fecha: ${new Date(daySummary.date).toLocaleDateString('es-AR')}\n` +
+      `💰 Total de ventas: ${daySummary.totalSales}\n` +
+      `💵 Ingresos totales: $${daySummary.totalRevenue.toLocaleString()}\n\n` +
+      `Esta acción cerrará definitivamente el día y no se podrá deshacer.`
+    );
+    
+    if (!confirmed) return;
+    
     setIsLoading(true);
     try {
+      console.log('🚀 Finalizando día:', daySummary);
+      
       await onFinalizarDia(daySummary);
+      
+      toast.success('✅ Día finalizado exitosamente');
       setShowFinalizarDiaModal(false);
+      
+      // Recargar datos después de finalizar
+      await checkCanFinalizarDia();
+      
     } catch (error) {
       console.error('Error finalizando día:', error);
+      toast.error('❌ Error al finalizar el día');
     } finally {
       setIsLoading(false);
     }
@@ -1268,6 +1343,35 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal }) =>
               </div>
             </div>
           </div>
+
+          {/* Métodos de pago */}
+          {daySummary.salesByPaymentMethod && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Métodos de Pago</h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-green-600">Efectivo</p>
+                  <p className="text-lg font-bold text-green-900">${daySummary.salesByPaymentMethod.efectivo.toLocaleString()}</p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-blue-600">Débito</p>
+                  <p className="text-lg font-bold text-blue-900">${daySummary.salesByPaymentMethod.tarjetaDebito.toLocaleString()}</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-purple-600">Crédito</p>
+                  <p className="text-lg font-bold text-purple-900">${daySummary.salesByPaymentMethod.tarjetaCredito.toLocaleString()}</p>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-orange-600">Transferencia</p>
+                  <p className="text-lg font-bold text-orange-900">${daySummary.salesByPaymentMethod.transferencia.toLocaleString()}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-yellow-600">MercadoPago</p>
+                  <p className="text-lg font-bold text-yellow-900">${daySummary.salesByPaymentMethod.mercadopago.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Detalle de turnos */}
           <div>

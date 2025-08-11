@@ -793,7 +793,15 @@ export const shiftService = {
 
   async finalizarDia(daySummary) {
     try {
-      // Cerrar todos los turnos activos del día
+      console.log('🚀 Iniciando finalización del día:', daySummary.date);
+      
+      // Verificar que ambos turnos estén cerrados
+      const openShifts = daySummary.shifts.filter(shift => shift.status === 'active');
+      if (openShifts.length > 0) {
+        throw new Error(`No se puede finalizar el día: ${openShifts.length} turno(s) aún abierto(s)`);
+      }
+
+      // Cerrar todos los turnos activos del día (por si acaso)
       const activeShifts = daySummary.shifts.filter(shift => shift.status === 'active');
       
       for (const shift of activeShifts) {
@@ -804,9 +812,10 @@ export const shiftService = {
           dayClosed: true,
           updatedAt: serverTimestamp()
         });
+        console.log(`✅ Turno cerrado: ${shift.id}`);
       }
 
-      // Crear registro del día cerrado
+      // Crear registro del día cerrado con información completa
       const dayData = {
         date: daySummary.date,
         totalShifts: daySummary.totalShifts,
@@ -817,20 +826,29 @@ export const shiftService = {
           type: shift.type,
           employeeName: shift.employeeName,
           totalSales: shift.totalSales,
-          totalRevenue: shift.totalRevenue
+          totalRevenue: shift.totalRevenue,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          status: shift.status
         })),
+        // Agregar estadísticas de métodos de pago si existen
+        salesByPaymentMethod: daySummary.salesByPaymentMethod || {},
         closedAt: serverTimestamp(),
-        status: 'closed'
+        status: 'closed',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       };
 
-      await dayService.createDay(dayData);
+      const dayId = await dayService.createDay(dayData);
+      console.log(`✅ Día registrado en base de datos: ${dayId}`);
 
       // Limpiar cache
       smartCache.invalidate('shifts');
       smartCache.invalidate('days');
+      smartCache.invalidate('sales');
       
-      console.log('✅ Día finalizado:', daySummary.date);
-      return true;
+      console.log('✅ Día finalizado exitosamente:', daySummary.date);
+      return { success: true, dayId };
     } catch (error) {
       console.error('❌ Error finalizando día:', error);
       throw error;
