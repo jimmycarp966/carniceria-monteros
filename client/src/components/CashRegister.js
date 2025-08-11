@@ -437,23 +437,23 @@ const CashRegister = () => {
   };
 
   // Calcular total del arqueo de efectivo
-  const calculateCashTotal = () => {
+  const calculateCashTotal = useCallback(() => {
     return Object.entries(cashCount).reduce((total, [denomination, count]) => {
       return total + (parseInt(denomination) * count);
     }, 0);
-  };
+  }, [cashCount]);
 
   // Calcular total general del arqueo
-  const calculateArqueoTotal = () => {
+  const calculateArqueoTotal = useCallback(() => {
     return calculateCashTotal() + (tarjetaDebitoAmount + tarjetaCreditoAmount) + transferenciaAmount + mercadopagoAmount;
-  };
+  }, [calculateCashTotal, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount]);
 
   // Calcular diferencia con el esperado
-  const calculateDifference = () => {
+  const calculateDifference = useCallback(() => {
     const expected = shiftStats.netAmount;
     const actual = calculateArqueoTotal();
     return actual - expected;
-  };
+  }, [shiftStats.netAmount, calculateArqueoTotal]);
 
   // Función para actualizar conteo de billetes/monedas
   const updateCashCount = (denomination, count) => {
