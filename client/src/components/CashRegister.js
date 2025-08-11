@@ -38,7 +38,7 @@ const CashRegister = () => {
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [showIncomeModal, setShowIncomeModal] = useState(false);
-  const [showCashCountModal, setShowCashCountModal] = useState(false);
+  const [showCashCountModal] = useState(false);
   const [showCashCountModalForClose, setShowCashCountModalForClose] = useState(false);
 
   // Estados para cerrar turno (mantenidos para compatibilidad futura)
