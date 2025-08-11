@@ -298,9 +298,24 @@ const CashRegister = () => {
     }
   };
 
+  // Calcular total del arqueo de efectivo
+  const calculateCashTotal = useCallback(() => {
+    return Object.entries(cashCount).reduce((total, [denomination, count]) => {
+      return total + (parseInt(denomination) * count);
+    }, 0);
+  }, [cashCount]);
 
+  // Calcular total general del arqueo
+  const calculateArqueoTotal = useCallback(() => {
+    return calculateCashTotal() + (tarjetaDebitoAmount + tarjetaCreditoAmount) + transferenciaAmount + mercadopagoAmount;
+  }, [calculateCashTotal, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount]);
 
-
+  // Calcular diferencia con el esperado
+  const calculateDifference = useCallback(() => {
+    const expected = shiftStats.netAmount;
+    const actual = calculateArqueoTotal();
+    return actual - expected;
+  }, [shiftStats.netAmount, calculateArqueoTotal]);
 
   // Función para cerrar turno
   const closeShift = useCallback(async () => {
@@ -435,25 +450,6 @@ const CashRegister = () => {
       toast.error('Error al registrar el ingreso');
     }
   };
-
-  // Calcular total del arqueo de efectivo
-  const calculateCashTotal = useCallback(() => {
-    return Object.entries(cashCount).reduce((total, [denomination, count]) => {
-      return total + (parseInt(denomination) * count);
-    }, 0);
-  }, [cashCount]);
-
-  // Calcular total general del arqueo
-  const calculateArqueoTotal = useCallback(() => {
-    return calculateCashTotal() + (tarjetaDebitoAmount + tarjetaCreditoAmount) + transferenciaAmount + mercadopagoAmount;
-  }, [calculateCashTotal, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount]);
-
-  // Calcular diferencia con el esperado
-  const calculateDifference = useCallback(() => {
-    const expected = shiftStats.netAmount;
-    const actual = calculateArqueoTotal();
-    return actual - expected;
-  }, [shiftStats.netAmount, calculateArqueoTotal]);
 
   // Función para actualizar conteo de billetes/monedas
   const updateCashCount = (denomination, count) => {
