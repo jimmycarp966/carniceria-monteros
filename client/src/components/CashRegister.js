@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   X,
   TrendingUp,
-  Clock
+  Clock,
+  CreditCard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { shiftService, saleService, expensesService } from '../services/firebaseService';
