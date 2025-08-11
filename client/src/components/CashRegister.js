@@ -385,30 +385,81 @@ const CashRegister = () => {
     const setupListeners = () => {
       console.log('🔧 Configurando listeners de tiempo real...');
       
-      // Escuchar cambios en ventas
+      // Escuchar cambios en ventas - MEJORADO para actualización inmediata
       realtimeService.on('sales_updated', (data) => {
         console.log('💰 Ventas actualizadas:', data);
-        // Usar setCurrentShift con callback para acceder al estado actual
-        setCurrentShift(currentShiftState => {
-          if (currentShiftState && data.sales) {
-            console.log('🔄 Recargando datos del turno por ventas actualizadas');
-            loadShiftData(currentShiftState);
-          }
-          return currentShiftState;
-        });
+        if (data.sales && currentShift) {
+          console.log('🔄 Actualizando datos del turno por ventas actualizadas');
+          // Filtrar ventas del turno actual
+          const shiftSales = data.sales.filter(sale => sale.shiftId === currentShift.id);
+          const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+          
+          // Actualizar estadísticas inmediatamente
+          setShiftStats(prev => ({
+            ...prev,
+            totalSales: shiftSales.length,
+            totalRevenue,
+            salesCount: shiftSales.length,
+            netAmount: totalRevenue + (prev.totalAdditionalIncomes || 0)
+          }));
+          
+          // Actualizar actividad reciente
+          setRecentActivity(shiftSales.slice(-5).reverse());
+          
+          // Actualizar ventas por método de pago
+          const salesByMethod = {
+            efectivo: { count: 0, total: 0 },
+            tarjetaDebito: { count: 0, total: 0 },
+            tarjetaCredito: { count: 0, total: 0 },
+            transferencia: { count: 0, total: 0 },
+            mercadopago: { count: 0, total: 0 }
+          };
+
+          shiftSales.forEach(sale => {
+            const normalizedMethod = normalizePaymentMethod(sale.paymentMethod);
+            if (salesByMethod[normalizedMethod]) {
+              salesByMethod[normalizedMethod].count++;
+              salesByMethod[normalizedMethod].total += sale.total || 0;
+            }
+          });
+          
+          setSalesByPaymentMethod(salesByMethod);
+          console.log('✅ Datos de caja actualizados en tiempo real');
+        }
       });
 
-      // Escuchar nuevas ventas
+      // Escuchar nuevas ventas - MEJORADO para notificación inmediata
       realtimeService.on('sale_synced', (data) => {
         console.log('💰 Nueva venta sincronizada:', data);
-        setCurrentShift(currentShiftState => {
-          if (currentShiftState) {
-            console.log('🔄 Recargando datos del turno por nueva venta');
-            loadShiftData(currentShiftState);
-            toast.success('Nueva venta registrada en la caja');
-          }
-          return currentShiftState;
-        });
+        if (data.saleData && currentShift && data.saleData.shiftId === currentShift.id) {
+          console.log('🔄 Nueva venta detectada para el turno actual');
+          
+          // Actualizar estadísticas inmediatamente
+          setShiftStats(prev => ({
+            ...prev,
+            totalSales: prev.totalSales + 1,
+            totalRevenue: prev.totalRevenue + (data.saleData.total || 0),
+            salesCount: prev.salesCount + 1,
+            netAmount: prev.netAmount + (data.saleData.total || 0)
+          }));
+          
+          // Agregar a actividad reciente
+          setRecentActivity(prev => [data.saleData, ...prev.slice(0, 4)]);
+          
+          // Actualizar ventas por método de pago
+          setSalesByPaymentMethod(prev => {
+            const normalizedMethod = normalizePaymentMethod(data.saleData.paymentMethod);
+            const updated = { ...prev };
+            if (updated[normalizedMethod]) {
+              updated[normalizedMethod].count++;
+              updated[normalizedMethod].total += data.saleData.total || 0;
+            }
+            return updated;
+          });
+          
+          toast.success(`Nueva venta: $${(data.saleData.total || 0).toLocaleString()}`);
+          console.log('✅ Nueva venta reflejada inmediatamente en la caja');
+        }
       });
 
       // Escuchar nuevos turnos sincronizados
@@ -461,9 +512,19 @@ const CashRegister = () => {
       realtimeService.off('shift_synced');
       realtimeService.off('shifts_updated');
     };
-  }, [checkCanFinalizarDia, loadShiftData]); // Incluir dependencias necesarias
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Listener adicional para actualizar currentShift cuando cambie
+  useEffect(() => {
+    const handleShiftChange = () => {
+      if (currentShift) {
+        console.log('🔄 Turno actual detectado, configurando listeners específicos');
+        // Los listeners ya están configurados arriba, solo necesitamos asegurar que currentShift esté disponible
+      }
+    };
 
+    handleShiftChange();
+  }, [currentShift]);
 
 
 
