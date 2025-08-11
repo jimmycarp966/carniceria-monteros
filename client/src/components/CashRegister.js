@@ -14,7 +14,8 @@ import {
   TrendingUp,
   Clock,
   CreditCard,
-  History
+  History,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { shiftService, saleService, expensesService } from '../services/firebaseService';
