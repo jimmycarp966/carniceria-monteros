@@ -5,7 +5,9 @@ import {
   query, 
   where, 
   serverTimestamp,
-  orderBy 
+  orderBy,
+  doc,
+  getDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { saleService, expensesService, shiftService } from './firebaseService';
@@ -18,9 +20,26 @@ export const cashCountService = {
       console.log(`🔄 Obteniendo ventas para turno: ${shiftId}${forceRefresh ? ' (forzando refresh)' : ''}`);
       
       // Obtener información del turno para el monto inicial
-      const shifts = await shiftService.getAllShifts();
-      const currentShift = shifts.find(shift => shift.id === shiftId);
-      const openingAmount = currentShift?.openingAmount || 0;
+      let openingAmount = 0;
+      try {
+        const shifts = await shiftService.getAllShifts();
+        const currentShift = shifts.find(shift => shift.id === shiftId);
+        openingAmount = currentShift?.openingAmount || 0;
+        console.log(`🔍 Turno encontrado:`, currentShift);
+      } catch (error) {
+        console.error('Error obteniendo turno:', error);
+        // Intentar obtener directamente del documento
+        try {
+          const shiftRef = doc(db, 'shifts', shiftId);
+          const shiftDoc = await getDoc(shiftRef);
+          if (shiftDoc.exists()) {
+            openingAmount = shiftDoc.data()?.openingAmount || 0;
+            console.log(`🔍 Turno obtenido directamente:`, shiftDoc.data());
+          }
+        } catch (directError) {
+          console.error('Error obteniendo turno directamente:', directError);
+        }
+      }
       
       console.log(`💰 Monto inicial del turno: $${openingAmount.toLocaleString()}`);
       
