@@ -410,6 +410,58 @@ const CashRegister = () => {
     }));
   };
 
+  // Abrir turno
+  const openShift = async (shiftData) => {
+    try {
+      // Verificar permisos
+      if (!canOpenShift) {
+        toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
+        return;
+      }
+
+      const shiftToCreate = {
+        type: shiftData.shiftType,
+        date: new Date().toISOString().split('T')[0],
+        openingAmount: parseFloat(shiftData.openingAmount),
+        employeeName: currentUser?.name || 'Usuario',
+        employeeEmail: currentUser?.email,
+        employeeId: currentUser?.employeeId || currentUser?.id,
+        employeeRole: currentUser?.role,
+        employeePosition: currentUser?.position,
+        notes: shiftData.notes.trim(),
+        status: 'active',
+        startTime: new Date(),
+        total: 0,
+        salesCount: 0,
+        createdAt: new Date(),
+        openedBy: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: currentUser?.role,
+          position: currentUser?.position,
+          timestamp: new Date()
+        }
+      };
+
+      const shiftId = await shiftService.addShift(shiftToCreate);
+      
+      // Actualizar estado local
+      const newShift = { id: shiftId, ...shiftToCreate };
+      setCurrentShift(newShift);
+      
+      // Cargar datos del turno
+      await loadShiftData(newShift);
+      
+      toast.success(`Turno ${shiftData.shiftType === 'morning' ? 'mañana' : 'tarde'} abierto exitosamente`);
+      
+    } catch (error) {
+      console.error('Error abriendo turno:', error);
+      toast.error('Error abriendo turno');
+      throw error;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -621,7 +673,10 @@ const CashRegister = () => {
         )}
 
         {/* Modales */}
-        {showOpenShiftModal && <OpenShiftModal />}
+        {showOpenShiftModal && <OpenShiftModal 
+          onOpenShift={openShift}
+          setShowOpenShiftModal={setShowOpenShiftModal}
+        />}
         {showCloseShiftModal && <CloseShiftModal 
           closeShift={closeShift}
           setShowCloseShiftModal={setShowCloseShiftModal}
@@ -639,14 +694,27 @@ const CashRegister = () => {
 };
 
 // Modal para abrir turno
-const OpenShiftModal = memo(() => {
+const OpenShiftModal = memo(({ onOpenShift, setShowOpenShiftModal }) => {
   const [shiftType, setShiftType] = useState('morning');
   const [openingAmount, setOpeningAmount] = useState(0);
   const [notes, setNotes] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleOpenShift = async () => {
-    // Esta función se implementará cuando se conecte con el componente padre
-    console.log('Abrir turno:', { shiftType, openingAmount, notes });
+    if (!onOpenShift) {
+      console.error('Función onOpenShift no proporcionada');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await onOpenShift({ shiftType, openingAmount, notes });
+      setShowOpenShiftModal(false);
+    } catch (error) {
+      console.error('Error abriendo turno:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -698,16 +766,25 @@ const OpenShiftModal = memo(() => {
 
         <div className="flex space-x-3 mt-6">
           <button
-            onClick={() => {/* Cerrar modal */}}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+            onClick={() => setShowOpenShiftModal(false)}
+            disabled={isLoading}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleOpenShift}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+            disabled={isLoading}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center"
           >
-            Abrir Turno
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Abriendo...
+              </>
+            ) : (
+              'Abrir Turno'
+            )}
           </button>
         </div>
       </div>
