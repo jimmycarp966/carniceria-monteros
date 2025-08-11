@@ -25,8 +25,7 @@ import AdminResetPanel from './AdminResetPanel';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
-import { verifyDaySummary } from '../utils/verifyDaySummary';
-import { testExpenses, addTestExpense } from '../utils/testExpenses';
+
 
 const CashRegister = () => {
   const { currentUser, userRole, canOpenShift, canCloseShift } = useCashRegisterAccess();
@@ -960,46 +959,9 @@ const CashRegister = () => {
               )}
               
               {/* Botón de verificación para debug */}
-              <button
-                onClick={async () => {
-                  console.log('🔍 Iniciando verificación del resumen del día...');
-                  const result = await verifyDaySummary();
-                  if (result.success) {
-                    toast.success('Verificación completada. Revisa la consola para detalles.');
-                  } else {
-                    toast.error('Error en verificación: ' + result.error);
-                  }
-                }}
-                className="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 font-medium flex items-center text-sm"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Verificar
-              </button>
 
-              {/* Botones de prueba para gastos */}
-              <button
-                onClick={async () => {
-                  console.log('🔍 Iniciando prueba de gastos...');
-                  await testExpenses();
-                  toast.success('Prueba de gastos completada. Revisa la consola.');
-                }}
-                className="bg-orange-600 text-white px-4 py-3 rounded-lg hover:bg-orange-700 font-medium flex items-center text-sm"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Probar Gastos
-              </button>
 
-              <button
-                onClick={async () => {
-                  console.log('➕ Agregando gasto de prueba...');
-                  await addTestExpense();
-                  toast.success('Gasto de prueba agregado. Revisa la consola.');
-                }}
-                className="bg-teal-600 text-white px-4 py-3 rounded-lg hover:bg-teal-700 font-medium flex items-center text-sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Gasto Test
-              </button>
+
             </div>
             
             {/* Mostrar estado de turnos cuando no hay turno activo */}

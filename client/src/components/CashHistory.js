@@ -16,8 +16,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { dayService } from '../services/firebaseService';
-import { debugDaysCollection, createTestDay } from '../utils/debugDays';
-import { checkShiftsStatus, createTestShifts } from '../utils/checkShifts';
+
 
 const CashHistory = ({ onBack }) => {
   const [days, setDays] = useState([]);
@@ -28,8 +27,7 @@ const CashHistory = ({ onBack }) => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [debugInfo, setDebugInfo] = useState(null);
   const [shiftsInfo, setShiftsInfo] = useState(null);
-  const [isCreatingTestDay, setIsCreatingTestDay] = useState(false);
-  const [isCreatingTestShifts, setIsCreatingTestShifts] = useState(false);
+
 
   // Cargar historial de días
   const loadDays = async () => {
@@ -125,35 +123,7 @@ ${day.shifts?.map(shift => `
     toast.success('Resumen exportado exitosamente');
   };
 
-  // Crear día de prueba
-  const handleCreateTestDay = async () => {
-    try {
-      setIsCreatingTestDay(true);
-      await createTestDay();
-      toast.success('Día de prueba creado exitosamente');
-      await loadDays(); // Recargar días
-    } catch (error) {
-      console.error('Error creando día de prueba:', error);
-      toast.error('Error creando día de prueba');
-    } finally {
-      setIsCreatingTestDay(false);
-    }
-  };
 
-  // Crear turnos de prueba
-  const handleCreateTestShifts = async () => {
-    try {
-      setIsCreatingTestShifts(true);
-      await createTestShifts();
-      toast.success('Turnos de prueba creados exitosamente');
-      await loadDays(); // Recargar días
-    } catch (error) {
-      console.error('Error creando turnos de prueba:', error);
-      toast.error('Error creando turnos de prueba');
-    } finally {
-      setIsCreatingTestShifts(false);
-    }
-  };
 
   // Imprimir resumen del día
   const printDaySummary = (day) => {
@@ -341,42 +311,7 @@ ${day.shifts?.map(shift => `
                   Error: {debugInfo.error}
                 </p>
               )}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={handleCreateTestDay}
-                  disabled={isCreatingTestDay}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isCreatingTestDay ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Crear Día de Prueba
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleCreateTestShifts}
-                  disabled={isCreatingTestShifts}
-                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                >
-                  {isCreatingTestShifts ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Crear Turnos de Prueba
-                    </>
-                  )}
-                </button>
-              </div>
+
             </div>
           )}
 
