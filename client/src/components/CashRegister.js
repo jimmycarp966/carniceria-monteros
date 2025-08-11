@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { 
   Clock, 
   DollarSign, 
@@ -26,6 +26,103 @@ import CashRegisterAccessGuard from './CashRegisterAccessGuard';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
 
+// Componente modal memoizado para evitar re-renders
+const OpenShiftModal = memo(({ 
+  isOpen, 
+  onClose, 
+  onOpenShift, 
+  currentUser, 
+  userRole 
+}) => {
+  const [shiftType, setShiftType] = useState('morning');
+  const [openingAmount, setOpeningAmount] = useState(0);
+  const [notes, setNotes] = useState('');
+
+  const handleOpenShift = () => {
+    onOpenShift({ shiftType, openingAmount, notes });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <LogIn className="h-6 w-6 mr-2 text-green-600" />
+          Abrir Turno
+        </h3>
+        
+        {/* Usuario actual */}
+        <div className="bg-gray-50 rounded-lg p-3 mb-4">
+          <div className="flex items-center">
+            <User className="h-4 w-4 mr-2 text-gray-500" />
+            <span className="font-medium">{currentUser?.name}</span>
+            <span className="mx-2 text-gray-400">•</span>
+            <span className="text-sm text-gray-600">{userRole?.displayName}</span>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Turno:</label>
+            <select
+              value={shiftType}
+              onChange={(e) => setShiftType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="morning">Mañana</option>
+              <option value="afternoon">Tarde</option>
+              <option value="night">Noche</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Monto de Apertura:</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={openingAmount}
+                onChange={(e) => setOpeningAmount(parseFloat(e.target.value) || 0)}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notas (opcional):</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows="2"
+              placeholder="Observaciones del turno..."
+            />
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleOpenShift}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Abrir Turno
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+OpenShiftModal.displayName = 'OpenShiftModal';
+
 const CashRegister = () => {
   // Hook de control de acceso
   const { 
@@ -52,11 +149,6 @@ const CashRegister = () => {
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showAmounts, setShowAmounts] = useState(true);
-
-  // Estados para abrir turno
-  const [openingAmount, setOpeningAmount] = useState(0);
-  const [shiftType, setShiftType] = useState('morning');
-  const [notes, setNotes] = useState('');
 
   // Estados para cerrar turno
   const [closingAmount, setClosingAmount] = useState(0);
@@ -293,7 +385,9 @@ const CashRegister = () => {
   };
 
   // Función para abrir turno
-  const openShift = useCallback(async () => {
+  const openShift = useCallback(async (modalData) => {
+    const { shiftType, openingAmount, notes } = modalData;
+    
     if (!canOpenShift) {
       toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
       return;
@@ -326,9 +420,6 @@ const CashRegister = () => {
       await realtimeService.syncShift({ ...shiftData, id: shiftId });
       
       setShowOpenShiftModal(false);
-      setOpeningAmount(0);
-      setNotes('');
-      setShiftType('morning');
       
       toast.success('Turno abierto exitosamente');
       
@@ -343,84 +434,7 @@ const CashRegister = () => {
       console.error('Error abriendo turno:', error);
       toast.error('Error al abrir el turno');
     }
-  }, [canOpenShift, userRole, currentUser, openingAmount, shiftType, notes]);
-
-  // Modal para abrir turno - componente separado para evitar re-renders
-  const OpenShiftModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <LogIn className="h-6 w-6 mr-2 text-green-600" />
-          Abrir Turno
-        </h3>
-        
-        {/* Usuario actual */}
-        <div className="bg-gray-50 rounded-lg p-3 mb-4">
-          <div className="flex items-center">
-            <User className="h-4 w-4 mr-2 text-gray-500" />
-            <span className="font-medium">{currentUser?.name}</span>
-            <span className="mx-2 text-gray-400">•</span>
-            <span className="text-sm text-gray-600">{userRole?.displayName}</span>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Turno:</label>
-            <select
-              value={shiftType}
-              onChange={(e) => setShiftType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="morning">Mañana</option>
-              <option value="afternoon">Tarde</option>
-              <option value="night">Noche</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Monto de Apertura:</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-              <input
-                type="number"
-                value={openingAmount}
-                onChange={(e) => setOpeningAmount(parseFloat(e.target.value) || 0)}
-                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Notas (opcional):</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              rows="2"
-              placeholder="Observaciones del turno..."
-            />
-          </div>
-        </div>
-
-        <div className="flex space-x-3 mt-6">
-          <button
-            onClick={() => setShowOpenShiftModal(false)}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={openShift}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
-          >
-            Abrir Turno
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  }, [canOpenShift, userRole, currentUser]);
 
   // Modal para cerrar turno
   const CloseShiftModal = () => (
@@ -802,7 +816,13 @@ const CashRegister = () => {
         )}
 
         {/* Modales */}
-        {showOpenShiftModal && <OpenShiftModal />}
+        {showOpenShiftModal && <OpenShiftModal 
+          isOpen={showOpenShiftModal} 
+          onClose={() => setShowOpenShiftModal(false)} 
+          onOpenShift={openShift} 
+          currentUser={currentUser} 
+          userRole={userRole} 
+        />}
         {showCloseShiftModal && <CloseShiftModal />}
         {showIncomeModal && <IncomeModal />}
       </div>
