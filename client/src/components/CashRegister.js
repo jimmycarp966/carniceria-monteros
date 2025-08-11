@@ -41,6 +41,7 @@ const CashRegister = () => {
   const [showAmounts, setShowAmounts] = useState(true);
   const [canFinalizarDia, setCanFinalizarDia] = useState(false);
   const [daySummary, setDaySummary] = useState(null);
+  const [dayFinalizado, setDayFinalizado] = useState(false);
 
   // Estados para modales
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
@@ -281,17 +282,26 @@ const CashRegister = () => {
         afternoon: afternoonShift
       });
       
-      // Solo se puede finalizar el día si ambos turnos existen y están cerrados
+      // Verificar si el día ya fue finalizado
+      const dayClosed = morningShift?.dayClosed || afternoonShift?.dayClosed;
+      setDayFinalizado(dayClosed);
+      
+      // Solo se puede finalizar el día si ambos turnos existen, están cerrados y el día no fue finalizado
       const canFinalizar = morningShift && 
                           afternoonShift && 
                           morningShift.status === 'closed' && 
-                          afternoonShift.status === 'closed';
+                          afternoonShift.status === 'closed' &&
+                          !dayClosed;
       
       setCanFinalizarDia(canFinalizar);
       
       if (canFinalizar) {
         console.log('✅ Ambos turnos cerrados - Finalizar Día habilitado');
         // Recargar el resumen del día cuando ambos turnos estén cerrados
+        loadDaySummary();
+      } else if (dayClosed) {
+        console.log('✅ Día ya finalizado - Mostrando como cerrado');
+        // Si el día ya fue finalizado, cargar el resumen para mostrar
         loadDaySummary();
       } else {
         console.log('❌ Finalizar Día deshabilitado - Turnos pendientes:', {
@@ -817,6 +827,25 @@ const CashRegister = () => {
                 </button>
               )}
               
+              {dayFinalizado && (
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center px-4 py-3 bg-gray-100 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                    <span className="text-gray-700 font-medium">Día Finalizado</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await loadDaySummary();
+                      setShowFinalizarDiaModal(true);
+                    }}
+                    className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-medium flex items-center"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver Resumen
+                  </button>
+                </div>
+              )}
+              
               {/* Botón de verificación para debug */}
               <button
                 onClick={async () => {
@@ -1018,7 +1047,31 @@ const CashRegister = () => {
                 </div>
               </div>
               
-              {canFinalizarDia && (
+              {dayFinalizado && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="h-6 w-6 text-blue-600" />
+                      <div>
+                        <p className="text-blue-800 font-semibold">✅ Día Finalizado</p>
+                        <p className="text-blue-700 text-sm">El día ha sido cerrado exitosamente</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await loadDaySummary();
+                        setShowFinalizarDiaModal(true);
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Ver Resumen</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {canFinalizarDia && !dayFinalizado && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -1088,36 +1141,55 @@ const CashRegister = () => {
                      Arqueo
                    </button>
 
-                                                          <button
-                     onClick={async () => {
-                       if (canFinalizarDia) {
-                         await loadDaySummary();
-                         setShowFinalizarDiaModal(true);
+                                                          {dayFinalizado ? (
+                     <div className="flex items-center space-x-2">
+                       <div className="flex items-center px-3 py-2 bg-gray-100 rounded-lg">
+                         <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                         <span className="text-gray-700 font-medium text-sm">Día Finalizado</span>
+                       </div>
+                       <button
+                         onClick={async () => {
+                           await loadDaySummary();
+                           setShowFinalizarDiaModal(true);
+                         }}
+                         className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+                       >
+                         <Eye className="h-4 w-4 mr-2" />
+                         Ver Resumen
+                       </button>
+                     </div>
+                   ) : (
+                     <button
+                       onClick={async () => {
+                         if (canFinalizarDia) {
+                           await loadDaySummary();
+                           setShowFinalizarDiaModal(true);
+                         }
+                       }}
+                       disabled={!canFinalizarDia}
+                       className={`px-4 py-2 rounded-lg flex items-center ${
+                         canFinalizarDia 
+                           ? 'bg-red-600 text-white hover:bg-red-700' 
+                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                       }`}
+                       title={canFinalizarDia 
+                         ? 'Finalizar el día (ambos turnos cerrados)' 
+                         : 'Debe cerrar ambos turnos (mañana y tarde) para finalizar el día'
                        }
-                     }}
-                     disabled={!canFinalizarDia}
-                     className={`px-4 py-2 rounded-lg flex items-center ${
-                       canFinalizarDia 
-                         ? 'bg-red-600 text-white hover:bg-red-700' 
-                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                     }`}
-                     title={canFinalizarDia 
-                       ? 'Finalizar el día (ambos turnos cerrados)' 
-                       : 'Debe cerrar ambos turnos (mañana y tarde) para finalizar el día'
-                     }
-                   >
-                     <LogOut className="h-4 w-4 mr-2" />
-                     Finalizar Día
-                     {!canFinalizarDia && (
-                       <span className="ml-2 text-xs bg-gray-400 text-white px-1 py-0.5 rounded">
-                         {!todayShifts.morning ? 'Falta turno mañana' :
-                          !todayShifts.afternoon ? 'Falta turno tarde' :
-                          todayShifts.morning.status !== 'closed' ? 'Cierre turno mañana' :
-                          todayShifts.afternoon.status !== 'closed' ? 'Cierre turno tarde' :
-                          'Espere cierre turnos'}
-                       </span>
-                     )}
-                   </button>
+                     >
+                       <LogOut className="h-4 w-4 mr-2" />
+                       Finalizar Día
+                       {!canFinalizarDia && (
+                         <span className="ml-2 text-xs bg-gray-400 text-white px-1 py-0.5 rounded">
+                           {!todayShifts.morning ? 'Falta turno mañana' :
+                            !todayShifts.afternoon ? 'Falta turno tarde' :
+                            todayShifts.morning.status !== 'closed' ? 'Cierre turno mañana' :
+                            todayShifts.afternoon.status !== 'closed' ? 'Cierre turno tarde' :
+                            'Espere cierre turnos'}
+                         </span>
+                       )}
+                     </button>
+                   )}
                  </div>
               </div>
             </div>
@@ -1184,6 +1256,8 @@ const CashRegister = () => {
                 await shiftService.finalizarDia(daySummary);
                 toast.success('Día finalizado exitosamente');
                 setShowFinalizarDiaModal(false);
+                setDayFinalizado(true);
+                setCanFinalizarDia(false);
                 // Recargar datos de la caja
                 const shifts = await shiftService.getAllShifts();
                 const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
@@ -1210,6 +1284,7 @@ const CashRegister = () => {
             setShowFinalizarDiaModal={setShowFinalizarDiaModal}
             daySummary={daySummary}
             onCheckCanFinalizarDia={checkCanFinalizarDia}
+            dayFinalizado={dayFinalizado}
           />
         )}
       </div>
@@ -1449,7 +1524,7 @@ const IncomeModal = memo(({ registerIncome, setShowIncomeModal }) => {
 });
 
 // Modal para finalizar día
-const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, daySummary, onCheckCanFinalizarDia }) => {
+const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, daySummary, onCheckCanFinalizarDia, dayFinalizado }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleFinalizarDia = async () => {
@@ -1504,11 +1579,17 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
       <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-red-100 rounded-full">
-              <LogOut className="h-8 w-8 text-red-600" />
+            <div className={`p-3 rounded-full ${dayFinalizado ? 'bg-blue-100' : 'bg-red-100'}`}>
+              {dayFinalizado ? (
+                <CheckCircle className="h-8 w-8 text-blue-600" />
+              ) : (
+                <LogOut className="h-8 w-8 text-red-600" />
+              )}
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Finalizar Día</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {dayFinalizado ? 'Resumen del Día' : 'Finalizar Día'}
+              </h2>
               <p className="text-sm text-gray-600">
                 {new Date(daySummary.date).toLocaleDateString('es-AR', { 
                   weekday: 'long', 
@@ -1516,6 +1597,7 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
                   month: 'long', 
                   day: 'numeric' 
                 })}
+                {dayFinalizado && ' - Día Finalizado'}
               </p>
             </div>
           </div>
@@ -1678,17 +1760,19 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
             </div>
           </div>
 
-          {/* Advertencia */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              <p className="text-yellow-800 font-medium">Advertencia</p>
+          {/* Advertencia - Solo mostrar si el día no está finalizado */}
+          {!dayFinalizado && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                <p className="text-yellow-800 font-medium">Advertencia</p>
+              </div>
+              <p className="text-yellow-700 mt-2">
+                Al finalizar el día, todos los turnos se cerrarán permanentemente y no se podrán modificar.
+                Esta acción no se puede deshacer.
+              </p>
             </div>
-            <p className="text-yellow-700 mt-2">
-              Al finalizar el día, todos los turnos se cerrarán permanentemente y no se podrán modificar.
-              Esta acción no se puede deshacer.
-            </p>
-          </div>
+          )}
         </div>
 
         {/* Botones */}
@@ -1698,22 +1782,24 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
             disabled={isLoading}
             className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50"
           >
-            Cancelar
+            {dayFinalizado ? 'Cerrar' : 'Cancelar'}
           </button>
-          <button
-            onClick={handleFinalizarDia}
-            disabled={isLoading}
-            className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Finalizando...
-              </>
-            ) : (
-              'Finalizar Día'
-            )}
-          </button>
+          {!dayFinalizado && (
+            <button
+              onClick={handleFinalizarDia}
+              disabled={isLoading}
+              className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Finalizando...
+                </>
+              ) : (
+                'Finalizar Día'
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
