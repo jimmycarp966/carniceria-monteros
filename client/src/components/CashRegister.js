@@ -20,6 +20,7 @@ import { toast } from 'react-hot-toast';
 import { shiftService, saleService, expensesService } from '../services/firebaseService';
 import CashCountModal from './CashCountModal';
 import CashHistory from './CashHistory';
+import AdminResetPanel from './AdminResetPanel';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
@@ -53,6 +54,7 @@ const CashRegister = () => {
   const [showCashCountModalForClose, setShowCashCountModalForClose] = useState(false);
   const [showFinalizarDiaModal, setShowFinalizarDiaModal] = useState(false);
   const [showCashHistory, setShowCashHistory] = useState(false);
+  const [showAdminResetPanel, setShowAdminResetPanel] = useState(false);
 
   // Estados para cerrar turno (mantenidos para compatibilidad futura)
   // const [closingAmount, setClosingAmount] = useState(0);
@@ -378,8 +380,33 @@ const CashRegister = () => {
     // Agregar listener para reset forzado
     window.addEventListener('forceResetShifts', handleForceResetShifts);
 
+    // Agregar listener para reset nuclear completado
+    const handleNuclearResetCompleted = (event) => {
+      console.log('🔄 Recibido evento de reset nuclear completado:', event.detail);
+      setCurrentShift(null);
+      setShiftStats({
+        totalSales: 0,
+        totalRevenue: 0,
+        totalAdditionalIncomes: 0,
+        salesCount: 0,
+        netAmount: 0
+      });
+      setRecentActivity([]);
+      setTodayShifts({
+        morning: null,
+        afternoon: null
+      });
+      setCanFinalizarDia(false);
+      setDaySummary(null);
+      setDayFinalizado(false);
+      toast.success('Sistema reseteado completamente');
+    };
+
+    window.addEventListener('nuclearResetCompleted', handleNuclearResetCompleted);
+
     return () => {
       window.removeEventListener('forceResetShifts', handleForceResetShifts);
+      window.removeEventListener('nuclearResetCompleted', handleNuclearResetCompleted);
     };
   }, [checkCanFinalizarDia, loadShiftData]); // Incluir dependencias necesarias
 
@@ -829,6 +856,18 @@ const CashRegister = () => {
                 <History className="h-4 w-4" />
                 <span className="text-sm">Historial</span>
               </button>
+
+              {/* Botón de reset administrativo (solo para admin) */}
+              {userRole?.role === 'admin' && (
+                <button
+                  onClick={() => setShowAdminResetPanel(true)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                  title="Panel de Reset Administrativo"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="text-sm">Reset Admin</span>
+                </button>
+              )}
 
               {/* Toggle para mostrar/ocultar montos */}
               <button
@@ -1364,6 +1403,10 @@ const CashRegister = () => {
         {/* Modal del historial de cajas */}
         {showCashHistory && (
           <CashHistory onBack={() => setShowCashHistory(false)} />
+        )}
+
+        {showAdminResetPanel && (
+          <AdminResetPanel onClose={() => setShowAdminResetPanel(false)} />
         )}
       </div>
     </CashRegisterAccessGuard>
