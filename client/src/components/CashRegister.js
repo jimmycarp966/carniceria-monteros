@@ -37,6 +37,7 @@ const CashRegister = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [showAmounts, setShowAmounts] = useState(true);
   const [canFinalizarDia, setCanFinalizarDia] = useState(false);
+  const [daySummary, setDaySummary] = useState(null);
 
   // Estados para modales
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
@@ -820,7 +821,10 @@ const CashRegister = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => setShowFinalizarDiaModal(true)}
+                      onClick={async () => {
+                        await loadDaySummary();
+                        setShowFinalizarDiaModal(true);
+                      }}
                       className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
                     >
                       <LogOut className="h-4 w-4" />
@@ -877,7 +881,12 @@ const CashRegister = () => {
                    </button>
 
                                                           <button
-                     onClick={() => setShowFinalizarDiaModal(true)}
+                     onClick={async () => {
+                       if (canFinalizarDia) {
+                         await loadDaySummary();
+                         setShowFinalizarDiaModal(true);
+                       }
+                     }}
                      disabled={!canFinalizarDia}
                      className={`px-4 py-2 rounded-lg flex items-center ${
                        canFinalizarDia 
@@ -991,6 +1000,8 @@ const CashRegister = () => {
               }
             }}
             setShowFinalizarDiaModal={setShowFinalizarDiaModal}
+            daySummary={daySummary}
+            onCheckCanFinalizarDia={checkCanFinalizarDia}
           />
         )}
       </div>
@@ -1230,13 +1241,8 @@ const IncomeModal = memo(({ registerIncome, setShowIncomeModal }) => {
 });
 
 // Modal para finalizar día
-const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal }) => {
+const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, daySummary, onCheckCanFinalizarDia }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [daySummary, setDaySummary] = useState(null);
-
-  useEffect(() => {
-    loadDaySummary();
-  }, [loadDaySummary]);
 
   const handleFinalizarDia = async () => {
     if (!daySummary) return;
@@ -1262,7 +1268,9 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal }) =>
       setShowFinalizarDiaModal(false);
       
       // Recargar datos después de finalizar
-      await checkCanFinalizarDia();
+      if (onCheckCanFinalizarDia) {
+        await onCheckCanFinalizarDia();
+      }
       
     } catch (error) {
       console.error('Error finalizando día:', error);
