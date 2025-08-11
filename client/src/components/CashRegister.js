@@ -372,7 +372,29 @@ const CashRegister = () => {
       return;
     }
 
+    if (!currentShift) {
+      toast.error('No hay turno activo para cerrar');
+      return;
+    }
+
     try {
+      // Verificar que el turno aún existe en la base de datos
+      const shifts = await shiftService.getAllShifts();
+      const shiftExists = shifts.find(shift => shift.id === currentShift.id);
+      
+      if (!shiftExists) {
+        toast.error('El turno ya no existe o fue cerrado por otro usuario');
+        setCurrentShift(null);
+        setShiftStats({
+          totalSales: 0,
+          totalRevenue: 0,
+          totalAdditionalIncomes: 0,
+          netAmount: 0
+        });
+        setRecentActivity([]);
+        return;
+      }
+
       const difference = calculateDifference();
       const arqueoData = {
         cashCount,
@@ -422,15 +444,15 @@ const CashRegister = () => {
       toast.success('Turno cerrado exitosamente');
       
       // Recargar datos
-      const shifts = await shiftService.getAllShifts();
-      const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+      const updatedShifts = await shiftService.getAllShifts();
+      const activeShift = updatedShifts.find(shift => shift.status === 'active' || !shift.endTime);
       if (activeShift) {
         setCurrentShift(activeShift);
         loadShiftData(activeShift);
       } else {
         setCurrentShift(null);
         setShiftStats({
-          salesCount: 0,
+          totalSales: 0,
           totalRevenue: 0,
           totalAdditionalIncomes: 0,
           netAmount: 0
@@ -444,7 +466,7 @@ const CashRegister = () => {
   }, [canCloseShift, userRole, currentUser, currentShift, closingAmount, closingNotes, shiftStats, cashCount, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount, calculateArqueoTotal, calculateCashTotal, calculateDifference]);
 
   // Registrar ingreso adicional
-  const registerIncome = async () => {
+  const registerIncome = useCallback(async () => {
     if (!currentShift) {
       toast.error('Debe haber un turno activo para registrar ingresos');
       return;
@@ -496,7 +518,7 @@ const CashRegister = () => {
       console.error('Error registrando ingreso:', error);
       toast.error('Error al registrar el ingreso');
     }
-  };
+  }, [currentShift, incomeAmount, incomeDescription, incomeCategory, currentUser]);
 
   // Función para actualizar conteo de billetes/monedas
   const updateCashCount = (denomination, count) => {
@@ -558,416 +580,453 @@ const CashRegister = () => {
     }
   }, [canOpenShift, userRole, currentUser]);
 
-  // Modal para cerrar turno
-  const CloseShiftModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl">
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <LogOut className="h-6 w-6 mr-2 text-red-600" />
-          Cerrar Turno
-        </h3>
+  // Modal para cerrar turno - Componente memoizado
+  const CloseShiftModal = memo(() => {
+    const [localClosingAmount, setLocalClosingAmount] = useState(closingAmount);
+    const [localClosingNotes, setLocalClosingNotes] = useState(closingNotes);
 
-        {/* Resumen del turno */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <h4 className="font-medium text-gray-900 mb-2">Resumen del Turno</h4>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Ventas:</span>
-              <span className="font-medium">{shiftStats.salesCount}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Ingresos:</span>
-              <span className="font-medium text-green-600">${shiftStats.totalRevenue.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Ingresos Adicionales:</span>
-              <span className="font-medium text-green-600">${shiftStats.totalAdditionalIncomes.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between border-t pt-1">
-              <span className="font-medium">Total Neto:</span>
-              <span className="font-bold text-primary-600">${shiftStats.netAmount.toLocaleString()}</span>
+    const handleCloseShift = () => {
+      setClosingAmount(localClosingAmount);
+      setClosingNotes(localClosingNotes);
+      closeShift();
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-2xl">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <LogOut className="h-6 w-6 mr-2 text-red-600" />
+            Cerrar Turno
+          </h3>
+
+          {/* Resumen del turno */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-gray-900 mb-2">Resumen del Turno</h4>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Ventas:</span>
+                <span className="font-medium">{shiftStats.salesCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Ingresos:</span>
+                <span className="font-medium text-green-600">${shiftStats.totalRevenue.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Ingresos Adicionales:</span>
+                <span className="font-medium text-green-600">${shiftStats.totalAdditionalIncomes.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1">
+                <span className="font-medium">Total Neto:</span>
+                <span className="font-bold text-primary-600">${shiftStats.netAmount.toLocaleString()}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Ventas por método de pago (del sistema) */}
-        <div className="bg-yellow-50 rounded-lg p-4 mb-4">
-          <h4 className="font-medium text-gray-900 mb-3">Ventas por Método de Pago (Sistema)</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Efectivo:</span>
-              <span className="font-medium text-green-600">
-                {salesByPaymentMethod.efectivo.count} ventas - ${salesByPaymentMethod.efectivo.total.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Tarjeta Débito:</span>
-              <span className="font-medium text-blue-600">
-                {salesByPaymentMethod.tarjetaDebito.count} ventas - ${salesByPaymentMethod.tarjetaDebito.total.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Tarjeta Crédito:</span>
-              <span className="font-medium text-indigo-600">
-                {salesByPaymentMethod.tarjetaCredito.count} ventas - ${salesByPaymentMethod.tarjetaCredito.total.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Transferencias:</span>
-              <span className="font-medium text-purple-600">
-                {salesByPaymentMethod.transferencia.count} ventas - ${salesByPaymentMethod.transferencia.total.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>MercadoPago:</span>
-              <span className="font-medium text-orange-600">
-                {salesByPaymentMethod.mercadopago.count} ventas - ${salesByPaymentMethod.mercadopago.total.toLocaleString()}
-              </span>
+          {/* Ventas por método de pago (del sistema) */}
+          <div className="bg-yellow-50 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-gray-900 mb-3">Ventas por Método de Pago (Sistema)</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Efectivo:</span>
+                <span className="font-medium text-green-600">
+                  {salesByPaymentMethod.efectivo.count} ventas - ${salesByPaymentMethod.efectivo.total.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tarjeta Débito:</span>
+                <span className="font-medium text-blue-600">
+                  {salesByPaymentMethod.tarjetaDebito.count} ventas - ${salesByPaymentMethod.tarjetaDebito.total.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tarjeta Crédito:</span>
+                <span className="font-medium text-indigo-600">
+                  {salesByPaymentMethod.tarjetaCredito.count} ventas - ${salesByPaymentMethod.tarjetaCredito.total.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Transferencias:</span>
+                <span className="font-medium text-purple-600">
+                  {salesByPaymentMethod.transferencia.count} ventas - ${salesByPaymentMethod.transferencia.total.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>MercadoPago:</span>
+                <span className="font-medium text-orange-600">
+                  {salesByPaymentMethod.mercadopago.count} ventas - ${salesByPaymentMethod.mercadopago.total.toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Arqueo */}
-        <div className="bg-blue-50 rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900">Arqueo de Caja</h4>
+          {/* Arqueo */}
+          <div className="bg-blue-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-gray-900">Arqueo de Caja</h4>
+              <button
+                onClick={() => setShowCashCountModal(true)}
+                className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-sm"
+              >
+                Realizar Arqueo
+              </button>
+            </div>
+            
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Efectivo:</span>
+                <span className="font-medium text-green-600">${calculateCashTotal().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tarjeta Débito:</span>
+                <span className="font-medium text-blue-600">${tarjetaDebitoAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tarjeta Crédito:</span>
+                <span className="font-medium text-indigo-600">${tarjetaCreditoAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Transferencias:</span>
+                <span className="font-medium text-purple-600">${transferenciaAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>MercadoPago:</span>
+                <span className="font-medium text-orange-600">${mercadopagoAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1">
+                <span className="font-medium">Total Arqueo:</span>
+                <span className="font-bold text-primary-600">${calculateArqueoTotal().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Diferencia:</span>
+                <span className={`font-bold ${calculateDifference() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {calculateDifference() >= 0 ? '+' : ''}${calculateDifference().toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Monto en Caja:</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  value={localClosingAmount}
+                  onChange={(e) => setLocalClosingAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="Contar dinero en caja"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones:</label>
+              <textarea
+                value={localClosingNotes}
+                onChange={(e) => setLocalClosingNotes(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                rows="2"
+                placeholder="Notas del cierre..."
+              />
+            </div>
+          </div>
+
+          <div className="flex space-x-3 mt-6">
             <button
-              onClick={() => setShowCashCountModal(true)}
-              className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-sm"
+              onClick={() => setShowCloseShiftModal(false)}
+              className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
             >
-              Realizar Arqueo
+              Cancelar
+            </button>
+            <button
+              onClick={handleCloseShift}
+              className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
+            >
+              Cerrar Turno
             </button>
           </div>
-          
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Efectivo:</span>
-              <span className="font-medium text-green-600">${calculateCashTotal().toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Tarjeta Débito:</span>
-              <span className="font-medium text-blue-600">${tarjetaDebitoAmount.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Tarjeta Crédito:</span>
-              <span className="font-medium text-indigo-600">${tarjetaCreditoAmount.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Transferencias:</span>
-              <span className="font-medium text-purple-600">${transferenciaAmount.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>MercadoPago:</span>
-              <span className="font-medium text-orange-600">${mercadopagoAmount.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between border-t pt-1">
-              <span className="font-medium">Total Arqueo:</span>
-              <span className="font-bold text-primary-600">${calculateArqueoTotal().toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Diferencia:</span>
-              <span className={`font-bold ${calculateDifference() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {calculateDifference() >= 0 ? '+' : ''}${calculateDifference().toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Monto en Caja:</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-              <input
-                type="number"
-                value={closingAmount}
-                onChange={(e) => setClosingAmount(parseFloat(e.target.value) || 0)}
-                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                placeholder="Contar dinero en caja"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones:</label>
-            <textarea
-              value={closingNotes}
-              onChange={(e) => setClosingNotes(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              rows="2"
-              placeholder="Notas del cierre..."
-            />
-          </div>
-        </div>
-
-        <div className="flex space-x-3 mt-6">
-          <button
-            onClick={() => setShowCloseShiftModal(false)}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={closeShift}
-            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
-          >
-            Cerrar Turno
-          </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  });
 
-  // Modal para registrar ingreso adicional
-  const IncomeModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <Plus className="h-6 w-6 mr-2 text-green-600" />
-          Registrar Ingreso Adicional
-        </h3>
+  // Modal para ingresos - Componente memoizado
+  const IncomeModal = memo(() => {
+    const [localIncomeAmount, setLocalIncomeAmount] = useState(incomeAmount);
+    const [localIncomeDescription, setLocalIncomeDescription] = useState(incomeDescription);
+    const [localIncomeCategory, setLocalIncomeCategory] = useState(incomeCategory);
 
-        <div className="space-y-4">
-                      <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Monto:</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+    const handleRegisterIncome = () => {
+      setIncomeAmount(localIncomeAmount);
+      setIncomeDescription(localIncomeDescription);
+      setIncomeCategory(localIncomeCategory);
+      registerIncome();
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <Plus className="h-6 w-6 mr-2 text-green-600" />
+            Registrar Ingreso
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Monto:</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  value={localIncomeAmount}
+                  onChange={(e) => setLocalIncomeAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Descripción:</label>
               <input
-                type="number"
-                value={incomeAmount}
-                onChange={(e) => setIncomeAmount(parseFloat(e.target.value) || 0)}
-                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                placeholder="0"
+                type="text"
+                value={localIncomeDescription}
+                onChange={(e) => setLocalIncomeDescription(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="¿De dónde proviene este ingreso?"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Categoría:</label>
+              <select
+                value={localIncomeCategory}
+                onChange={(e) => setLocalIncomeCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="venta_adicional">Venta Adicional</option>
+                <option value="servicio_extra">Servicio Extra</option>
+                <option value="propina">Propina</option>
+                <option value="reintegro">Reintegro</option>
+                <option value="otro">Otro</option>
+              </select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Descripción:</label>
-            <input
-              type="text"
-              value={incomeDescription}
-              onChange={(e) => setIncomeDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="¿De dónde proviene este ingreso?"
-            />
-              </div>
-
-                        <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Categoría:</label>
-            <select
-              value={incomeCategory}
-              onChange={(e) => setIncomeCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowIncomeModal(false)}
+              className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
             >
-              <option value="venta_adicional">Venta Adicional</option>
-              <option value="servicio_extra">Servicio Extra</option>
-              <option value="propina">Propina</option>
-              <option value="reintegro">Reintegro</option>
-              <option value="otro">Otro</option>
-            </select>
-                      </div>
+              Cancelar
+            </button>
+            <button
+              onClick={handleRegisterIncome}
+              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+            >
+              Registrar Ingreso
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  });
+
+  // Modal para conteo de efectivo - Componente memoizado
+  const CashCountModal = memo(() => {
+    const [localTarjetaDebito, setLocalTarjetaDebito] = useState(tarjetaDebitoAmount);
+    const [localTarjetaCredito, setLocalTarjetaCredito] = useState(tarjetaCreditoAmount);
+    const [localTransferencia, setLocalTransferencia] = useState(transferenciaAmount);
+    const [localMercadopago, setLocalMercadopago] = useState(mercadopagoAmount);
+
+    const handleConfirmArqueo = () => {
+      setTarjetaDebitoAmount(localTarjetaDebito);
+      setTarjetaCreditoAmount(localTarjetaCredito);
+      setTransferenciaAmount(localTransferencia);
+      setMercadopagoAmount(localMercadopago);
+      setClosingAmount(calculateArqueoTotal());
+      setShowCashCountModal(false);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <DollarSign className="h-6 w-6 mr-2 text-green-600" />
+            Arqueo de Efectivo
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Denominaciones */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3">Conteo de Billetes y Monedas</h4>
+              <div className="space-y-3">
+                {Object.entries(cashCount).map(([denomination, count]) => (
+                  <div key={denomination} className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">
+                      ${parseInt(denomination).toLocaleString()}
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => updateCashCount(denomination, Math.max(0, count - 1))}
+                        className="w-8 h-8 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 flex items-center justify-center"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        value={count}
+                        onChange={(e) => updateCashCount(denomination, e.target.value)}
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                        min="0"
+                      />
+                      <button
+                        onClick={() => updateCashCount(denomination, count + 1)}
+                        className="w-8 h-8 bg-green-200 text-green-700 rounded-full hover:bg-green-300 flex items-center justify-center"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-        <div className="flex space-x-3 mt-6">
-                  <button
-            onClick={() => setShowIncomeModal(false)}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-                  >
-            Cancelar
-                  </button>
-                  <button
-            onClick={registerIncome}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
-          >
-            Registrar Ingreso
-                  </button>
+            {/* Resumen */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3">Resumen del Arqueo</h4>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Efectivo:</span>
+                  <span className="font-semibold text-green-600">
+                    ${calculateCashTotal().toLocaleString()}
+                  </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Tarjeta Débito:</span>
+                  <span className="font-semibold text-blue-600">
+                    ${localTarjetaDebito.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Tarjeta Crédito:</span>
+                  <span className="font-semibold text-indigo-600">
+                    ${localTarjetaCredito.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Transferencias:</span>
+                  <span className="font-semibold text-purple-600">
+                    ${localTransferencia.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">MercadoPago:</span>
+                  <span className="font-semibold text-orange-600">
+                    ${localMercadopago.toLocaleString()}
+                  </span>
+                </div>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Total Arqueo:</span>
+                    <span className="font-bold text-primary-600">
+                      ${(calculateCashTotal() + localTarjetaDebito + localTarjetaCredito + localTransferencia + localMercadopago).toLocaleString()}
+                    </span>
                   </div>
-    </div>
-  );
+                </div>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Esperado:</span>
+                    <span className="font-medium text-gray-600">
+                      ${shiftStats.netAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Diferencia:</span>
+                    <span className={`font-bold ${((calculateCashTotal() + localTarjetaDebito + localTarjetaCredito + localTransferencia + localMercadopago) - shiftStats.netAmount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {((calculateCashTotal() + localTarjetaDebito + localTarjetaCredito + localTransferencia + localMercadopago) - shiftStats.netAmount) >= 0 ? '+' : ''}${((calculateCashTotal() + localTarjetaDebito + localTarjetaCredito + localTransferencia + localMercadopago) - shiftStats.netAmount).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-  // Modal para conteo de efectivo
-  const CashCountModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-          <DollarSign className="h-6 w-6 mr-2 text-green-600" />
-          Arqueo de Efectivo
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Denominaciones */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Conteo de Billetes y Monedas</h4>
-            <div className="space-y-3">
-              {Object.entries(cashCount).map(([denomination, count]) => (
-                <div key={denomination} className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    ${parseInt(denomination).toLocaleString()}
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => updateCashCount(denomination, Math.max(0, count - 1))}
-                      className="w-8 h-8 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 flex items-center justify-center"
-                    >
-                      -
-                    </button>
+              {/* Inputs para métodos de pago */}
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tarjeta Débito:</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                     <input
                       type="number"
-                      value={count}
-                      onChange={(e) => updateCashCount(denomination, e.target.value)}
-                      className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
-                      min="0"
+                      value={localTarjetaDebito}
+                      onChange={(e) => setLocalTarjetaDebito(parseFloat(e.target.value) || 0)}
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="0"
                     />
-                    <button
-                      onClick={() => updateCashCount(denomination, count + 1)}
-                      className="w-8 h-8 bg-green-200 text-green-700 rounded-full hover:bg-green-300 flex items-center justify-center"
-                    >
-                      +
-                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Resumen */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">Resumen del Arqueo</h4>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Efectivo:</span>
-                <span className="font-semibold text-green-600">
-                  ${calculateCashTotal().toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Tarjeta Débito:</span>
-                <span className="font-semibold text-blue-600">
-                  ${tarjetaDebitoAmount.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Tarjeta Crédito:</span>
-                <span className="font-semibold text-indigo-600">
-                  ${tarjetaCreditoAmount.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Transferencias:</span>
-                <span className="font-semibold text-purple-600">
-                  ${transferenciaAmount.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">MercadoPago:</span>
-                <span className="font-semibold text-orange-600">
-                  ${mercadopagoAmount.toLocaleString()}
-                </span>
-              </div>
-              <div className="border-t pt-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Total Arqueo:</span>
-                  <span className="font-bold text-primary-600">
-                    ${calculateArqueoTotal().toLocaleString()}
-                  </span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tarjeta Crédito:</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      value={localTarjetaCredito}
+                      onChange={(e) => setLocalTarjetaCredito(parseFloat(e.target.value) || 0)}
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="border-t pt-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Esperado:</span>
-                  <span className="font-medium text-gray-600">
-                    ${shiftStats.netAmount.toLocaleString()}
-                  </span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Transferencias:</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      value={localTransferencia}
+                      onChange={(e) => setLocalTransferencia(parseFloat(e.target.value) || 0)}
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Diferencia:</span>
-                  <span className={`font-bold ${calculateDifference() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {calculateDifference() >= 0 ? '+' : ''}${calculateDifference().toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Inputs para métodos de pago */}
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tarjeta Débito:</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    value={tarjetaDebitoAmount}
-                    onChange={(e) => setTarjetaDebitoAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tarjeta Crédito:</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    value={tarjetaCreditoAmount}
-                    onChange={(e) => setTarjetaCreditoAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Transferencias:</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    value={transferenciaAmount}
-                    onChange={(e) => setTransferenciaAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">MercadoPago:</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    value={mercadopagoAmount}
-                    onChange={(e) => setMercadopagoAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="0"
-                  />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">MercadoPago:</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      value={localMercadopago}
+                      onChange={(e) => setLocalMercadopago(parseFloat(e.target.value) || 0)}
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex space-x-3 mt-6">
-          <button
-            onClick={() => setShowCashCountModal(false)}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => {
-              setClosingAmount(calculateArqueoTotal());
-              setShowCashCountModal(false);
-            }}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
-          >
-            Confirmar Arqueo
-          </button>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowCashCountModal(false)}
+              className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirmArqueo}
+              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+            >
+              Confirmar Arqueo
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  });
 
 
 
