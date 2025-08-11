@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { customers, customerStatuses } from '../data/customers';
 import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getCurrentDate, calculateOverdueDays as calculateOverdueDaysFromService } from '../services/dateService';
+import { getCurrentDate } from '../services/dateService';
 import { processCustomerPayment, validateCustomerPayment } from '../services/paymentService';
 import { shiftService, customerService } from '../services/firebaseService';
 import LoadingSpinner from './LoadingSpinner';
