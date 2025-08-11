@@ -115,6 +115,22 @@ export const expensesService = {
       console.error('❌ Error cargando gastos por rango:', error);
       throw error;
     }
+  },
+
+  async updateExpense(expenseId, updateData) {
+    try {
+      const expenseRef = doc(db, 'expenses', expenseId);
+      await updateDoc(expenseRef, {
+        ...updateData,
+        updatedAt: serverTimestamp()
+      });
+      smartCache.invalidate('expenses');
+      console.log('✅ Gasto actualizado:', expenseId);
+      return expenseId;
+    } catch (error) {
+      console.error('❌ Error actualizando gasto:', error);
+      throw error;
+    }
   }
 };
 

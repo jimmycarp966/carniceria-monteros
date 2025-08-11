@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { shiftService, saleService } from '../services/firebaseService';
+import CashCountModal from './CashCountModal';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
@@ -38,6 +39,7 @@ const CashRegister = () => {
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showCashCountModal, setShowCashCountModal] = useState(false);
+  const [showCashCountModalForClose, setShowCashCountModalForClose] = useState(false);
 
   // Estados para cerrar turno
   const [closingAmount, setClosingAmount] = useState(0);
@@ -262,13 +264,13 @@ const CashRegister = () => {
       return;
     }
 
-    try {
-      if (!currentShift) {
-        toast.error('No hay turno activo para cerrar');
-        return;
-      }
+    if (!currentShift) {
+      toast.error('No hay turno activo para cerrar');
+      return;
+    }
 
-      // Verificar que el turno aún existe en la base de datos
+    // Verificar que el turno aún existe en la base de datos
+    try {
       const shifts = await shiftService.getAllShifts();
       const shiftExists = shifts.find(shift => shift.id === currentShift.id);
       
@@ -285,26 +287,24 @@ const CashRegister = () => {
         return;
       }
 
-      const difference = calculateDifference();
-      const arqueoData = {
-        cashCount,
-        efectivoAmount: calculateCashTotal(),
-        tarjetaDebitoAmount,
-        tarjetaCreditoAmount,
-        tarjetaAmount: tarjetaDebitoAmount + tarjetaCreditoAmount,
-        transferenciaAmount,
-        mercadopagoAmount,
-        totalArqueo: calculateArqueoTotal(),
-        expectedAmount: shiftStats.netAmount,
-        difference,
-        hasDifference: Math.abs(difference) > 0
-      };
+      // Mostrar modal de arqueo antes de cerrar
+      setShowCashCountModalForClose(true);
+      setShowCloseShiftModal(false);
+      
+    } catch (error) {
+      console.error('Error verificando turno:', error);
+      toast.error('Error al verificar el turno');
+    }
+  }, [canCloseShift, userRole, currentShift]);
 
+  // Función para completar el cierre después del arqueo
+  const completeShiftClose = useCallback(async (cashCountData, differences) => {
+    try {
       const shiftData = {
         ...currentShift,
         endTime: new Date(),
-        closingAmount,
-        closingNotes,
+        closingAmount: differences.finalTotal,
+        closingNotes: `Arqueo completado - ${differences.hasDifference ? 'Con diferencia' : 'Balanceado'}`,
         status: 'closed',
         closedBy: {
           id: currentUser?.id,
@@ -312,7 +312,11 @@ const CashRegister = () => {
           email: currentUser?.email,
           role: currentUser?.role || 'ayudante'
         },
-        arqueo: arqueoData
+        cashCountId: cashCountData.id,
+        arqueo: {
+          ...differences,
+          cashCountData
+        }
       };
 
       await shiftService.updateShift(currentShift.id, shiftData);
@@ -320,9 +324,7 @@ const CashRegister = () => {
       // Sincronizar en tiempo real
       await dataSyncService.syncShift({ ...shiftData, id: currentShift.id });
       
-      setShowCloseShiftModal(false);
-      setClosingAmount(0);
-      setClosingNotes('');
+      // Limpiar estados
       setCashCount({
         20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
         20: 0, 10: 0, 5: 0, 2: 0, 1: 0
@@ -354,7 +356,7 @@ const CashRegister = () => {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
     }
-  }, [canCloseShift, userRole, currentUser, currentShift, closingAmount, closingNotes, shiftStats, cashCount, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount, calculateArqueoTotal, calculateCashTotal, calculateDifference]);
+  }, [currentShift, currentUser, loadShiftData]);
 
   // Registrar ingreso adicional
   const registerIncome = useCallback(async () => {
@@ -688,6 +690,14 @@ const CashRegister = () => {
         {showCashCountModal && <CashCountModal 
           updateCashCount={updateCashCount}
         />}
+        {showCashCountModalForClose && (
+          <CashCountModal
+            currentShift={currentShift}
+            currentUser={currentUser}
+            onCashCountComplete={completeShiftClose}
+            onClose={() => setShowCashCountModalForClose(false)}
+          />
+        )}
       </div>
     </CashRegisterAccessGuard>
   );
