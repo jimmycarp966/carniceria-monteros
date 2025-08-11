@@ -100,7 +100,7 @@ export const testArqueo = {
         console.log('✅ El cashCountService está funcionando correctamente');
       }
       
-      return { activeShift, salesData, shiftSales };
+             return { activeShift, salesData };
       
     } catch (error) {
       console.error('❌ Error en prueba del arqueo:', error);
