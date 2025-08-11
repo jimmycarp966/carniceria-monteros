@@ -508,14 +508,16 @@ export const dataSyncService = {
           console.warn('No se actualizaron métricas de turno:', e);
         }
 
-        // Actualizar estadísticas en tiempo real (no bloquear venta si falla RTDB)
+        // Intentar actualizar estadísticas en tiempo real (no bloquear venta si falla RTDB)
         try {
-          const statsRef = ref(realtimeDb, 'stats');
-          await update(statsRef, {
-            totalSales: saleData.total,
-            lastSale: rtdbServerTimestamp(),
-            dailySales: saleData.total
-          });
+          if (realtimeDb) {
+            const statsRef = ref(realtimeDb, 'stats');
+            await update(statsRef, {
+              totalSales: saleData.total,
+              lastSale: rtdbServerTimestamp(),
+              dailySales: saleData.total
+            });
+          }
         } catch (e) {
           console.warn('RTDB no disponible para stats, continúa sin bloquear venta');
         }

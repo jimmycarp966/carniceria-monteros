@@ -184,39 +184,55 @@ const Ventas = () => {
         }
       };
       
-      // Guardar venta
+      console.log('🛒 Procesando venta:', saleData);
+      
+      // Guardar venta en Firestore
       const saleId = await saleService.addSale(saleData);
+      console.log('✅ Venta guardada en Firestore:', saleId);
       
       // Actualizar stock del producto
       await productService.updateProduct(selectedProduct.id, {
         stock: selectedProduct.stock - quantity
       });
+      console.log('✅ Stock actualizado');
       
-      // Sincronizar en tiempo real
-      await dataSyncService.syncSale(saleData);
+      // Intentar sincronizar en tiempo real (sin bloquear si falla)
+      try {
+        await dataSyncService.syncSale(saleData);
+        console.log('✅ Sincronización en tiempo real completada');
+      } catch (syncError) {
+        console.warn('⚠️ Error en sincronización en tiempo real:', syncError);
+        // No bloquear la venta si falla la sincronización
+      }
       
-      // Notificar a la caja sobre la nueva venta
-      await realtimeService.notifySaleCompleted({
-        saleId,
-        shiftId: currentShift.id,
-        total: subtotal,
-        employeeName: currentUser?.name
-      });
+      // Intentar notificar a la caja (sin bloquear si falla)
+      try {
+        await realtimeService.notifySaleCompleted({
+          saleId,
+          shiftId: currentShift.id,
+          total: subtotal,
+          employeeName: currentUser?.name
+        });
+        console.log('✅ Notificación enviada');
+      } catch (notifyError) {
+        console.warn('⚠️ Error enviando notificación:', notifyError);
+        // No bloquear la venta si falla la notificación
+      }
       
       toast.success(`Venta registrada exitosamente - ID: ${saleId}`);
       
-             // Limpiar formulario
-       setSelectedProduct(null);
-       setQuantity(1);
-       setSearchTerm('');
-       setShowDropdown(false);
+      // Limpiar formulario
+      setSelectedProduct(null);
+      setQuantity(1);
+      setSearchTerm('');
+      setShowDropdown(false);
       
       // Recargar productos para actualizar stock
       loadInitialData();
       
     } catch (error) {
-      console.error('Error procesando venta:', error);
-      toast.error('Error al procesar la venta');
+      console.error('❌ Error procesando venta:', error);
+      toast.error(`Error al procesar la venta: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
