@@ -83,7 +83,7 @@ const DebugPanel = () => {
     console.log('🔥 BORRANDO TURNO PROBLEMÁTICO INMEDIATAMENTE...');
     
     try {
-      const { collection, getDocs, deleteDoc, doc, query, where } = await import('firebase/firestore');
+      const { collection, getDocs, deleteDoc, doc } = await import('firebase/firestore');
       const { db } = await import('../firebase');
       
       // Buscar el turno específico con apertura $5.000 y notas "prueba 1"
