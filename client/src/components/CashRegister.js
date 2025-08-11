@@ -312,6 +312,9 @@ const CashRegister = () => {
         setIsLoading(true);
         console.log('🔄 Inicializando caja registradora...');
 
+        // Inicializar listeners de tiempo real
+        realtimeService.initializeRealtimeListeners();
+
         // Buscar turno activo
         const shifts = await shiftService.getAllShifts();
         console.log(`📊 Turnos encontrados: ${shifts.length}`);
@@ -339,29 +342,49 @@ const CashRegister = () => {
     };
 
     const setupListeners = () => {
+      console.log('🔧 Configurando listeners de tiempo real...');
+      
       // Escuchar cambios en ventas
       realtimeService.on('sales_updated', (data) => {
+        console.log('💰 Ventas actualizadas:', data);
         if (currentShift && data.sales) {
+          console.log('🔄 Recargando datos del turno por ventas actualizadas');
           loadShiftData(currentShift);
         }
       });
 
       // Escuchar nuevas ventas
       realtimeService.on('sale_synced', (data) => {
+        console.log('💰 Nueva venta sincronizada:', data);
         if (currentShift) {
+          console.log('🔄 Recargando datos del turno por nueva venta');
           loadShiftData(currentShift);
           toast.success('Nueva venta registrada en la caja');
         }
       });
 
+      // Escuchar nuevos turnos sincronizados
+      realtimeService.on('shift_synced', (data) => {
+        console.log('🔄 Turno sincronizado:', data);
+        if (data.shiftData && data.shiftData.status === 'active') {
+          console.log('✅ Configurando turno activo desde shift_synced');
+          setCurrentShift({ id: data.shiftId, ...data.shiftData });
+          loadShiftData({ id: data.shiftId, ...data.shiftData });
+          toast.success(`Turno ${data.shiftData.type === 'morning' ? 'mañana' : 'tarde'} abierto exitosamente`);
+        }
+      });
+
       // Escuchar cambios en turnos
       realtimeService.on('shifts_updated', (data) => {
+        console.log('🔄 Turnos actualizados:', data);
         if (data.shifts) {
           const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
           if (activeShift) {
+            console.log('✅ Configurando turno activo desde shifts_updated:', activeShift);
             setCurrentShift(activeShift);
             loadShiftData(activeShift);
           } else {
+            console.log('❌ No hay turno activo, limpiando estado');
             setCurrentShift(null);
             setShiftStats({
               totalSales: 0,
@@ -377,6 +400,8 @@ const CashRegister = () => {
           checkCanFinalizarDia();
         }
       });
+      
+      console.log('✅ Listeners de tiempo real configurados');
     };
 
     // Listener para reset forzado de turnos
@@ -407,6 +432,7 @@ const CashRegister = () => {
     return () => {
       realtimeService.off('sales_updated');
       realtimeService.off('sale_synced');
+      realtimeService.off('shift_synced');
       realtimeService.off('shifts_updated');
       window.removeEventListener('forceResetShifts', handleForceResetShifts);
     };
@@ -594,6 +620,8 @@ const CashRegister = () => {
   // Abrir turno
   const openShift = async (shiftData) => {
     try {
+      console.log('🔄 Iniciando apertura de turno:', shiftData);
+      
       // Verificar permisos
       if (!canOpenShift) {
         toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
@@ -603,6 +631,8 @@ const CashRegister = () => {
       // Verificar que no haya un turno activo del mismo tipo hoy
       const today = new Date().toISOString().split('T')[0];
       const shifts = await shiftService.getAllShifts();
+      console.log(`📊 Turnos existentes hoy: ${shifts.length}`);
+      
       const todayShifts = shifts.filter(shift => {
         const shiftDate = shift.date || (shift.startTime?.toDate?.()?.toISOString()?.split('T')[0]);
         return shiftDate === today;
@@ -652,11 +682,16 @@ const CashRegister = () => {
         }
       };
 
+      console.log('📝 Datos del turno a crear:', shiftToCreate);
+
       // Sincronizar turno (esto ya crea el turno en Firestore)
+      console.log('🔄 Sincronizando turno con dataSyncService...');
       const shiftId = await dataSyncService.syncShift(shiftToCreate);
+      console.log('✅ Turno sincronizado, ID:', shiftId);
       
       // Actualizar estado local
       const newShift = { id: shiftId, ...shiftToCreate };
+      console.log('🔄 Actualizando estado local con turno:', newShift);
       setCurrentShift(newShift);
       
       // Cargar datos del turno
@@ -665,7 +700,7 @@ const CashRegister = () => {
       toast.success(`Turno ${shiftData.shiftType === 'morning' ? 'mañana' : 'tarde'} abierto exitosamente`);
       
     } catch (error) {
-      console.error('Error abriendo turno:', error);
+      console.error('❌ Error abriendo turno:', error);
       toast.error('Error abriendo turno');
       throw error;
     }
