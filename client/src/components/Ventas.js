@@ -74,6 +74,51 @@ const Ventas = () => {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Listeners de tiempo real para sincronización de turnos
+  useEffect(() => {
+    console.log('🔧 Ventas: Configurando listeners de tiempo real...');
+    
+    // Inicializar listeners de tiempo real si no están inicializados
+    realtimeService.initializeRealtimeListeners();
+    
+    // Listener para cambios en turnos
+    const handleShiftsUpdated = (data) => {
+      console.log('🔄 Ventas: Turnos actualizados:', data);
+      if (data.shifts && Array.isArray(data.shifts)) {
+        const activeShift = data.shifts.find(shift => shift.status === 'active' || !shift.endTime);
+        console.log('🔍 Ventas: Turno activo encontrado:', activeShift);
+        setCurrentShift(activeShift);
+        
+        if (activeShift) {
+          toast.success(`Turno activo detectado: ${activeShift.employeeName}`);
+        } else {
+          toast.error('No hay turno activo. Debe abrir un turno para realizar ventas.');
+        }
+      }
+    };
+
+    // Listener para sincronización de turnos
+    const handleShiftSynced = (data) => {
+      console.log('🔄 Ventas: Turno sincronizado:', data);
+      if (data.shiftData && (data.shiftData.status === 'active' || !data.shiftData.endTime)) {
+        const newShift = { id: data.shiftId, ...data.shiftData };
+        setCurrentShift(newShift);
+        toast.success(`Turno activo sincronizado: ${newShift.employeeName}`);
+      }
+    };
+
+    // Configurar listeners
+    realtimeService.on('shifts_updated', handleShiftsUpdated);
+    realtimeService.on('shift_synced', handleShiftSynced);
+    
+    console.log('✅ Ventas: Listeners de tiempo real configurados');
+    
+    return () => {
+      realtimeService.off('shifts_updated', handleShiftsUpdated);
+      realtimeService.off('shift_synced', handleShiftSynced);
+    };
+  }, []);
+
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
