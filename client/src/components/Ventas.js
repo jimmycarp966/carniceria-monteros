@@ -59,6 +59,19 @@ const Ventas = () => {
   // Cargar datos iniciales
   useEffect(() => {
     loadInitialData();
+    
+    // Listener para reset forzado de turnos
+    const handleForceResetShifts = () => {
+      console.log('🔄 Ventas: Recibido evento de reset forzado de turnos');
+      setCurrentShift(null);
+      toast.success('Turnos reseteados - No hay turno activo para ventas');
+    };
+    
+    window.addEventListener('forceResetShifts', handleForceResetShifts);
+    
+    return () => {
+      window.removeEventListener('forceResetShifts', handleForceResetShifts);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadInitialData = async () => {

@@ -80,6 +80,19 @@ const SalesModule = () => {
   // Cargar datos iniciales
   useEffect(() => {
     loadInitialData();
+    
+    // Listener para reset forzado de turnos
+    const handleForceResetShifts = () => {
+      console.log('🔄 SalesModule: Recibido evento de reset forzado de turnos');
+      setCurrentShift(null);
+      toast.success('Turnos reseteados - No hay turno activo para ventas');
+    };
+    
+    window.addEventListener('forceResetShifts', handleForceResetShifts);
+    
+    return () => {
+      window.removeEventListener('forceResetShifts', handleForceResetShifts);
+    };
   }, []);
 
   const loadInitialData = async () => {

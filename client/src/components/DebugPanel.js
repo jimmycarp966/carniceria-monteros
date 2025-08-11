@@ -136,17 +136,57 @@ const DebugPanel = () => {
       }
     };
 
+    // Función específica para forzar reset de turnos
+    const forceResetShifts = async () => {
+      console.log('🔥 FORZANDO RESET DE TURNOS...');
+      
+      try {
+        // 1. Borrar todos los turnos de Firestore
+        const deletedCount = await deleteCollection('shifts');
+        console.log(`✅ ${deletedCount} turnos borrados de Firestore`);
+        
+        // 2. Limpiar Realtime Database
+        try {
+          const { ref, remove } = await import('firebase/database');
+          const { realtimeDb } = await import('../firebase');
+          
+          if (realtimeDb) {
+            const shiftsRef = ref(realtimeDb, 'shifts');
+            await remove(shiftsRef);
+            console.log('✅ Turnos borrados de Realtime Database');
+          }
+        } catch (error) {
+          console.warn('⚠️ No se pudo limpiar Realtime Database:', error);
+        }
+        
+        // 3. Limpiar localStorage
+        localStorage.removeItem('currentShift');
+        localStorage.removeItem('shiftData');
+        localStorage.removeItem('cashRegisterState');
+        console.log('✅ Estado local limpiado');
+        
+        // 4. Forzar recarga de componentes
+        window.dispatchEvent(new CustomEvent('forceResetShifts'));
+        console.log('✅ Evento de reset disparado');
+        
+        return deletedCount;
+      } catch (error) {
+        console.error('❌ Error en forceResetShifts:', error);
+        throw error;
+      }
+    };
+
     try {
       toast.loading('Iniciando reset completo del sistema...', { id: 'reset' });
 
-      // 1. Borrar TODOS los turnos/cajas (PRIORIDAD ALTA)
+      // 1. FORZAR RESET DE TURNOS (PRIORIDAD MÁXIMA)
       try {
-        console.log('🗑️ Borrando TODOS los turnos...');
-        const deletedCount = await deleteCollection('shifts');
+        console.log('🔥 INICIANDO RESET FORZADO DE TURNOS...');
+        const deletedCount = await forceResetShifts();
         resetResults.shifts = true;
-        console.log(`✅ ${deletedCount} turnos borrados completamente`);
+        console.log(`✅ ${deletedCount} turnos borrados completamente (FORZADO)`);
       } catch (error) {
-        console.error('❌ Error borrando turnos:', error);
+        console.error('❌ Error en reset forzado de turnos:', error);
       }
 
       // 2. Borrar TODAS las ventas

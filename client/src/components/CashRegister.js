@@ -250,13 +250,42 @@ const CashRegister = () => {
       });
     };
 
+    // Listener para reset forzado de turnos
+    const handleForceResetShifts = () => {
+      console.log('🔄 Recibido evento de reset forzado de turnos');
+      setCurrentShift(null);
+      setShiftStats({
+        totalSales: 0,
+        totalRevenue: 0,
+        totalAdditionalIncomes: 0,
+        salesCount: 0,
+        netAmount: 0
+      });
+      setRecentActivity([]);
+      setCashCount({
+        20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
+        20: 0, 10: 0, 5: 0, 2: 0, 1: 0
+      });
+      setTarjetaDebitoAmount(0);
+      setTarjetaCreditoAmount(0);
+      setTransferenciaAmount(0);
+      setMercadopagoAmount(0);
+      setClosingAmount(0);
+      setClosingNotes('');
+      toast.success('Turnos reseteados completamente');
+    };
+
     initCashRegister();
     setupListeners();
+    
+    // Agregar listener para reset forzado
+    window.addEventListener('forceResetShifts', handleForceResetShifts);
 
     return () => {
       realtimeService.off('sales_updated');
       realtimeService.off('sale_synced');
       realtimeService.off('shifts_updated');
+      window.removeEventListener('forceResetShifts', handleForceResetShifts);
     };
   }, [currentShift]);
 
