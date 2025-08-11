@@ -107,22 +107,34 @@ export const expensesService = {
       console.log('📅 StartDate:', startDate);
       console.log('📅 EndDate:', endDate);
       
+      // Obtener todos los gastos y filtrar por fecha en el cliente
       const expensesRef = collection(db, 'expenses');
-      const q = query(
-        expensesRef,
-        where('createdAt', '>=', startDate),
-        where('createdAt', '<=', endDate)
-      );
+      const q = query(expensesRef, orderBy('createdAt', 'desc'));
       
       const snapshot = await getDocs(q);
-      const expenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const allExpenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      console.log(`💰 Gastos encontrados: ${expenses.length}`);
-      expenses.forEach(expense => {
-        console.log(`  - ${expense.id}: $${expense.amount} | ${expense.reason} | ${expense.createdAt?.toDate?.()?.toISOString()}`);
+      console.log(`📊 Total gastos en el sistema: ${allExpenses.length}`);
+      
+      // Filtrar por fecha en el cliente
+      const filteredExpenses = allExpenses.filter(expense => {
+        const expenseDate = expense.createdAt?.toDate?.();
+        if (!expenseDate) {
+          console.log(`⚠️ Gasto ${expense.id} sin fecha válida:`, expense.createdAt);
+          return false;
+        }
+        
+        const isInRange = expenseDate >= startDate && expenseDate <= endDate;
+        console.log(`  - ${expense.id}: ${expenseDate.toISOString()} | En rango: ${isInRange}`);
+        return isInRange;
       });
       
-      return expenses;
+      console.log(`💰 Gastos en rango de fecha: ${filteredExpenses.length}`);
+      filteredExpenses.forEach(expense => {
+        console.log(`  ✅ ${expense.id}: $${expense.amount} | ${expense.reason} | ${expense.createdAt?.toDate?.()?.toISOString()}`);
+      });
+      
+      return filteredExpenses;
     } catch (error) {
       console.error('❌ Error cargando gastos por rango:', error);
       throw error;
