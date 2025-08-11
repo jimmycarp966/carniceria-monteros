@@ -1,38 +1,93 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { categories } from '../data/products';
-import { Package, Plus, Edit, Trash2, Search, Filter, Grid, List, RefreshCw, AlertTriangle, TrendingUp, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { 
+  Package, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Search, 
+  Filter, 
+  Grid, 
+  List, 
+  RefreshCw, 
+  AlertTriangle, 
+  TrendingUp, 
+  DollarSign,
+  Eye,
+  MoreVertical
+} from 'lucide-react';
+import { toast } from 'react-toastify';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { productService } from '../services/firebaseService';
+import LoadingSpinner from './LoadingSpinner';
 
 // Componente de producto optimizado con memo
-const ProductCard = memo(({ product, onEdit, onDelete, getCategoryColor, getStockStatus }) => {
+const ProductCard = memo(({ product, onEdit, onDelete, onView, getCategoryColor, getStockStatus }) => {
   const stockStatus = getStockStatus(product.stock, product.minStock);
   
   return (
-    <div className="card hover:transform hover:scale-105 transition-all duration-300">
+    <div className="card hover:shadow-lg transition-all duration-300 group">
+      {/* Header del card */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="text-3xl">{product.image}</div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
+              <p className="text-sm text-gray-500 truncate">{product.description}</p>
+            </div>
+          </div>
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
             {product.category}
           </span>
         </div>
-        <div className="text-2xl">{product.image}</div>
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="dropdown relative">
+            <button className="p-1 rounded-full hover:bg-gray-100">
+              <MoreVertical className="h-4 w-4 text-gray-500" />
+            </button>
+            <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+              <button
+                onClick={() => onView(product)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Ver detalles
+              </button>
+              <button
+                onClick={() => onEdit(product)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </button>
+              <button
+                onClick={() => onDelete(product.id)}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       
-      <div className="space-y-2 mb-4">
+      {/* Información del producto */}
+      <div className="space-y-3 mb-4">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Precio:</span>
-          <span className="text-lg font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</span>
+          <span className="text-xl font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Stock:</span>
-          <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
-            {(Number(product.stock) || 0)} {product.unit || ''}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
+              {(Number(product.stock) || 0)} {product.unit || ''}
+            </span>
+            <div className={`w-2 h-2 rounded-full bg-${stockStatus.color}-500`}></div>
+          </div>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-500">Origen:</span>
@@ -46,20 +101,20 @@ const ProductCard = memo(({ product, onEdit, onDelete, getCategoryColor, getStoc
         )}
       </div>
 
+      {/* Acciones rápidas */}
       <div className="flex space-x-2">
         <button
           onClick={() => onEdit(product)}
-          className="flex-1 btn btn-secondary text-xs py-2 flex items-center justify-center"
+          className="flex-1 btn btn-secondary text-sm py-2 flex items-center justify-center"
         >
-          <Edit className="h-3 w-3 mr-1" />
+          <Edit className="h-4 w-4 mr-1" />
           Editar
         </button>
         <button
           onClick={() => onDelete(product.id)}
-          className="flex-1 btn btn-danger text-xs py-2 flex items-center justify-center"
+          className="btn btn-danger text-sm py-2 px-3 flex items-center justify-center"
         >
-          <Trash2 className="h-3 w-3 mr-1" />
-          Eliminar
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -67,39 +122,27 @@ const ProductCard = memo(({ product, onEdit, onDelete, getCategoryColor, getStoc
 });
 
 // Componente de tabla optimizado con memo
-const ProductTable = memo(({ products, onEdit, onDelete, getCategoryColor, getStockStatus }) => {
+const ProductTable = memo(({ products, onEdit, onDelete, onView, getCategoryColor, getStockStatus }) => {
   return (
-    <div className="table-container">
+    <div className="card">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="table">
+          <thead>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Producto
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Categoría
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Precio
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stock
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ventas
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Ventas</th>
+              <th>Acciones</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody>
             {products.map(product => {
               const stockStatus = getStockStatus(product.stock, product.minStock);
               return (
                 <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td>
                     <div className="flex items-center">
                       <div className="text-2xl mr-3">{product.image}</div>
                       <div>
@@ -108,33 +151,45 @@ const ProductTable = memo(({ products, onEdit, onDelete, getCategoryColor, getSt
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
+                  <td>
+                    <span className={`badge badge-${getCategoryColor(product.category)}`}>
                       {product.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="font-medium text-gray-900">
                     ${(Number(product.price) || 0).toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
-                      {(Number(product.stock) || 0)} {product.unit || ''}
-                    </span>
+                  <td>
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
+                        {(Number(product.stock) || 0)} {product.unit || ''}
+                      </span>
+                      <div className={`w-2 h-2 rounded-full bg-${stockStatus.color}-500`}></div>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                     {Number(product.salesCount) || 0}
+                  <td className="text-sm text-gray-500">
+                    {Number(product.salesCount) || 0}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
+                  <td>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => onView(product)}
+                        className="p-1 text-gray-400 hover:text-gray-600"
+                        title="Ver detalles"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => onEdit(product)}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        className="p-1 text-blue-400 hover:text-blue-600"
+                        title="Editar"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => onDelete(product.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="p-1 text-red-400 hover:text-red-600"
+                        title="Eliminar"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -145,107 +200,6 @@ const ProductTable = memo(({ products, onEdit, onDelete, getCategoryColor, getSt
             })}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-});
-
-// Componente de paginación optimizado
-const Pagination = memo(({ currentPage, totalPages, onPageChange }) => {
-  const pages = useMemo(() => {
-    const pagesArray = [];
-    const maxVisible = 5;
-    
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pagesArray.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) {
-          pagesArray.push(i);
-        }
-        pagesArray.push('...');
-        pagesArray.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pagesArray.push(1);
-        pagesArray.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pagesArray.push(i);
-        }
-      } else {
-        pagesArray.push(1);
-        pagesArray.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pagesArray.push(i);
-        }
-        pagesArray.push('...');
-        pagesArray.push(totalPages);
-      }
-    }
-    
-    return pagesArray;
-  }, [currentPage, totalPages]);
-
-  return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
-      <div className="flex-1 flex justify-between sm:hidden">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Anterior
-        </button>
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Siguiente
-        </button>
-      </div>
-      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-700">
-            Página <span className="font-medium">{currentPage}</span> de{' '}
-            <span className="font-medium">{totalPages}</span>
-          </p>
-        </div>
-        <div>
-          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-            <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            
-            {pages.map((page, index) => (
-              <button
-                key={index}
-                onClick={() => typeof page === 'number' && onPageChange(page)}
-                disabled={typeof page !== 'number'}
-                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                  page === currentPage
-                    ? 'z-10 bg-orange-50 border-orange-500 text-orange-600'
-                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                } ${typeof page !== 'number' ? 'cursor-default' : 'cursor-pointer'}`}
-              >
-                {page}
-              </button>
-            ))}
-            
-            <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </nav>
-        </div>
       </div>
     </div>
   );
@@ -368,27 +322,22 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [viewingProduct, setViewingProduct] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  
-  // Estados para paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
-  // Cargar productos en tiempo real sin cache local ni servicios
+  // Cargar productos en tiempo real
   useEffect(() => {
     setLoading(true);
     const unsub = onSnapshot(query(collection(db, 'products'), orderBy('name')), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setProductList(Array.isArray(list) ? list : []);
-      setTotalPages(1);
       setLoading(false);
     }, (err) => {
       console.error('❌ Error onSnapshot productos:', err);
       toast.error('No se pudieron cargar productos');
       setProductList([]);
-      setTotalPages(1);
       setLoading(false);
     });
     return () => { try { unsub(); } catch {} };
@@ -398,7 +347,7 @@ const Products = () => {
   const filteredProducts = useMemo(() => {
     return productList.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
+                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !categoryFilter || product.category === categoryFilter;
       return matchesSearch && matchesCategory;
     });
@@ -438,7 +387,6 @@ const Products = () => {
       const productId = await productService.addProduct(productData);
       console.log('✅ Producto agregado con ID:', productId);
       
-      // No forzar estado local; onSnapshot actualizará la lista
       setShowAddModal(false);
       toast.success('Producto agregado exitosamente');
     } catch (error) {
@@ -463,8 +411,6 @@ const Products = () => {
       
       await productService.updateProduct(updatedProduct.id, productData);
       
-      // No forzar estado local; onSnapshot actualizará la lista
-      
       setEditingProduct(null);
       toast.success('Producto actualizado exitosamente');
     } catch (error) {
@@ -476,44 +422,26 @@ const Products = () => {
   }, []);
 
   const handleDeleteProduct = useCallback(async (id) => {
-    try {
-      setSyncing(true);
-      console.log('🔄 Eliminando producto...');
-      
-      await productService.deleteProduct(id);
-      
-      // No forzar estado local; onSnapshot actualizará la lista
-      toast.success('Producto eliminado exitosamente');
-    } catch (error) {
-      console.error('❌ Error eliminando producto:', error);
-      toast.error('Error al eliminar producto');
-    } finally {
-      setSyncing(false);
+    if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+      try {
+        setSyncing(true);
+        console.log('🔄 Eliminando producto...');
+        
+        await productService.deleteProduct(id);
+        
+        toast.success('Producto eliminado exitosamente');
+      } catch (error) {
+        console.error('❌ Error eliminando producto:', error);
+        toast.error('Error al eliminar producto');
+      } finally {
+        setSyncing(false);
+      }
     }
-  }, []);
-
-  // Handlers de paginación
-  const handlePageChange = useCallback((page) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   // Handler para refrescar productos
   const handleRefresh = useCallback(async () => {
     toast.success('Productos actualizados');
-  }, []);
-
-  // Handler para forzar recarga de datos
-  const handleForceReload = useCallback(async () => {
-    try {
-      setSyncing(true);
-      console.log('🔄 Forzando recarga de datos...');
-      setProductList([]);
-      setCurrentPage(1);
-      toast.success('Datos recargados exitosamente');
-    } finally {
-      setSyncing(false);
-    }
   }, []);
 
   // Funciones de utilidad memoizadas
@@ -552,6 +480,10 @@ const Products = () => {
     setEditingProduct(product);
   }, []);
 
+  const handleViewClick = useCallback((product) => {
+    setViewingProduct(product);
+  }, []);
+
   const handleDeleteClick = useCallback((id) => {
     handleDeleteProduct(id);
   }, [handleDeleteProduct]);
@@ -559,53 +491,42 @@ const Products = () => {
   if (loading) {
     return (
       <div className="p-4 lg:p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="loading-spinner mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando productos...</p>
-          </div>
-        </div>
+        <LoadingSpinner size="lg" text="Cargando productos..." />
       </div>
     );
   }
 
   return (
-    <div className="p-4 lg:p-6 space-y-4">
+    <div className="space-y-6">
       {/* Header Mejorado */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gradient">
             Productos
           </h1>
-          <p className="mt-2 text-gray-600">Gestiona el catálogo de productos de la carnicería</p>
+          <p className="text-gray-600 mt-1">
+            Gestiona el catálogo de productos de la carnicería
+          </p>
         </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <button
             onClick={handleRefresh}
             disabled={syncing}
-            className="btn btn-secondary flex items-center justify-center"
+            className="btn btn-secondary"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
           <button
-            onClick={handleForceReload}
-            disabled={syncing}
-            className="btn btn-secondary flex items-center justify-center"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-            Recargar Datos
-          </button>
-          <button
             onClick={handleViewModeToggle}
-            className="btn btn-secondary flex items-center justify-center"
+            className="btn btn-secondary"
           >
             {viewMode === 'grid' ? <List className="h-4 w-4 mr-2" /> : <Grid className="h-4 w-4 mr-2" />}
             {viewMode === 'grid' ? 'Lista' : 'Grid'}
           </button>
           <button
             onClick={handleShowAddModal}
-            className="btn btn-primary flex items-center w-full sm:w-auto justify-center"
+            className="btn btn-primary"
           >
             <Plus className="h-4 w-4 mr-2" />
             Agregar Producto
@@ -613,10 +534,10 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Stats Cards Optimizadas */}
+      {/* Stats Cards */}
       <StatsCards stats={stats} />
 
-      {/* Filters Optimizados */}
+      {/* Filters */}
       <Filters 
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -626,7 +547,7 @@ const Products = () => {
         onClearFilters={handleClearFilters}
       />
 
-      {/* Products Display Optimizado */}
+      {/* Products Display */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {filteredProducts.map(product => (
@@ -635,6 +556,7 @@ const Products = () => {
               product={product}
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}
+              onView={handleViewClick}
               getCategoryColor={getCategoryColor}
               getStockStatus={getStockStatus}
             />
@@ -645,19 +567,13 @@ const Products = () => {
           products={filteredProducts}
           onEdit={handleEditClick}
           onDelete={handleDeleteClick}
+          onView={handleViewClick}
           getCategoryColor={getCategoryColor}
           getStockStatus={getStockStatus}
         />
       )}
 
-      {/* Pagination Optimizada */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
-
-      {/* Empty State Mejorado */}
+      {/* Empty State */}
       {filteredProducts.length === 0 && (
         <div className="text-center py-12">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -673,7 +589,7 @@ const Products = () => {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Modals */}
       {(showAddModal || editingProduct) && (
         <ProductModal
           product={editingProduct}
@@ -686,11 +602,20 @@ const Products = () => {
           syncing={syncing}
         />
       )}
+
+      {viewingProduct && (
+        <ProductViewModal
+          product={viewingProduct}
+          onClose={() => setViewingProduct(null)}
+          getCategoryColor={getCategoryColor}
+          getStockStatus={getStockStatus}
+        />
+      )}
     </div>
   );
 };
 
-// ProductModal optimizado con memo
+// ProductModal optimizado
 const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) => {
   const [formData, setFormData] = useState({
     name: product?.name || '',
@@ -715,7 +640,7 @@ const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) =
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content p-6">
+      <div className="modal-content p-6 max-w-2xl">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-gray-900">
             {product ? 'Editar Producto' : 'Agregar Producto'}
@@ -865,8 +790,8 @@ const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) =
             >
               {syncing ? (
                 <>
-                  <div className="loading-spinner mr-2"></div>
-                  {product ? 'Actualizando...' : 'Agregando...'}
+                  <LoadingSpinner size="sm" text="" showIcon={false} />
+                  <span className="ml-2">{product ? 'Actualizando...' : 'Agregando...'}</span>
                 </>
               ) : (
                 product ? 'Actualizar' : 'Agregar'
@@ -874,6 +799,83 @@ const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) =
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+});
+
+// ProductViewModal para ver detalles del producto
+const ProductViewModal = memo(({ product, onClose, getCategoryColor, getStockStatus }) => {
+  const stockStatus = getStockStatus(product.stock, product.minStock);
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content p-6 max-w-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">Detalles del Producto</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="text-4xl">{product.image}</div>
+            <div>
+              <h4 className="text-xl font-semibold text-gray-900">{product.name}</h4>
+              <span className={`badge badge-${getCategoryColor(product.category)}`}>
+                {product.category}
+              </span>
+            </div>
+          </div>
+          
+          <div>
+            <p className="text-gray-600">{product.description}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Precio</label>
+              <p className="text-lg font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Stock</label>
+              <p className={`text-lg font-bold text-${stockStatus.color}-600`}>
+                {(Number(product.stock) || 0)} {product.unit || ''}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Stock Mínimo</label>
+              <p className="text-lg font-medium text-gray-900">{product.minStock || 10}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Unidad</label>
+              <p className="text-lg font-medium text-gray-900">{product.unit || 'kg'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Origen</label>
+              <p className="text-lg font-medium text-gray-900">{product.origin}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Ventas</label>
+              <p className="text-lg font-medium text-blue-600">{product.salesCount || 0}</p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end pt-4">
+            <button
+              onClick={onClose}
+              className="btn btn-secondary"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
