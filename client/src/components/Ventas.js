@@ -33,10 +33,32 @@ const Ventas = () => {
   // Hook de acceso
   const { currentUser } = useCashRegisterAccess();
 
+  // Función para actualizar productos sin status
+  const updateProductsWithoutStatus = async (productsData) => {
+    const productsToUpdate = productsData.filter(p => !p.status);
+    
+    if (productsToUpdate.length > 0) {
+      console.log(`🔄 Actualizando ${productsToUpdate.length} productos sin status...`);
+      
+      try {
+        for (const product of productsToUpdate) {
+          await productService.updateProduct(product.id, {
+            status: 'active'
+          });
+        }
+        console.log('✅ Productos actualizados exitosamente');
+        // Recargar productos después de actualizar
+        loadInitialData();
+      } catch (error) {
+        console.error('❌ Error actualizando productos:', error);
+      }
+    }
+  };
+
   // Cargar datos iniciales
   useEffect(() => {
     loadInitialData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadInitialData = async () => {
     try {
@@ -46,12 +68,19 @@ const Ventas = () => {
       const productsData = await productService.getAllProducts(1, 1000);
       console.log('🔍 Productos cargados:', productsData);
       
-      const filteredProducts = productsData.filter(p => p.status === 'active' && p.stock > 0);
+      const filteredProducts = productsData.filter(p => 
+        (p.status === 'active' || !p.status) && p.stock > 0
+      );
       console.log('🔍 Productos filtrados (active + stock > 0):', filteredProducts);
       console.log('🔍 Productos con status !== active:', productsData.filter(p => p.status !== 'active'));
       console.log('🔍 Productos con stock <= 0:', productsData.filter(p => p.stock <= 0));
       
       setProducts(filteredProducts);
+      
+      // Actualizar productos sin status automáticamente
+      if (productsData.some(p => !p.status)) {
+        updateProductsWithoutStatus(productsData);
+      }
       
       // Buscar turno activo
       const shifts = await shiftService.getAllShifts();
