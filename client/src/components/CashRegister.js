@@ -46,7 +46,7 @@ const CashRegister = () => {
   // const [closingNotes, setClosingNotes] = useState('');
 
   // Estados para arqueo
-  const [cashCount, setCashCount] = useState({
+  const [, setCashCount] = useState({
     20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
     20: 0, 10: 0, 5: 0, 2: 0, 1: 0
   });
@@ -164,7 +164,7 @@ const CashRegister = () => {
       realtimeService.off('shifts_updated');
       window.removeEventListener('forceResetShifts', handleForceResetShifts);
     };
-  }, [currentShift]);
+  }, [currentShift, loadShiftData]);
 
   const loadShiftData = useCallback(async (shift) => {
     try {
@@ -329,7 +329,7 @@ const CashRegister = () => {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
     }
-  }, [currentShift, currentUser]);
+  }, [currentShift, currentUser, loadShiftData]);
 
   // Registrar ingreso adicional
   const registerIncome = useCallback(async () => {
@@ -375,7 +375,7 @@ const CashRegister = () => {
       console.error('Error registrando ingreso:', error);
       toast.error('Error al registrar el ingreso');
     }
-  }, [currentShift, incomeAmount, incomeDescription, incomeCategory, currentUser]);
+  }, [currentShift, incomeAmount, incomeDescription, incomeCategory, currentUser, loadShiftData]);
 
   // Actualizar conteo de efectivo
   const updateCashCount = (denomination, count) => {

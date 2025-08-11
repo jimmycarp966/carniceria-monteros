@@ -155,8 +155,6 @@ const CashCountModal = memo(({
 
   // Calcular totales
   const calculateTotals = () => {
-    const { differences } = calculateDifferences();
-    
     const totalExpected = Object.values(paymentMethods)
       .reduce((sum, data) => sum + (data.expected || 0), 0);
     

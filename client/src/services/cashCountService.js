@@ -8,7 +8,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { saleService, expensesService } from './firebaseService';
+import { saleService } from './firebaseService';
 
 // Servicio de arqueo de caja
 export const cashCountService = {
@@ -118,7 +118,6 @@ export const cashCountService = {
   // Calcular diferencias del arqueo
   calculateDifferences(cashCountData) {
     const differences = {};
-    let totalDifference = 0;
 
     // Calcular diferencias por método de pago
     Object.keys(cashCountData.paymentMethods).forEach(method => {
@@ -130,7 +129,6 @@ export const cashCountService = {
         difference: difference,
         hasDifference: Math.abs(difference) > 0
       };
-      totalDifference += difference;
     });
 
     // Calcular totales
