@@ -89,8 +89,8 @@ const CashCountModal = memo(({
         if (currentShift?.id) {
           console.log('🔄 Cargando datos de ventas para arqueo...');
           
-          // Cargar ventas del turno por método de pago
-          const salesData = await cashCountService.getSalesByPaymentMethod(currentShift.id);
+          // Cargar ventas del turno por método de pago (forzando refresh)
+          const salesData = await cashCountService.getSalesByPaymentMethod(currentShift.id, true);
           
           console.log('📊 Datos de ventas cargados:', salesData);
           
@@ -102,6 +102,8 @@ const CashCountModal = memo(({
             transferencia: { expected: salesData.transferencia.expected, counted: 0 },
             mercadopago: { expected: salesData.mercadopago.expected, counted: 0 }
           };
+          
+          console.log('🔧 Montos esperados configurados:', expectedMethods);
           setPaymentMethods(expectedMethods);
           
           // Mostrar resumen de ventas cargadas
