@@ -17,22 +17,22 @@ import {
   Menu,
   X,
   DollarSign,
-  Settings,
-  Bug,
-  CreditCard,
-  Bell
+  CreditCard
+  // Settings,
+  // Bug,
+  // Bell
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionsContext';
 
 // Componentes
-import DebugPanel from './DebugPanel';
-import RealtimeNotifications from './RealtimeNotifications';
+// import DebugPanel from './DebugPanel';
+// import RealtimeNotifications from './RealtimeNotifications';
 
 const MainLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const [debugPanelOpen, setDebugPanelOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  // const [debugPanelOpen, setDebugPanelOpen] = useState(false);
+  // const [notificationsOpen, setNotificationsOpen] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -67,13 +67,13 @@ const MainLayout = ({ children }) => {
     setSidebarOpen(prev => !prev);
   }, []);
 
-  const toggleDebugPanel = useCallback(() => {
-    setDebugPanelOpen(prev => !prev);
-  }, []);
+  // const toggleDebugPanel = useCallback(() => {
+  //   setDebugPanelOpen(prev => !prev);
+  // }, []);
 
-  const toggleNotifications = useCallback(() => {
-    setNotificationsOpen(prev => !prev);
-  }, []);
+  // const toggleNotifications = useCallback(() => {
+  //   setNotificationsOpen(prev => !prev);
+  // }, []);
 
   // Navegación principal
   const navigation = useMemo(() => {
@@ -229,9 +229,9 @@ const MainLayout = ({ children }) => {
               </h1>
             </div>
 
-            {/* Acciones del header */}
+            {/* Acciones del header - OCULTADAS TEMPORALMENTE */}
+            {/* 
             <div className="flex items-center space-x-2">
-              {/* Notificaciones */}
               <div className="relative">
                 <button
                   onClick={toggleNotifications}
@@ -248,12 +248,10 @@ const MainLayout = ({ children }) => {
                 )}
               </div>
 
-              {/* Configuración */}
               <button className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100">
                 <Settings className="h-5 w-5" />
               </button>
 
-              {/* Debug Panel */}
               <button
                 onClick={toggleDebugPanel}
                 className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -261,6 +259,7 @@ const MainLayout = ({ children }) => {
                 <Bug className="h-5 w-5" />
               </button>
             </div>
+            */}
           </div>
         </header>
 
@@ -281,11 +280,13 @@ const MainLayout = ({ children }) => {
         </footer>
       </div>
 
-      {/* Debug Panel */}
+      {/* Debug Panel - OCULTADO TEMPORALMENTE */}
+      {/* 
       <DebugPanel 
         isVisible={debugPanelOpen} 
         onClose={() => setDebugPanelOpen(false)} 
       />
+      */}
     </div>
   );
 };
