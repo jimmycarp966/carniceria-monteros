@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Check, DollarSign, Receipt, Plus, Trash2 } from 'lucide-react';
+import { CreditCard, DollarSign, Receipt, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { expensesService, shiftService } from '../services/firebaseService';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';

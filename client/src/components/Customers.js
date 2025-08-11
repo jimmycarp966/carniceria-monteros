@@ -149,14 +149,9 @@ const Customers = () => {
     }
   };
 
-  const calculateOverdueDays = (customer) => {
-    if (!customer.lastPurchase) return 0;
-    return calculateOverdueDaysFromService(customer.lastPurchase);
-  };
 
-  const isCustomerOverdue = (customer) => {
-    return calculateOverdueDays(customer) > customer.creditDays;
-  };
+
+
 
 
 

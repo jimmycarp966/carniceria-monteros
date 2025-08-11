@@ -3,11 +3,10 @@ import { employees, positions, employeeStatuses } from '../data/employees';
 import { UserCheck, Plus, Edit, Trash2, Search, DollarSign, Users, KeyRound } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { employeeService, loadSampleData } from '../services/firebaseService';
-import { usePermissions } from '../context/PermissionsContext';
+
 import LoadingSpinner from './LoadingSpinner';
 
 const Employees = () => {
-  const permissions = usePermissions();
   const [employeeList, setEmployeeList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
