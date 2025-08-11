@@ -101,43 +101,75 @@ const DebugPanel = () => {
     const deleteDocuments = async (collectionName, documents) => {
       const { deleteDoc, doc } = await import('firebase/firestore');
       const { db } = await import('../firebase');
+      
+      console.log(`🗑️ Borrando ${documents.length} documentos de ${collectionName}...`);
+      
       for (const document of documents) {
-        await deleteDoc(doc(db, collectionName, document.id));
+        try {
+          await deleteDoc(doc(db, collectionName, document.id));
+          console.log(`✅ Borrado: ${collectionName}/${document.id}`);
+        } catch (error) {
+          console.error(`❌ Error borrando ${collectionName}/${document.id}:`, error);
+        }
+      }
+    };
+
+    // Función auxiliar para borrar colección completa
+    const deleteCollection = async (collectionName) => {
+      const { collection, getDocs, deleteDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      console.log(`🗑️ Borrando colección completa: ${collectionName}...`);
+      
+      try {
+        const snapshot = await getDocs(collection(db, collectionName));
+        const documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        for (const document of documents) {
+          try {
+            await deleteDoc(doc(db, collectionName, document.id));
+            console.log(`✅ Borrado: ${collectionName}/${document.id}`);
+          } catch (error) {
+            console.error(`❌ Error borrando ${collectionName}/${document.id}:`, error);
+          }
+        }
+        
+        return documents.length;
+      } catch (error) {
+        console.error(`❌ Error accediendo a colección ${collectionName}:`, error);
+        return 0;
       }
     };
 
     try {
       toast.loading('Iniciando reset completo del sistema...', { id: 'reset' });
 
-      // 1. Borrar todas las ventas
+      // 1. Borrar TODOS los turnos/cajas (PRIORIDAD ALTA)
       try {
-        console.log('🗑️ Borrando ventas...');
-        const sales = await saleService.getAllSales();
-        await deleteDocuments('sales', sales);
-        resetResults.sales = true;
-        console.log('✅ Ventas borradas');
-      } catch (error) {
-        console.error('❌ Error borrando ventas:', error);
-      }
-
-      // 2. Borrar todos los turnos/cajas
-      try {
-        console.log('🗑️ Borrando turnos...');
-        const shifts = await shiftService.getAllShifts();
-        await deleteDocuments('shifts', shifts);
+        console.log('🗑️ Borrando TODOS los turnos...');
+        const deletedCount = await deleteCollection('shifts');
         resetResults.shifts = true;
-        console.log('✅ Turnos borrados');
+        console.log(`✅ ${deletedCount} turnos borrados completamente`);
       } catch (error) {
         console.error('❌ Error borrando turnos:', error);
+      }
+
+      // 2. Borrar TODAS las ventas
+      try {
+        console.log('🗑️ Borrando TODAS las ventas...');
+        const deletedCount = await deleteCollection('sales');
+        resetResults.sales = true;
+        console.log(`✅ ${deletedCount} ventas borradas completamente`);
+      } catch (error) {
+        console.error('❌ Error borrando ventas:', error);
       }
 
       // 3. Borrar todos los clientes
       try {
         console.log('🗑️ Borrando clientes...');
-        const customers = await customerService.getAllCustomers();
-        await deleteDocuments('customers', customers);
+        const deletedCount = await deleteCollection('customers');
         resetResults.customers = true;
-        console.log('✅ Clientes borrados');
+        console.log(`✅ ${deletedCount} clientes borrados`);
       } catch (error) {
         console.error('❌ Error borrando clientes:', error);
       }
@@ -145,45 +177,44 @@ const DebugPanel = () => {
       // 4. Borrar todos los productos e inventario
       try {
         console.log('🗑️ Borrando productos...');
-        const products = await productService.getAllProducts();
-        await deleteDocuments('products', products);
-        await deleteDocuments('inventory', products); // Borrar inventario relacionado
+        const deletedCount = await deleteCollection('products');
         resetResults.products = true;
-        resetResults.inventory = true;
-        console.log('✅ Productos e inventario borrados');
+        console.log(`✅ ${deletedCount} productos borrados`);
       } catch (error) {
         console.error('❌ Error borrando productos:', error);
       }
 
-      // 5. Borrar movimientos de inventario
+      // 5. Borrar inventario
+      try {
+        console.log('🗑️ Borrando inventario...');
+        const deletedCount = await deleteCollection('inventory');
+        resetResults.inventory = true;
+        console.log(`✅ ${deletedCount} items de inventario borrados`);
+      } catch (error) {
+        console.error('❌ Error borrando inventario:', error);
+      }
+
+      // 6. Borrar movimientos de inventario
       try {
         console.log('🗑️ Borrando movimientos de inventario...');
-        const { collection, getDocs } = await import('firebase/firestore');
-        const { db } = await import('../firebase');
-        const snapshot = await getDocs(collection(db, 'inventory_movements'));
-        const movements = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        await deleteDocuments('inventory_movements', movements);
+        const deletedCount = await deleteCollection('inventory_movements');
         resetResults.movements = true;
-        console.log('✅ Movimientos borrados');
+        console.log(`✅ ${deletedCount} movimientos borrados`);
       } catch (error) {
         console.error('❌ Error borrando movimientos:', error);
       }
 
-      // 6. Borrar gastos
+      // 7. Borrar gastos
       try {
         console.log('🗑️ Borrando gastos...');
-        const { collection, getDocs } = await import('firebase/firestore');
-        const { db } = await import('../firebase');
-        const snapshot = await getDocs(collection(db, 'expenses'));
-        const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        await deleteDocuments('expenses', expenses);
+        const deletedCount = await deleteCollection('expenses');
         resetResults.expenses = true;
-        console.log('✅ Gastos borrados');
+        console.log(`✅ ${deletedCount} gastos borrados`);
       } catch (error) {
         console.error('❌ Error borrando gastos:', error);
       }
 
-      // 7. Borrar empleados (excepto admin)
+      // 8. Borrar empleados (excepto admin)
       try {
         console.log('🗑️ Borrando empleados (excepto admin)...');
         const employees = await employeeService.getAllEmployees();
@@ -196,23 +227,22 @@ const DebugPanel = () => {
         
         await deleteDocuments('employees', nonAdminEmployees);
         resetResults.employees = true;
-        console.log('✅ Empleados borrados (admin preservado)');
+        console.log(`✅ ${nonAdminEmployees.length} empleados borrados (admin preservado)`);
       } catch (error) {
         console.error('❌ Error borrando empleados:', error);
       }
 
-      // 8. Borrar proveedores
+      // 9. Borrar proveedores
       try {
         console.log('🗑️ Borrando proveedores...');
-        const suppliers = await suppliersService.getAllSuppliers();
-        await deleteDocuments('suppliers', suppliers);
+        const deletedCount = await deleteCollection('suppliers');
         resetResults.suppliers = true;
-        console.log('✅ Proveedores borrados');
+        console.log(`✅ ${deletedCount} proveedores borrados`);
       } catch (error) {
         console.error('❌ Error borrando proveedores:', error);
       }
 
-      // 9. Limpiar cache y reiniciar listeners
+      // 10. Limpiar cache y reiniciar listeners
       try {
         console.log('🔄 Limpiando cache y reiniciando sistema...');
         realtimeService.cleanup();
@@ -220,6 +250,7 @@ const DebugPanel = () => {
         
         // Limpiar localStorage
         localStorage.removeItem('offlineQueue_v1');
+        localStorage.removeItem('smartCache');
         
         console.log('✅ Sistema reiniciado');
       } catch (error) {
@@ -242,10 +273,11 @@ const DebugPanel = () => {
         toast.success(`⚠️ Reset parcial: ${successful}/${total} categorías borradas.`, { id: 'reset' });
       }
 
-      // Recargar la página después de 2 segundos para refrescar todo
+      // Recargar la página después de 3 segundos para refrescar todo
       setTimeout(() => {
+        console.log('🔄 Recargando página...');
         window.location.reload();
-      }, 2000);
+      }, 3000);
 
     } catch (error) {
       console.error('💥 Error en reset completo:', error);
