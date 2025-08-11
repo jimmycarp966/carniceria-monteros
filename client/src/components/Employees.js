@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { employees, positions, employeeStatuses } from '../data/employees';
 import { UserCheck, Plus, Edit, Trash2, Search, DollarSign, Users, KeyRound } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { employeeService, loadSampleData } from '../services/firebaseService';
 import { usePermissions } from '../context/PermissionsContext';
+import LoadingSpinner from './LoadingSpinner';
 
 const Employees = () => {
   const permissions = usePermissions();
@@ -14,11 +15,13 @@ const Employees = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Cargar empleados desde Firebase
   useEffect(() => {
     const loadEmployees = async () => {
       try {
+        setLoading(true);
         console.log('🔄 Cargando empleados desde Firebase...');
         
         // Intentar cargar datos simulados si Firebase está vacío
@@ -31,6 +34,8 @@ const Employees = () => {
         console.error('❌ Error cargando empleados:', error);
         // Fallback a datos locales
         setEmployeeList(employees);
+      } finally {
+        setLoading(false);
       }
     };
     loadEmployees();
@@ -73,7 +78,7 @@ const Employees = () => {
       setShowAddModal(false);
       toast.success('Empleado agregado exitosamente');
     } catch (error) {
-      console.error('❌ Error agregando empleado desde Employees:', error);
+      console.error('❌ Error agregando empleado:', error);
       toast.error('Error al agregar empleado');
     }
   };
@@ -85,102 +90,113 @@ const Employees = () => {
       await employeeService.updateEmployee(updatedEmployee.id, updatedEmployee);
       console.log('✅ Empleado actualizado en Firebase');
       
-      setEmployeeList(employeeList.map(e => 
-        e.id === updatedEmployee.id ? updatedEmployee : e
-      ));
+      setEmployeeList(prev => 
+        prev.map(e => e.id === updatedEmployee.id ? updatedEmployee : e)
+      );
       setShowEditModal(false);
       setSelectedEmployee(null);
       toast.success('Empleado actualizado exitosamente');
     } catch (error) {
-      console.error('❌ Error actualizando empleado desde Employees:', error);
+      console.error('❌ Error actualizando empleado:', error);
       toast.error('Error al actualizar empleado');
     }
   };
 
   const handleDeleteEmployee = async (id) => {
-    try {
-      console.log('🔄 Eliminando empleado desde componente Employees...');
-      
-      await employeeService.deleteEmployee(id);
-      console.log('✅ Empleado eliminado de Firebase');
-      
-      setEmployeeList(employeeList.filter(e => e.id !== id));
-      toast.success('Empleado eliminado exitosamente');
-    } catch (error) {
-      console.error('❌ Error eliminando empleado desde Employees:', error);
-      toast.error('Error al eliminar empleado');
+    if (window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
+      try {
+        await employeeService.deleteEmployee(id);
+        setEmployeeList(prev => prev.filter(e => e.id !== id));
+        toast.success('Empleado eliminado exitosamente');
+      } catch (error) {
+        console.error('❌ Error eliminando empleado:', error);
+        toast.error('Error al eliminar empleado');
+      }
     }
   };
 
   const getStatusColor = (status) => {
-    const statusObj = employeeStatuses.find(s => s.id === status);
-    return statusObj?.color || 'gray';
+    switch (status) {
+      case 'active': return 'green';
+      case 'inactive': return 'red';
+      case 'on_leave': return 'yellow';
+      default: return 'gray';
+    }
   };
 
   const getPositionColor = (position) => {
-    const positionObj = positions.find(p => p.name === position);
-    return positionObj?.color || 'gray';
+    switch (position) {
+      case 'manager': return 'purple';
+      case 'cashier': return 'blue';
+      case 'butcher': return 'orange';
+      case 'assistant': return 'green';
+      default: return 'gray';
+    }
   };
+
+  if (loading) {
+    return <LoadingSpinner text="Cargando empleados..." />;
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Empleados</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gradient">
+            Empleados
+          </h1>
+          <p className="text-gray-600 mt-1">
             Gestiona el personal de la carnicería
           </p>
         </div>
-        {(permissions.includes('employees') || permissions.includes('admin')) && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn btn-primary flex items-center"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Empleado
-          </button>
-        )}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="btn btn-primary"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Agregar Empleado
+        </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <Users className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Empleados</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+            <Users className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Total Empleados</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.total}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <UserCheck className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Activos</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.active}</p>
+            <UserCheck className="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Activos</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.active}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Salarios</p>
-              <p className="text-2xl font-semibold text-gray-900">
-              ${(Number(stats.totalSalary) || 0).toLocaleString()}
+            <DollarSign className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Salario Total</p>
+              <p className="stats-value text-lg lg:text-xl">
+                ${(stats.totalSalary / 1000).toFixed(0)}k
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-orange-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Salario Promedio</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                ${(Number(Math.round(stats.averageSalary)) || 0).toLocaleString()}
+            <DollarSign className="h-5 w-5 lg:h-6 lg:w-6 text-orange-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Promedio</p>
+              <p className="stats-value text-lg lg:text-xl">
+                ${stats.averageSalary.toFixed(0)}
               </p>
             </div>
           </div>
@@ -188,12 +204,10 @@ const Employees = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="card p-4 lg:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Buscar
-            </label>
+            <label className="form-label text-sm lg:text-base">Buscar Empleado</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -201,35 +215,31 @@ const Employees = () => {
                 placeholder="Buscar por nombre o email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="form-input pl-10 text-sm lg:text-base"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cargo
-            </label>
+            <label className="form-label text-sm lg:text-base">Posición</label>
             <select
               value={positionFilter}
               onChange={(e) => setPositionFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="form-select text-sm lg:text-base"
             >
-              <option value="">Todos los cargos</option>
+              <option value="">Todas las posiciones</option>
               {positions.map(position => (
-                <option key={position.id} value={position.name}>
+                <option key={position.id} value={position.id}>
                   {position.name}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
-            </label>
+            <label className="form-label text-sm lg:text-base">Estado</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="form-select text-sm lg:text-base"
             >
               <option value="">Todos los estados</option>
               {employeeStatuses.map(status => (
@@ -239,110 +249,126 @@ const Employees = () => {
               ))}
             </select>
           </div>
+          <div>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setPositionFilter('');
+                setStatusFilter('');
+              }}
+              className="btn btn-secondary w-full text-sm lg:text-base"
+            >
+              Limpiar Filtros
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Employees List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Empleado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cargo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contacto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Salario
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha Contratación
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredEmployees.map(employee => (
-                <tr key={employee.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {employee.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {employee.address}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getPositionColor(employee.position)}-100 text-${getPositionColor(employee.position)}-800`}>
-                      {employee.position}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm text-gray-900">{employee.email}</div>
-                      <div className="text-sm text-gray-500">{employee.phone}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      ${(Number(employee.salary) || 0).toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(employee.hireDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getStatusColor(employee.status)}-100 text-${getStatusColor(employee.status)}-800`}>
-                      {employeeStatuses.find(s => s.id === employee.status)?.name}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                     {(permissions.includes('employees') || permissions.includes('admin')) && (
-                     <button
-                      onClick={() => {
-                        setSelectedEmployee(employee);
-                        setShowEditModal(true);
-                      }}
-                      className="text-primary-600 hover:text-primary-900 mr-3"
-                    >
-                      <Edit className="h-4 w-4" />
-                     </button>
-                     )}
-                     {(permissions.includes('employees') || permissions.includes('admin')) && (
-                     <button
-                      onClick={() => handleDeleteEmployee(employee.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                     </button>
-                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+        {filteredEmployees.map(employee => (
+          <div key={employee.id} className="card hover:shadow-lg transition-all duration-300 group p-5 lg:p-6">
+            {/* Header del card */}
+            <div className="flex items-start justify-between mb-4 lg:mb-5">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-3 lg:space-x-4 mb-3">
+                  <div className="text-3xl lg:text-4xl flex-shrink-0">👨‍💼</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg lg:text-xl font-semibold text-gray-900 truncate mb-1">{employee.name}</h3>
+                    <p className="text-sm lg:text-base text-gray-500 truncate leading-relaxed">{employee.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className={`inline-flex px-3 py-1.5 text-xs font-semibold rounded-full bg-${getPositionColor(employee.position)}-100 text-${getPositionColor(employee.position)}-800`}>
+                    {positions.find(p => p.id === employee.position)?.name || employee.position}
+                  </span>
+                  <span className={`inline-flex px-3 py-1.5 text-xs font-semibold rounded-full bg-${getStatusColor(employee.status)}-100 text-${getStatusColor(employee.status)}-800`}>
+                    {employeeStatuses.find(s => s.id === employee.status)?.name || employee.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Información del empleado */}
+            <div className="space-y-4 mb-5 lg:mb-6">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm lg:text-base text-gray-600 font-medium">Teléfono:</span>
+                <span className="text-sm lg:text-base text-gray-700 truncate max-w-[120px] lg:max-w-[150px]">{employee.phone}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm lg:text-base text-gray-600 font-medium">Salario:</span>
+                <span className="text-sm lg:text-base font-semibold text-green-600">
+                  ${employee.salary?.toLocaleString() || 0}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm lg:text-base text-gray-600 font-medium">Fecha Contrato:</span>
+                <span className="text-sm lg:text-base text-gray-700">
+                  {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString() : 'N/A'}
+                </span>
+              </div>
+              {employee.permissions && employee.permissions.length > 0 && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm lg:text-base text-gray-600 font-medium">Permisos:</span>
+                  <span className="text-sm lg:text-base text-blue-600 font-medium">
+                    {employee.permissions.length}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Acciones */}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setSelectedEmployee(employee);
+                  setShowEditModal(true);
+                }}
+                className="flex-1 btn btn-secondary text-sm lg:text-base py-3 flex items-center justify-center font-medium"
+              >
+                <Edit className="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
+                Editar
+              </button>
+              <button
+                onClick={() => handleDeleteEmployee(employee.id)}
+                className="btn btn-danger text-sm lg:text-base py-3 px-4 lg:px-5 flex items-center justify-center font-medium"
+              >
+                <Trash2 className="h-4 w-4 lg:h-5 lg:w-5" />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Add/Edit Modal */}
-      {(showAddModal || showEditModal) && (
+      {/* Empty State */}
+      {filteredEmployees.length === 0 && (
+        <div className="text-center py-8 lg:py-12">
+          <Users className="h-12 w-12 lg:h-16 lg:w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg lg:text-xl font-medium text-gray-900 mb-2">No se encontraron empleados</h3>
+          <p className="text-sm lg:text-base text-gray-500 mb-4 px-4">Intenta ajustar los filtros de búsqueda</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary text-sm lg:text-base"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Primer Empleado
+          </button>
+        </div>
+      )}
+
+      {/* Modals */}
+      {showAddModal && (
+        <EmployeeModal
+          onSave={handleAddEmployee}
+          onCancel={() => setShowAddModal(false)}
+        />
+      )}
+
+      {showEditModal && selectedEmployee && (
         <EmployeeModal
           employee={selectedEmployee}
-          onSave={showAddModal ? handleAddEmployee : handleEditEmployee}
+          onSave={handleEditEmployee}
           onCancel={() => {
-            setShowAddModal(false);
             setShowEditModal(false);
             setSelectedEmployee(null);
           }}

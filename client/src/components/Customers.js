@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { customers, customerStatuses } from '../data/customers';
-import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck, CreditCard } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Users, Plus, Edit, Trash2, Search, DollarSign, AlertTriangle, UserCheck } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { getCurrentDate, calculateOverdueDays as calculateOverdueDaysFromService } from '../services/dateService';
 import { processCustomerPayment, validateCustomerPayment } from '../services/paymentService';
 import { shiftService, customerService } from '../services/firebaseService';
+import LoadingSpinner from './LoadingSpinner';
 
 const Customers = () => {
   const [customerList, setCustomerList] = useState([]);
@@ -13,6 +14,7 @@ const Customers = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   // Estados para fiado
   const [showCreditModal, setShowCreditModal] = useState(false);
@@ -33,6 +35,7 @@ const Customers = () => {
   useEffect(() => {
     const loadCustomers = async () => {
       try {
+        setLoading(true);
         console.log('🔄 Cargando clientes desde Firebase...');
         const customersFromFirebase = await customerService.getAllCustomers();
         console.log('👥 Clientes cargados de Firebase:', customersFromFirebase.length);
@@ -41,6 +44,8 @@ const Customers = () => {
         console.error('❌ Error cargando clientes de Firebase:', error);
         // Fallback a datos locales solo si hay error
         setCustomerList(customers);
+      } finally {
+        setLoading(false);
       }
     };
     loadCustomers();
@@ -99,7 +104,7 @@ const Customers = () => {
       setShowAddModal(false);
       toast.success('Cliente agregado exitosamente');
     } catch (error) {
-      console.error('❌ Error agregando cliente desde Customers:', error);
+      console.error('❌ Error agregando cliente:', error);
       toast.error('Error al agregar cliente');
     }
   };
@@ -108,134 +113,102 @@ const Customers = () => {
     try {
       console.log('🔄 Actualizando cliente desde componente Customers...');
       await customerService.updateCustomer(updatedCustomer.id, updatedCustomer);
-      console.log('✅ Cliente actualizado en Firebase');
       
-      setCustomerList(customerList.map(c => 
-        c.id === updatedCustomer.id ? updatedCustomer : c
-      ));
+      // Actualizar el estado local
+      setCustomerList(prev => 
+        prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c)
+      );
       setShowEditModal(false);
       setSelectedCustomer(null);
       toast.success('Cliente actualizado exitosamente');
     } catch (error) {
-      console.error('❌ Error actualizando cliente desde Customers:', error);
+      console.error('❌ Error actualizando cliente:', error);
       toast.error('Error al actualizar cliente');
     }
   };
 
   const handleDeleteCustomer = async (id) => {
-    try {
-      console.log('🔄 Eliminando cliente desde componente Customers...');
-      await customerService.deleteCustomer(id);
-      console.log('✅ Cliente eliminado de Firebase');
-      
-      setCustomerList(customerList.filter(c => c.id !== id));
-      toast.success('Cliente eliminado exitosamente');
-    } catch (error) {
-      console.error('❌ Error eliminando cliente desde Customers:', error);
-      toast.error('Error al eliminar cliente');
+    if (window.confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
+      try {
+        await customerService.deleteCustomer(id);
+        setCustomerList(prev => prev.filter(c => c.id !== id));
+        toast.success('Cliente eliminado exitosamente');
+      } catch (error) {
+        console.error('❌ Error eliminando cliente:', error);
+        toast.error('Error al eliminar cliente');
+      }
     }
   };
 
   const getStatusColor = (status) => {
-    const statusObj = customerStatuses.find(s => s.id === status);
-    return statusObj?.color || 'gray';
-  };
-
-  // Función para calcular días de atraso usando el servicio de fecha
-  const calculateOverdueDays = (customer) => {
-    // Si no hay saldo pendiente, no hay atraso
-    if (customer.currentBalance <= 0) return 0;
-    
-    // Usar el servicio de fecha para calcular días de atraso
-    return calculateOverdueDaysFromService(customer.lastPurchase, customer.creditDays || 7);
-  };
-
-  // Función para verificar si un cliente está atrasado
-  const isCustomerOverdue = (customer) => {
-    return calculateOverdueDays(customer) > 0;
-  };
-
-  // Función para agregar fiado
-  const handleAddCredit = (customer) => {
-    setSelectedCustomerForCredit(customer);
-    setCreditAmount(0);
-    setCreditDays(customer.creditDays || 7);
-    setShowCreditModal(true);
-  };
-
-  // Función para procesar el fiado
-  const processCredit = () => {
-    if (!selectedCustomerForCredit || creditAmount <= 0) {
-      toast.error('Monto inválido');
-      return;
+    switch (status) {
+      case 'active': return 'green';
+      case 'overdue': return 'red';
+      case 'inactive': return 'gray';
+      default: return 'gray';
     }
+  };
+
+  const calculateOverdueDays = (customer) => {
+    if (!customer.lastPurchase) return 0;
+    return calculateOverdueDaysFromService(customer.lastPurchase);
+  };
+
+  const isCustomerOverdue = (customer) => {
+    return calculateOverdueDays(customer) > customer.creditDays;
+  };
+
+
+
+  const processCredit = () => {
+    if (!selectedCustomerForCredit) return;
 
     const updatedCustomer = {
       ...selectedCustomerForCredit,
-      currentBalance: selectedCustomerForCredit.currentBalance + creditAmount,
-      creditDays: creditDays,
-      lastPurchase: new Date().toISOString().split('T')[0],
-      status: 'active'
+      creditLimit: creditAmount,
+      creditDays: creditDays
     };
 
-    setCustomerList(customerList.map(c => 
-      c.id === updatedCustomer.id ? updatedCustomer : c
-    ));
-    
+    handleEditCustomer(updatedCustomer);
     setShowCreditModal(false);
     setSelectedCustomerForCredit(null);
-    toast.success(`Fiado agregado: $${creditAmount.toLocaleString()} - ${creditDays} días`);
+    setCreditAmount(0);
+    setCreditDays(7);
   };
 
-  // Función para procesar pago de cliente atrasado
-  const handlePayment = (customer) => {
-    if (customer.currentBalance <= 0) {
-      toast.error('Este cliente no tiene saldo pendiente');
-      return;
-    }
-    
-    setSelectedCustomerForPayment(customer);
-    setPaymentAmount(customer.currentBalance); // Por defecto, el monto completo
-    setShowPaymentModal(true);
-  };
 
-  // Función para procesar el pago
+
   const processPayment = async () => {
-    if (!selectedCustomerForPayment || paymentAmount <= 0) {
-      toast.error('Monto inválido');
-      return;
-    }
-
-    // Validar el pago
-    const validation = validateCustomerPayment(selectedCustomerForPayment, paymentAmount);
-    if (!validation.valid) {
-      toast.error(validation.message);
-      return;
-    }
-
-    setIsProcessingPayment(true);
+    if (!selectedCustomerForPayment || !currentShift) return;
 
     try {
-      // Procesar pago usando el servicio
-      const result = await processCustomerPayment(selectedCustomerForPayment, paymentAmount, currentShift);
-
-      if (result.success) {
-        // Actualizar el cliente localmente
-        const updatedCustomer = {
-          ...selectedCustomerForPayment,
-          currentBalance: selectedCustomerForPayment.currentBalance - paymentAmount,
-          status: selectedCustomerForPayment.currentBalance - paymentAmount <= 0 ? 'active' : 'overdue'
-        };
-
-        setCustomerList(customerList.map(c => 
-          c.id === updatedCustomer.id ? updatedCustomer : c
-        ));
-        
-        toast.success(`Pago procesado: $${paymentAmount.toLocaleString()} - Cliente: ${selectedCustomerForPayment.name}`);
-        
-        setShowPaymentModal(false);
-        setSelectedCustomerForPayment(null);
+      setIsProcessingPayment(true);
+      
+      // Validar el pago
+      const validation = validateCustomerPayment(selectedCustomerForPayment, paymentAmount);
+      if (!validation.isValid) {
+        toast.error(validation.message);
+        return;
       }
+
+      // Procesar el pago
+      await processCustomerPayment(selectedCustomerForPayment, paymentAmount, currentShift);
+      
+      // Actualizar el cliente en la lista
+      const updatedCustomer = {
+        ...selectedCustomerForPayment,
+        currentBalance: Math.max(0, selectedCustomerForPayment.currentBalance - paymentAmount),
+        status: Math.max(0, selectedCustomerForPayment.currentBalance - paymentAmount) === 0 ? 'active' : 'overdue'
+      };
+      
+      setCustomerList(prev => 
+        prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c)
+      );
+      
+      setShowPaymentModal(false);
+      setSelectedCustomerForPayment(null);
+      setPaymentAmount(0);
+      toast.success('Pago procesado exitosamente');
     } catch (error) {
       console.error('Error procesando pago:', error);
       toast.error('Error al procesar el pago');
@@ -244,19 +217,25 @@ const Customers = () => {
     }
   };
 
+  if (loading) {
+    return <LoadingSpinner text="Cargando clientes..." />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Clientes</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gradient">
+            Clientes
+          </h1>
+          <p className="text-gray-600 mt-1">
             Gestiona clientes con cuenta corriente
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="btn btn-primary flex items-center"
+          className="btn btn-primary"
         >
           <Plus className="h-4 w-4 mr-2" />
           Agregar Cliente
@@ -264,52 +243,52 @@ const Customers = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <Users className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Clientes</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+            <Users className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Total Clientes</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.total}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <UserCheck className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Activos</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.active}</p>
+            <UserCheck className="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Activos</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.active}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <AlertTriangle className="h-8 w-8 text-red-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Atrasados</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.overdue}</p>
+            <AlertTriangle className="h-5 w-5 lg:h-6 lg:w-6 text-red-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Atrasados</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.overdue}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stats-card">
           <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Crédito Total</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                ${stats.totalCredit.toLocaleString()}
+            <DollarSign className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Crédito Total</p>
+              <p className="stats-value text-lg lg:text-xl">
+                ${(stats.totalCredit / 1000).toFixed(0)}k
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="stats-card lg:col-span-1">
           <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-orange-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Deuda Total</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                ${stats.totalOwed.toLocaleString()}
+            <DollarSign className="h-5 w-5 lg:h-6 lg:w-6 text-orange-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Deuda Total</p>
+              <p className="stats-value text-lg lg:text-xl">
+                ${(stats.totalOwed / 1000).toFixed(0)}k
               </p>
             </div>
           </div>
@@ -317,12 +296,10 @@ const Customers = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="card p-4 lg:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Buscar
-            </label>
+            <label className="form-label text-sm lg:text-base">Buscar Cliente</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -330,18 +307,16 @@ const Customers = () => {
                 placeholder="Buscar por nombre o email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="form-input pl-10 text-sm lg:text-base"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
-            </label>
+            <label className="form-label text-sm lg:text-base">Estado</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="form-select text-sm lg:text-base"
             >
               <option value="">Todos los estados</option>
               {customerStatuses.map(status => (
@@ -351,135 +326,120 @@ const Customers = () => {
               ))}
             </select>
           </div>
+          <div className="sm:col-span-2 lg:col-span-1">
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('');
+              }}
+              className="btn btn-secondary w-full text-sm lg:text-base"
+            >
+              Limpiar Filtros
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Customers List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contacto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Límite Crédito
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Saldo Actual
-                </th>
-
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Días Atraso
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Última Compra
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredCustomers.map(customer => (
-                <tr key={customer.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {customer.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {customer.address}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm text-gray-900">{customer.email}</div>
-                      <div className="text-sm text-gray-500">{customer.phone}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-              <div className="text-sm text-gray-900">
-                      ${(Number(customer.creditLimit) || 0).toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm font-medium ${
-                      customer.currentBalance > 0 ? 'text-red-600' : 'text-green-600'
-                    }`}>
-                      ${(Number(customer.currentBalance) || 0).toLocaleString()}
-                    </div>
-                  </td>
-
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm font-medium ${
-                      isCustomerOverdue(customer) ? 'text-red-600' : 'text-green-600'
-                    }`}>
-                      {calculateOverdueDays(customer)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getStatusColor(customer.status)}-100 text-${getStatusColor(customer.status)}-800`}>
-                      {customerStatuses.find(s => s.id === customer.status)?.name}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+        {filteredCustomers.map(customer => (
+          <div key={customer.id} className="card hover:shadow-lg transition-all duration-300 group p-5 lg:p-6">
+            {/* Header del card */}
+            <div className="flex items-start justify-between mb-4 lg:mb-5">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-3 lg:space-x-4 mb-3">
+                  <div className="text-3xl lg:text-4xl flex-shrink-0">👤</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg lg:text-xl font-semibold text-gray-900 truncate mb-1">{customer.name}</h3>
+                    <p className="text-sm lg:text-base text-gray-500 truncate leading-relaxed">{customer.email}</p>
+                  </div>
+                </div>
+                <span className={`inline-flex px-3 py-1.5 text-xs font-semibold rounded-full bg-${getStatusColor(customer.status)}-100 text-${getStatusColor(customer.status)}-800`}>
+                  {customerStatuses.find(s => s.id === customer.status)?.name || customer.status}
+                </span>
+              </div>
+            </div>
+            
+            {/* Información del cliente */}
+            <div className="space-y-4 mb-5 lg:mb-6">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm lg:text-base text-gray-600 font-medium">Teléfono:</span>
+                <span className="text-sm lg:text-base text-gray-700 truncate max-w-[120px] lg:max-w-[150px]">{customer.phone}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm lg:text-base text-gray-600 font-medium">Crédito:</span>
+                <span className="text-sm lg:text-base font-semibold text-green-600">
+                  ${customer.creditLimit?.toLocaleString() || 0}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm lg:text-base text-gray-600 font-medium">Deuda:</span>
+                <span className={`text-sm lg:text-base font-semibold ${customer.currentBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  ${customer.currentBalance?.toLocaleString() || 0}
+                </span>
+              </div>
+              {customer.lastPurchase && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm lg:text-base text-gray-600 font-medium">Última Compra:</span>
+                  <span className="text-sm lg:text-base text-gray-700">
                     {new Date(customer.lastPurchase).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => {
-                        setSelectedCustomer(customer);
-                        setShowEditModal(true);
-                      }}
-                      className="text-primary-600 hover:text-primary-900 mr-3"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleAddCredit(customer)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                    >
-                      <DollarSign className="h-4 w-4" />
-                    </button>
-                    {isCustomerOverdue(customer) && customer.currentBalance > 0 && (
-                      <button
-                        onClick={() => handlePayment(customer)}
-                        className="text-green-600 hover:text-green-900 mr-3"
-                        title="Procesar Pago"
-                      >
-                        <CreditCard className="h-4 w-4" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteCustomer(customer.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Acciones */}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setSelectedCustomer(customer);
+                  setShowEditModal(true);
+                }}
+                className="flex-1 btn btn-secondary text-sm lg:text-base py-3 flex items-center justify-center font-medium"
+              >
+                <Edit className="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
+                Editar
+              </button>
+              <button
+                onClick={() => handleDeleteCustomer(customer.id)}
+                className="btn btn-danger text-sm lg:text-base py-3 px-4 lg:px-5 flex items-center justify-center font-medium"
+              >
+                <Trash2 className="h-4 w-4 lg:h-5 lg:w-5" />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Add/Edit Modal */}
-      {(showAddModal || showEditModal) && (
+      {/* Empty State */}
+      {filteredCustomers.length === 0 && (
+        <div className="text-center py-8 lg:py-12">
+          <Users className="h-12 w-12 lg:h-16 lg:w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg lg:text-xl font-medium text-gray-900 mb-2">No se encontraron clientes</h3>
+          <p className="text-sm lg:text-base text-gray-500 mb-4 px-4">Intenta ajustar los filtros de búsqueda</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary text-sm lg:text-base"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Primer Cliente
+          </button>
+        </div>
+      )}
+
+      {/* Modals */}
+      {showAddModal && (
+        <CustomerModal
+          onSave={handleAddCustomer}
+          onCancel={() => setShowAddModal(false)}
+        />
+      )}
+
+      {showEditModal && selectedCustomer && (
         <CustomerModal
           customer={selectedCustomer}
-          onSave={showAddModal ? handleAddCustomer : handleEditCustomer}
+          onSave={handleEditCustomer}
           onCancel={() => {
-            setShowAddModal(false);
             setShowEditModal(false);
             setSelectedCustomer(null);
           }}
@@ -488,68 +448,58 @@ const Customers = () => {
 
       {/* Credit Modal */}
       {showCreditModal && selectedCustomerForCredit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Agregar Fiado - {selectedCustomerForCredit.name}
-            </h3>
+        <div className="modal-overlay">
+          <div className="modal-content p-4 lg:p-6 max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4 lg:mb-6">
+              <h3 className="text-lg lg:text-xl font-bold text-gray-900">Configurar Crédito</h3>
+              <button
+                onClick={() => setShowCreditModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Monto del Fiado
-                </label>
+                <label className="form-label text-sm lg:text-base">Monto de Crédito</label>
                 <input
                   type="number"
                   value={creditAmount}
-                  onChange={(e) => setCreditAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="0.00"
+                  onChange={(e) => setCreditAmount(Number(e.target.value))}
+                  className="form-input text-sm lg:text-base"
+                  placeholder="0"
+                  min="0"
                 />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Días de Margen
-                </label>
+                <label className="form-label text-sm lg:text-base">Días de Crédito</label>
                 <input
                   type="number"
                   value={creditDays}
-                  onChange={(e) => setCreditDays(parseInt(e.target.value) || 7)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  onChange={(e) => setCreditDays(Number(e.target.value))}
+                  className="form-input text-sm lg:text-base"
                   placeholder="7"
+                  min="1"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Días que tiene el cliente para pagar antes de considerarse atrasado
-                </p>
               </div>
-
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-sm text-gray-600">
-                   <strong>Saldo actual:</strong> ${(Number(selectedCustomerForCredit.currentBalance) || 0).toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-600">
-                   <strong>Nuevo saldo:</strong> ${((Number(selectedCustomerForCredit.currentBalance) || 0) + (Number(creditAmount) || 0)).toLocaleString()}
-                </p>
+              
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
+                <button
+                  onClick={() => setShowCreditModal(false)}
+                  className="btn btn-secondary text-sm lg:text-base order-2 sm:order-1"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={processCredit}
+                  className="btn btn-primary text-sm lg:text-base order-1 sm:order-2"
+                >
+                  Guardar
+                </button>
               </div>
-            </div>
-
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={processCredit}
-                className="flex-1 btn btn-primary"
-              >
-                Confirmar Fiado
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreditModal(false);
-                  setSelectedCustomerForCredit(null);
-                }}
-                className="flex-1 btn btn-secondary"
-              >
-                Cancelar
-              </button>
             </div>
           </div>
         </div>
@@ -557,72 +507,60 @@ const Customers = () => {
 
       {/* Payment Modal */}
       {showPaymentModal && selectedCustomerForPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Procesar Pago - {selectedCustomerForPayment.name}
-            </h3>
+        <div className="modal-overlay">
+          <div className="modal-content p-4 lg:p-6 max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4 lg:mb-6">
+              <h3 className="text-lg lg:text-xl font-bold text-gray-900">Procesar Pago</h3>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             
             <div className="space-y-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-800">
-                  <strong>Cliente Atrasado:</strong> {calculateOverdueDays(selectedCustomerForPayment)} días
-                </p>
-                <p className="text-sm text-red-800">
-                   <strong>Saldo pendiente:</strong> ${(Number(selectedCustomerForPayment.currentBalance) || 0).toLocaleString()}
+              <div>
+                <label className="form-label text-sm lg:text-base">Cliente</label>
+                <p className="text-sm lg:text-base text-gray-700 font-medium">{selectedCustomerForPayment.name}</p>
+              </div>
+              <div>
+                <label className="form-label text-sm lg:text-base">Deuda Actual</label>
+                <p className="text-sm lg:text-base text-red-600 font-semibold">
+                  ${selectedCustomerForPayment.currentBalance?.toLocaleString() || 0}
                 </p>
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Monto a Pagar
-                </label>
+                <label className="form-label text-sm lg:text-base">Monto a Pagar</label>
                 <input
                   type="number"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="0.00"
+                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                  className="form-input text-sm lg:text-base"
+                  placeholder="0"
+                  min="0"
                   max={selectedCustomerForPayment.currentBalance}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Máximo: ${(Number(selectedCustomerForPayment.currentBalance) || 0).toLocaleString()}
-                </p>
               </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm text-green-800">
-                   <strong>Saldo después del pago:</strong> ${((Number(selectedCustomerForPayment.currentBalance) || 0) - (Number(paymentAmount) || 0)).toLocaleString()}
-                </p>
-                <p className="text-xs text-green-600 mt-1">
-                  Este pago se sumará a la caja del turno actual
-                </p>
-                {currentShift && (
-                  <p className="text-xs text-blue-600 mt-1">
-                    Turno: {currentShift.type === 'morning' ? 'Mañana' : 'Tarde'}
-                  </p>
-                )}
+              
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="btn btn-secondary text-sm lg:text-base order-2 sm:order-1"
+                  disabled={isProcessingPayment}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={processPayment}
+                  className="btn btn-primary text-sm lg:text-base order-1 sm:order-2"
+                  disabled={isProcessingPayment}
+                >
+                  {isProcessingPayment ? 'Procesando...' : 'Procesar Pago'}
+                </button>
               </div>
-            </div>
-
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={processPayment}
-                disabled={isProcessingPayment}
-                className="flex-1 btn btn-success"
-              >
-                {isProcessingPayment ? 'Procesando...' : 'Confirmar Pago'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedCustomerForPayment(null);
-                }}
-                disabled={isProcessingPayment}
-                className="flex-1 btn btn-secondary"
-              >
-                Cancelar
-              </button>
             </div>
           </div>
         </div>
@@ -646,90 +584,87 @@ const CustomerModal = ({ customer, onSave, onCancel }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div className="mt-3">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+    <div className="modal-overlay">
+      <div className="modal-content p-4 lg:p-6 max-w-md mx-4">
+        <div className="flex items-center justify-between mb-4 lg:mb-6">
+          <h3 className="text-lg lg:text-xl font-bold text-gray-900">
             {customer ? 'Editar Cliente' : 'Agregar Cliente'}
           </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            {/* Campo de email removido por requerimiento */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Teléfono
-              </label>
-              <input
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dirección
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Límite de Crédito
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.creditLimit}
-                onChange={(e) => setFormData({...formData, creditLimit: parseInt(e.target.value)})}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notas
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                rows="3"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="btn btn-secondary"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-              >
-                {customer ? 'Actualizar' : 'Agregar'}
-              </button>
-            </div>
-          </form>
+          <button
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-600 p-1"
+          >
+            <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="form-label text-sm lg:text-base">Nombre</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="form-input text-sm lg:text-base"
+            />
+          </div>
+          <div>
+            <label className="form-label text-sm lg:text-base">Teléfono</label>
+            <input
+              type="tel"
+              required
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              className="form-input text-sm lg:text-base"
+            />
+          </div>
+          <div>
+            <label className="form-label text-sm lg:text-base">Dirección</label>
+            <input
+              type="text"
+              required
+              value={formData.address}
+              onChange={(e) => setFormData({...formData, address: e.target.value})}
+              className="form-input text-sm lg:text-base"
+            />
+          </div>
+          <div>
+            <label className="form-label text-sm lg:text-base">Límite de Crédito</label>
+            <input
+              type="number"
+              required
+              value={formData.creditLimit}
+              onChange={(e) => setFormData({...formData, creditLimit: Number(e.target.value)})}
+              className="form-input text-sm lg:text-base"
+            />
+          </div>
+          <div>
+            <label className="form-label text-sm lg:text-base">Notas</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              rows="3"
+              className="form-input text-sm lg:text-base"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="btn btn-secondary text-sm lg:text-base"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary text-sm lg:text-base"
+            >
+              {customer ? 'Actualizar' : 'Agregar'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
