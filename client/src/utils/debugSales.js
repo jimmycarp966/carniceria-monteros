@@ -117,17 +117,17 @@ export const debugSales = {
   async runFullDiagnostic() {
     try {
       console.log('🚀 INICIANDO DIAGNÓSTICO COMPLETO DE VENTAS');
-      console.log('=' .repeat(50));
+      console.log('='.repeat(50));
       
       // 1. Verificar turno activo
       const activeShift = await this.checkActiveShift();
       
-      console.log('\n' + '=' .repeat(50));
+      console.log('\n' + '='.repeat(50));
       
       // 2. Verificar todas las ventas
       const { salesByShift, salesWithoutShift } = await this.checkAllSales();
       
-      console.log('\n' + '=' .repeat(50));
+      console.log('\n' + '='.repeat(50));
       
       // 3. Resumen
       console.log('📋 RESUMEN DEL DIAGNÓSTICO:');
