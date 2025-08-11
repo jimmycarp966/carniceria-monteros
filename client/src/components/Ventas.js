@@ -44,7 +44,14 @@ const Ventas = () => {
       
       // Cargar productos (sin paginación para el formulario)
       const productsData = await productService.getAllProducts(1, 1000);
-      setProducts(productsData.filter(p => p.status === 'active' && p.stock > 0));
+      console.log('🔍 Productos cargados:', productsData);
+      
+      const filteredProducts = productsData.filter(p => p.status === 'active' && p.stock > 0);
+      console.log('🔍 Productos filtrados (active + stock > 0):', filteredProducts);
+      console.log('🔍 Productos con status !== active:', productsData.filter(p => p.status !== 'active'));
+      console.log('🔍 Productos con stock <= 0:', productsData.filter(p => p.stock <= 0));
+      
+      setProducts(filteredProducts);
       
       // Buscar turno activo
       const shifts = await shiftService.getAllShifts();
