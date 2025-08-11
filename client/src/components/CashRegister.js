@@ -179,8 +179,14 @@ const CashRegister = () => {
       const endDate = new Date(today);
       endDate.setHours(23, 59, 59, 999);
       
+      console.log('🔍 Buscando gastos del día:', today);
+      console.log('📅 Rango de fechas:', startDate.toISOString(), 'a', endDate.toISOString());
+      
       const todayExpenses = await expensesService.getExpensesByDateRange(startDate, endDate);
+      console.log('💰 Gastos encontrados:', todayExpenses.length, todayExpenses);
+      
       const totalExpenses = todayExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      console.log('💰 Total gastos del día: $', totalExpenses.toLocaleString());
 
       // Calcular totales por turno
       const shiftsWithTotals = shifts.map(shift => {

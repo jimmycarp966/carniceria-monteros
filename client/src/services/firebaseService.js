@@ -103,14 +103,26 @@ export const expensesService = {
 
   async getExpensesByDateRange(startDate, endDate) {
     try {
+      console.log('🔍 getExpensesByDateRange - Buscando gastos...');
+      console.log('📅 StartDate:', startDate);
+      console.log('📅 EndDate:', endDate);
+      
       const expensesRef = collection(db, 'expenses');
       const q = query(
         expensesRef,
         where('createdAt', '>=', startDate),
         where('createdAt', '<=', endDate)
       );
+      
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const expenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      console.log(`💰 Gastos encontrados: ${expenses.length}`);
+      expenses.forEach(expense => {
+        console.log(`  - ${expense.id}: $${expense.amount} | ${expense.reason} | ${expense.createdAt?.toDate?.()?.toISOString()}`);
+      });
+      
+      return expenses;
     } catch (error) {
       console.error('❌ Error cargando gastos por rango:', error);
       throw error;
