@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Check } from 'lucide-react';
+import { CreditCard, Check, DollarSign, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { expensesService, shiftService } from '../services/firebaseService';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
@@ -12,6 +12,8 @@ const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
   const [amount, setAmount] = useState(0);
   const [reason, setReason] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('efectivo');
+  const [cardType, setCardType] = useState('debito');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -51,15 +53,24 @@ const Expenses = () => {
     }
     setSaving(true);
     try {
+      // Determinar el método de pago final
+      let finalPaymentMethod = paymentMethod;
+      if (paymentMethod === 'tarjeta') {
+        finalPaymentMethod = cardType === 'credito' ? 'tarjetaCredito' : 'tarjetaDebito';
+      }
+
       await expensesService.addExpense({
         shiftId: currentShift.id,
         amount: Number(amount) || 0,
         reason: reason || 'Gasto operativo',
+        paymentMethod: finalPaymentMethod,
         type: 'operational'
       });
       // onSnapshot actualizará la lista
       setAmount(0);
       setReason('');
+      setPaymentMethod('efectivo');
+      setCardType('debito');
       toast.success('Gasto registrado');
     } catch (e) {
       console.error('Error agregando gasto:', e);
@@ -89,7 +100,7 @@ const Expenses = () => {
           </div>
 
           <div className="card">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="form-label">Monto</label>
                 <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="form-input" />
@@ -98,9 +109,70 @@ const Expenses = () => {
                 <label className="form-label">Motivo</label>
                 <input value={reason} onChange={(e) => setReason(e.target.value)} className="form-input" placeholder="Ej: Limpieza" />
               </div>
-              <div className="flex justify-end">
-                <button onClick={addExpense} disabled={saving} className="btn btn-primary flex items-center"><Check className="h-4 w-4 mr-2" /> {saving ? 'Guardando...' : 'Agregar Gasto'}</button>
+            </div>
+
+            {/* Método de Pago */}
+            <div className="mb-4">
+              <label className="form-label">Método de Pago</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { value: 'efectivo', label: 'Efectivo', icon: DollarSign },
+                  { value: 'tarjeta', label: 'Tarjeta', icon: CreditCard },
+                  { value: 'transferencia', label: 'Transferencia', icon: Receipt },
+                  { value: 'mercadopago', label: 'MercadoPago', icon: CreditCard }
+                ].map(method => (
+                  <button
+                    key={method.value}
+                    onClick={() => setPaymentMethod(method.value)}
+                    className={`p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center ${
+                      paymentMethod === method.value
+                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        : 'border-gray-200 hover:border-purple-300 bg-white hover:bg-purple-50/50'
+                    }`}
+                  >
+                    <method.icon className="h-5 w-5 mb-1" />
+                    <span className="text-xs font-medium">{method.label}</span>
+                  </button>
+                ))}
               </div>
+
+              {/* Selector de tipo de tarjeta */}
+              {paymentMethod === 'tarjeta' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Tarjeta:</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setCardType('debito')}
+                      className={`p-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
+                        cardType === 'debito'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-blue-300 bg-white'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4 mr-1" />
+                      <span className="text-sm font-medium">Débito</span>
+                    </button>
+                    <button
+                      onClick={() => setCardType('credito')}
+                      className={`p-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
+                        cardType === 'credito'
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 hover:border-indigo-300 bg-white'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4 mr-1" />
+                      <span className="text-sm font-medium">Crédito</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button onClick={addExpense} disabled={saving} className="btn btn-primary flex items-center">
+                <Check className="h-4 w-4 mr-2" /> 
+                {saving ? 'Guardando...' : 'Agregar Gasto'}
+              </button>
             </div>
           </div>
 
@@ -119,6 +191,11 @@ const Expenses = () => {
                     <div>
                       <div className="font-medium text-gray-900">${(Number(e.amount) || 0).toLocaleString()}</div>
                       <div className="text-sm text-gray-600">{e.reason || 'Gasto'}</div>
+                      <div className="text-xs text-purple-600 capitalize">
+                        {e.paymentMethod === 'tarjetaDebito' ? 'Tarjeta Débito' :
+                         e.paymentMethod === 'tarjetaCredito' ? 'Tarjeta Crédito' :
+                         e.paymentMethod || 'Efectivo'}
+                      </div>
                     </div>
                     <div className="text-xs text-gray-500">{e.createdAt?.toDate?.()?.toLocaleString?.() || ''}</div>
                   </div>

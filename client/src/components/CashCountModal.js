@@ -253,16 +253,15 @@ const CashCountModal = memo(({
     const totalAdditionalIncomes = additionalIncomes.reduce((sum, income) => sum + (income.amount || 0), 0);
     const totalAdditionalExpenses = additionalExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
-    // El total esperado debe incluir el monto inicial (que ya está incluido en las ventas en efectivo)
-    // y los gastos del turno (que ya están restados del efectivo esperado)
-    const totalExpectedWithInitial = totalExpected + openingAmount;
-    
+    // El total esperado ya incluye:
+    // - Las ventas por método de pago (incluyendo el monto inicial en efectivo)
+    // - Los gastos del turno ya están restados del efectivo esperado en cashCountService
     const finalTotal = totalCounted + totalAdditionalIncomes - totalAdditionalExpenses;
-    const finalExpected = totalExpectedWithInitial + totalAdditionalIncomes - totalAdditionalExpenses;
+    const finalExpected = totalExpected + totalAdditionalIncomes - totalAdditionalExpenses;
     const finalDifference = finalTotal - finalExpected;
 
     return {
-      totalExpected: totalExpectedWithInitial,
+      totalExpected: totalExpected,
       totalCounted,
       totalAdditionalIncomes,
       totalAdditionalExpenses,
@@ -523,6 +522,53 @@ const CashCountModal = memo(({
                     <p className="text-sm text-orange-600">{shiftExpenses.length} gastos registrados</p>
                   </div>
                 </div>
+
+                {/* Gastos por método de pago */}
+                {(() => {
+                  const expensesByMethod = {
+                    efectivo: 0,
+                    tarjetaDebito: 0,
+                    tarjetaCredito: 0,
+                    transferencia: 0,
+                    mercadopago: 0
+                  };
+
+                  shiftExpenses.forEach(expense => {
+                    const paymentMethod = expense.paymentMethod || 'efectivo';
+                    if (expensesByMethod.hasOwnProperty(paymentMethod)) {
+                      expensesByMethod[paymentMethod] += expense.amount || 0;
+                    } else {
+                      expensesByMethod.efectivo += expense.amount || 0;
+                    }
+                  });
+
+                  const methodLabels = {
+                    efectivo: 'Efectivo',
+                    tarjetaDebito: 'Tarjeta Débito',
+                    tarjetaCredito: 'Tarjeta Crédito',
+                    transferencia: 'Transferencia',
+                    mercadopago: 'MercadoPago'
+                  };
+
+                  return (
+                    <div className="mb-3">
+                      <p className="text-sm font-medium text-orange-700 mb-2">Gastos por método de pago:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(expensesByMethod).map(([method, amount]) => {
+                          if (amount > 0) {
+                            return (
+                              <div key={method} className="flex justify-between items-center bg-orange-100 rounded-lg p-2">
+                                <span className="text-xs font-medium text-orange-800">{methodLabels[method] || method}</span>
+                                <span className="text-xs font-bold text-orange-900">-${amount.toLocaleString()}</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
                 
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {shiftExpenses.map((expense) => (
@@ -532,6 +578,11 @@ const CashCountModal = memo(({
                           <p className="font-medium text-gray-900 text-sm">{expense.reason || 'Gasto operativo'}</p>
                           <p className="text-xs text-gray-600">
                             {expense.createdAt?.toDate?.()?.toLocaleTimeString() || 'N/A'}
+                          </p>
+                          <p className="text-xs text-orange-600 capitalize">
+                            {expense.paymentMethod === 'tarjetaDebito' ? 'Tarjeta Débito' :
+                             expense.paymentMethod === 'tarjetaCredito' ? 'Tarjeta Crédito' :
+                             expense.paymentMethod || 'Efectivo'}
                           </p>
                         </div>
                         <div className="text-right">
@@ -722,6 +773,7 @@ const CashCountModal = memo(({
             <div className="text-center">
               <p className="text-sm text-gray-600">Gastos del Turno</p>
               <p className="text-lg font-bold text-orange-600">${shiftExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString()}</p>
+              <p className="text-xs text-gray-500">(Restados por método)</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Ingresos Adicionales</p>

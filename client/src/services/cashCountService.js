@@ -104,15 +104,36 @@ export const cashCountService = {
         totalAmount += saleAmount;
       });
 
-      // Agregar gastos del turno como egresos esperados
-      const totalExpenses = shiftExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      // Agregar gastos del turno por método de pago
+      const expensesByMethod = {
+        efectivo: 0,
+        tarjetaDebito: 0,
+        tarjetaCredito: 0,
+        transferencia: 0,
+        mercadopago: 0
+      };
+
+      shiftExpenses.forEach(expense => {
+        const paymentMethod = expense.paymentMethod || 'efectivo';
+        if (expensesByMethod.hasOwnProperty(paymentMethod)) {
+          expensesByMethod[paymentMethod] += expense.amount || 0;
+        } else {
+          // Si el método de pago no está en la lista, agregar a efectivo
+          expensesByMethod.efectivo += expense.amount || 0;
+        }
+      });
+
+      const totalExpenses = Object.values(expensesByMethod).reduce((sum, amount) => sum + amount, 0);
       console.log(`💰 Total gastos del turno: $${totalExpenses.toLocaleString()}`);
+      console.log(`📊 Gastos por método:`, expensesByMethod);
       
-      // Los gastos se restan del efectivo esperado (asumiendo que se pagan en efectivo)
-      if (totalExpenses > 0) {
-        salesByMethod.efectivo.expected -= totalExpenses;
-        console.log(`📉 Efectivo esperado ajustado por gastos: $${salesByMethod.efectivo.expected.toLocaleString()}`);
-      }
+      // Restar gastos del método de pago correspondiente
+      Object.entries(expensesByMethod).forEach(([method, amount]) => {
+        if (amount > 0 && salesByMethod[method]) {
+          salesByMethod[method].expected -= amount;
+          console.log(`📉 ${method} esperado ajustado por gastos: $${salesByMethod[method].expected.toLocaleString()}`);
+        }
+      });
 
       console.log(`✅ Procesadas ${totalProcessed} ventas por $${totalAmount.toLocaleString()}`);
       console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
