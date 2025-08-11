@@ -368,7 +368,7 @@ const CashRegister = () => {
     return () => {
       window.removeEventListener('forceResetShifts', handleForceResetShifts);
     };
-  }, []); // Solo se ejecuta una vez al montar el componente
+  }, [checkCanFinalizarDia, loadShiftData]); // Incluir dependencias necesarias
 
   // Configurar listeners de tiempo real (separado del useEffect principal)
   useEffect(() => {
@@ -451,7 +451,7 @@ const CashRegister = () => {
       realtimeService.off('shift_synced');
       realtimeService.off('shifts_updated');
     };
-  }, []); // Sin dependencias para evitar re-renders infinitos
+  }, [checkCanFinalizarDia, loadShiftData]); // Incluir dependencias necesarias
 
 
 
