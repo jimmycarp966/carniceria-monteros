@@ -1,534 +1,456 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   DollarSign, 
+  ShoppingCart, 
   Package, 
   Users, 
   TrendingUp, 
-  Activity, 
+  TrendingDown,
+  Calendar,
+  Clock,
   AlertTriangle,
-  Zap,
-  Bell,
-  RefreshCw,
-  ShoppingCart
+  CheckCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import realtimeService from '../services/realtimeService';
-import { productService, saleService, customerService } from '../services/firebaseService';
-import toast from 'react-hot-toast';
+import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
+import { db } from '../firebase';
+import { toast } from 'react-toastify';
 
-// Componentes memoizados para evitar re-renders
-const StatCard = memo(({ title, value, icon: Icon, color, subtitle, subtitleIcon: SubtitleIcon }) => (
-  <div className="bg-white rounded-2xl p-6 shadow-lg">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">{title}</p>
-        <p className={`text-3xl font-bold text-${color}-600`}>
-          {typeof value === 'number' ? (Number(value) || 0).toLocaleString() : value}
-        </p>
-      </div>
-      <div className={`p-3 bg-${color}-100 rounded-xl`}>
-        <Icon className={`h-8 w-8 text-${color}-600`} />
-      </div>
-    </div>
-    {subtitle && (
-      <div className="mt-4 flex items-center text-sm">
-        <SubtitleIcon className={`h-4 w-4 text-${color}-500 mr-1`} />
-        <span className={`text-${color}-600`}>{subtitle}</span>
-      </div>
-    )}
-  </div>
-));
-
-const NotificationItem = memo(({ notification }) => (
-  <div className="flex items-center p-3 bg-gray-50 rounded-xl">
-    <div className="flex-1">
-      <div className="font-medium">{notification.type}</div>
-      <div className="text-sm text-gray-600">
-        {notification.data?.message || 'Nueva notificación'}
-      </div>
-      <div className="text-xs text-gray-500">
-        {new Date(notification.timestamp?.toDate?.() || notification.timestamp || Date.now()).toLocaleString()}
-      </div>
-    </div>
-  </div>
-));
-
-const SalesChart = memo(({ salesChart }) => {
-  const maxValue = Math.max(1, ...salesChart.map(d => d.ventas || 0));
-  return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg">
-      <h3 className="text-lg font-semibold mb-4">Ventas por Hora</h3>
-      <div className="h-64 flex items-end justify-between space-x-1">
-        {salesChart.map((data, index) => (
-          <div key={index} className="flex-1 flex flex-col items-center">
-            <div
-              className="w-full bg-gradient-to-t from-orange-500 to-red-500 rounded-t"
-              style={{ height: `${(Math.max(0, data.ventas || 0) / maxValue) * 200}px` }}
-            />
-            <span className="text-xs text-gray-600 mt-1">{data.hora}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-const ProductPerformance = memo(({ productPerformance }) => (
-  <div className="bg-white rounded-2xl p-6 shadow-lg">
-    <h3 className="text-lg font-semibold mb-4">Productos Más Vendidos</h3>
-    <div className="space-y-3">
-      {productPerformance.map((product, index) => (
-        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-              <span className="text-sm font-bold text-orange-600">{index + 1}</span>
-            </div>
-            <div>
-              <div className="font-medium">{product.name}</div>
-              <div className="text-sm text-gray-600">{product.cantidad} unidades</div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="font-semibold text-green-600">${(Number(product.ventas) || 0).toLocaleString()}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-));
-
-const RecentSales = memo(({ ventasRecientes }) => (
-  <div className="bg-white rounded-2xl p-6 shadow-lg">
-    <h3 className="text-lg font-semibold mb-4">Ventas Recientes</h3>
-    <div className="space-y-3">
-      {ventasRecientes.map((sale, index) => (
-        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-              <DollarSign className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <div className="font-medium">{sale.cliente}</div>
-              <div className="text-sm text-gray-600">{sale.productos} productos</div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="font-semibold text-green-600">${(Number(sale.monto) || 0).toLocaleString()}</div>
-            <div className="text-xs text-gray-500">{sale.hora}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-));
-
-const StockAlerts = memo(({ stockAlerts }) => (
-  <div className="bg-white rounded-2xl p-6 shadow-lg">
-    <h3 className="text-lg font-semibold mb-4">Alertas de Stock</h3>
-    {stockAlerts.length === 0 ? (
-      <div className="text-center py-8 text-gray-500">
-        <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-        <p>No hay alertas de stock</p>
-      </div>
-    ) : (
-      <div className="space-y-3">
-        {stockAlerts.slice(0, 5).map((item, index) => (
-          <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
-              <div>
-                <div className="font-medium">{item.name}</div>
-                <div className="text-sm text-red-600">Stock: {item.stock}</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-medium text-red-600">Mínimo: {item.minStock}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-));
+// Componentes
+import LoadingSpinner from './LoadingSpinner';
 
 const Dashboard = () => {
-  // Estados optimizados con valores iniciales
-  const [realtimeStats, setRealtimeStats] = useState({
-    ventasHoy: 0,
-    productosVendidos: 0,
-    clientesNuevos: 0,
-    inventarioBajo: 0,
-    ventasUltimaHora: 0,
-    promedioTicket: 0,
-    productosPopulares: [],
-    ventasRecientes: []
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalSales: 0,
+    todaySales: 0,
+    totalProducts: 0,
+    totalCustomers: 0,
+    lowStockProducts: 0,
+    activeShifts: 0
   });
+  const [recentSales, setRecentSales] = useState([]);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [showSensitiveData, setShowSensitiveData] = useState(false);
 
-  const [connectionStatus, setConnectionStatus] = useState({
-    isOnline: true,
-    pendingOperations: 0,
-    lastSync: Date.now()
-  });
-
-  const [stockAlerts] = useState([]);
-  const [recentNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Estados para gráficos y análisis
-  const [salesChart, setSalesChart] = useState([]);
-  const [productPerformance, setProductPerformance] = useState([]);
-
-  // Funciones optimizadas con useCallback - definidas antes de su uso
-  const updateSalesStats = useCallback((sales) => {
-    const today = new Date().toDateString();
-    const todaySales = sales.filter(sale => 
-      new Date(sale.createdAt?.toDate?.() || sale.createdAt).toDateString() === today
-    );
-    
-    const lastHour = new Date(Date.now() - 60 * 60 * 1000);
-    const lastHourSales = sales.filter(sale => 
-      new Date(sale.createdAt?.toDate?.() || sale.createdAt) > lastHour
-    );
-    
-    const totalToday = todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const totalLastHour = lastHourSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const avgTicket = todaySales.length > 0 ? totalToday / todaySales.length : 0;
-    
-    setRealtimeStats(prev => ({
-      ...prev,
-      ventasHoy: totalToday,
-      ventasUltimaHora: totalLastHour,
-      promedioTicket: avgTicket,
-      productosVendidos: todaySales.reduce((sum, sale) => 
-        sum + (sale.items?.length || 0), 0
-      )
-    }));
-  }, []);
-
-  const updateRecentSales = useCallback((sales) => {
-    const recent = sales
-      .slice(0, 5)
-      .map(sale => ({
-        id: sale.id,
-        cliente: sale.customer?.name || 'Cliente',
-        monto: sale.total || 0,
-        hora: new Date(sale.createdAt?.toDate?.() || sale.createdAt).toLocaleTimeString(),
-        productos: sale.items?.length || 0,
-        metodo: sale.paymentMethod || 'efectivo'
-      }));
-    
-    setRealtimeStats(prev => ({
-      ...prev,
-      ventasRecientes: recent
-    }));
-  }, []);
-
-  const updateProductStats = useCallback((products) => {
-    const lowStock = products.filter(p => (p.stock || 0) <= (p.minStock || 5));
-    
-    setRealtimeStats(prev => ({
-      ...prev,
-      inventarioBajo: lowStock.length
-    }));
-  }, []);
-
-  const updateCustomerStats = useCallback((customers) => {
-    const thisMonth = new Date();
-    const startOfMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
-    
-    const newCustomersThisMonth = customers.filter(customer => {
-      const createdDate = new Date(customer.createdAt?.toDate?.() || customer.createdAt || customer.fechaRegistro);
-      return createdDate >= startOfMonth;
-    });
-    
-    setRealtimeStats(prev => ({
-      ...prev,
-      clientesNuevos: newCustomersThisMonth.length
-    }));
-  }, []);
-
-  const generateChartData = useCallback((sales) => {
-    // Datos para gráfico de ventas por hora optimizado
-    const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-      const hourSales = sales.filter(sale => {
-        const saleHour = new Date(sale.createdAt?.toDate?.() || sale.createdAt).getHours();
-        return saleHour === hour;
-      });
-      return {
-        hora: `${hour}:00`,
-        ventas: hourSales.reduce((sum, sale) => sum + (sale.total || 0), 0)
-      };
-    });
-    
-    setSalesChart(hourlyData);
-    
-    // Datos para rendimiento de productos optimizado
-    const productSales = {};
-    sales.forEach(sale => {
-      sale.items?.forEach(item => {
-        if (!productSales[item.name]) {
-          productSales[item.name] = { name: item.name, ventas: 0, cantidad: 0 };
-        }
-        productSales[item.name].ventas += item.subtotal || 0;
-        productSales[item.name].cantidad += item.quantity || 0;
-      });
-    });
-    
-    const topProducts = Object.values(productSales)
-      .sort((a, b) => b.ventas - a.ventas)
-      .slice(0, 5);
-    
-    setProductPerformance(topProducts);
-  }, []);
-
-  // Cargar datos iniciales optimizado
-  const loadInitialData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      // Cargar datos en paralelo con cache
-      const [products, sales, customers] = await Promise.all([
-        productService.getAllProducts(1, 50), // Solo primera página
-        saleService.getAllSales(1, 100), // Solo últimas 100 ventas
-        customerService.getAllCustomers(1, 50) // Solo primera página de clientes
-      ]);
-      
-      updateSalesStats(sales);
-      updateRecentSales(sales);
-      updateProductStats(products);
-      updateCustomerStats(customers);
-      
-      // Generar datos de gráficos de forma optimizada
-      generateChartData(sales);
-      
-    } catch (error) {
-      console.error('Error cargando datos iniciales:', error);
-      toast.error('Error cargando datos del dashboard');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [updateSalesStats, updateProductStats, updateCustomerStats, generateChartData, updateRecentSales]);
-
-  // Inicializar con carga de datos y listeners en tiempo real
+  // Cargar datos del dashboard
   useEffect(() => {
-    console.log('🚀 Inicializando Dashboard con tiempo real...');
-    loadInitialData();
+    setLoading(true);
     
-    // Registrar listeners para actualizaciones en tiempo real
-    realtimeService.on('sales_updated', (data) => {
-      console.log('📈 Dashboard: Ventas actualizadas', data);
-      if (data.sales) {
-        updateSalesStats(data.sales);
-        updateRecentSales(data.sales);
+    const unsubscribeSales = onSnapshot(
+      query(collection(db, 'sales'), orderBy('timestamp', 'desc'), limit(5)),
+      (snapshot) => {
+        const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setRecentSales(sales);
+        
+        // Calcular estadísticas de ventas
+        const totalSales = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todaySales = sales
+          .filter(sale => sale.timestamp?.toDate() >= today)
+          .reduce((sum, sale) => sum + (sale.total || 0), 0);
+        
+        setStats(prev => ({ ...prev, totalSales, todaySales }));
+      },
+      (error) => {
+        console.error('Error cargando ventas:', error);
+        toast.error('Error al cargar datos de ventas');
       }
-    });
+    );
 
-    realtimeService.on('inventory_updated', (data) => {
-      console.log('📦 Dashboard: Inventario actualizado', data);
-      if (data.inventory) {
-        updateProductStats(data.inventory);
+    const unsubscribeProducts = onSnapshot(
+      query(collection(db, 'products')),
+      (snapshot) => {
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lowStock = products.filter(p => (p.stock || 0) <= (p.minStock || 10));
+        
+        setStats(prev => ({ 
+          ...prev, 
+          totalProducts: products.length,
+          lowStockProducts: lowStock.length 
+        }));
+        setLowStockItems(lowStock.slice(0, 5));
+      },
+      (error) => {
+        console.error('Error cargando productos:', error);
+        toast.error('Error al cargar datos de productos');
       }
-    });
+    );
 
-    realtimeService.on('customers_updated', (data) => {
-      console.log('👥 Dashboard: Clientes actualizados', data);
-      if (data.customers) {
-        updateCustomerStats(data.customers);
+    const unsubscribeCustomers = onSnapshot(
+      query(collection(db, 'customers')),
+      (snapshot) => {
+        const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setStats(prev => ({ ...prev, totalCustomers: customers.length }));
+      },
+      (error) => {
+        console.error('Error cargando clientes:', error);
+        toast.error('Error al cargar datos de clientes');
       }
-    });
+    );
 
-    realtimeService.on('sale_synced', (data) => {
-      console.log('💰 Dashboard: Nueva venta sincronizada', data);
-      // Recargar datos para reflejar la nueva venta
-      loadInitialData();
-    });
-    
-    // Actualizar estado de conexión cada 30 segundos
-    const connectionInterval = setInterval(() => {
-      const syncState = realtimeService.getSyncState();
-      setConnectionStatus({
-        isOnline: syncState.isOnline,
-        pendingOperations: syncState.offlineQueueSize,
-        lastSync: syncState.lastSync
-      });
-    }, 30000);
-    
+    const unsubscribeShifts = onSnapshot(
+      query(collection(db, 'shifts'), where('status', '==', 'active')),
+      (snapshot) => {
+        setStats(prev => ({ ...prev, activeShifts: snapshot.docs.length }));
+      },
+      (error) => {
+        console.error('Error cargando turnos:', error);
+      }
+    );
+
+    setLoading(false);
+
     return () => {
-      clearInterval(connectionInterval);
-      // Limpiar listeners
-      realtimeService.off('sales_updated');
-      realtimeService.off('inventory_updated');
-      realtimeService.off('customers_updated');
-      realtimeService.off('sale_synced');
+      unsubscribeSales();
+      unsubscribeProducts();
+      unsubscribeCustomers();
+      unsubscribeShifts();
     };
-  }, [loadInitialData, updateSalesStats, updateProductStats, updateCustomerStats, updateRecentSales]);
-
-  // Handlers optimizados
-  const handleForceSync = useCallback(async () => {
-    try {
-      const success = await realtimeService.forceSync();
-      if (success) {
-        toast.success('Sincronización completada');
-        setConnectionStatus(prev => ({ ...prev, pendingOperations: 0 }));
-      } else {
-        toast.error('No hay conexión para sincronizar');
-      }
-    } catch (error) {
-      toast.error('Error en sincronización');
-    }
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    loadInitialData();
-    toast.success('Datos actualizados');
-  }, [loadInitialData]);
+  // Calcular tendencias
+  const trends = useMemo(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    
+    const yesterdaySales = recentSales
+      .filter(sale => {
+        const saleDate = sale.timestamp?.toDate();
+        return saleDate >= yesterday && saleDate < new Date(yesterday.getTime() + 24 * 60 * 60 * 1000);
+      })
+      .reduce((sum, sale) => sum + (sale.total || 0), 0);
 
-  // Estadísticas memoizadas
-  const statsCards = useMemo(() => [
-    {
-      title: 'Ventas Hoy',
-      value: realtimeStats.ventasHoy,
-      icon: DollarSign,
-      color: 'green',
-      subtitle: `+${(Number(realtimeStats.ventasUltimaHora) || 0).toLocaleString()} última hora`,
-      subtitleIcon: TrendingUp
-    },
-    {
-      title: 'Productos Vendidos',
-      value: realtimeStats.productosVendidos,
-      icon: Package,
-      color: 'blue',
-      subtitle: `Promedio: $${(Number(realtimeStats.promedioTicket) || 0).toLocaleString()}`,
-      subtitleIcon: ShoppingCart
-    },
-    {
-      title: 'Clientes Nuevos',
-      value: realtimeStats.clientesNuevos,
-      icon: Users,
-      color: 'purple',
-      subtitle: 'Este mes',
-      subtitleIcon: Activity
-    },
-    {
-      title: 'Stock Bajo',
-      value: realtimeStats.inventarioBajo,
-      icon: AlertTriangle,
-      color: 'red',
-      subtitle: 'Requieren atención',
-      subtitleIcon: AlertTriangle
-    }
-  ], [realtimeStats]);
+    const todaySales = stats.todaySales;
+    const salesChange = yesterdaySales > 0 ? ((todaySales - yesterdaySales) / yesterdaySales) * 100 : 0;
 
-  if (isLoading) {
-    return (
-      <div className="p-4 lg:p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-red-100 rounded-3xl mb-6 shadow-lg">
-              <RefreshCw className="h-10 w-10 text-orange-600 animate-spin" />
-            </div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-              Cargando Dashboard...
-            </h2>
-            <p className="text-gray-600">Sincronizando datos en tiempo real</p>
-          </div>
-        </div>
-      </div>
-    );
+    return {
+      salesChange,
+      isPositive: salesChange >= 0
+    };
+  }, [stats.todaySales, recentSales]);
+
+  // Formatear moneda
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Formatear fecha
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    return timestamp.toDate().toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return <LoadingSpinner text="Cargando dashboard..." />;
   }
 
   return (
-    <div className="p-4 lg:p-6">
-      {/* Header con controles */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-600">Vista general del negocio en tiempo real</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gradient">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Resumen ejecutivo del negocio
+          </p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          {/* Estado de conexión */}
-          <div className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center ${
-            connectionStatus.isOnline 
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {connectionStatus.isOnline ? '🟢' : '🔴'} 
-            {connectionStatus.isOnline ? 'En línea' : 'Offline'}
-            {connectionStatus.pendingOperations > 0 && (
-              <span className="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">
-                {connectionStatus.pendingOperations}
-              </span>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowSensitiveData(!showSensitiveData)}
+            className="btn btn-secondary flex items-center"
+          >
+            {showSensitiveData ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+            {showSensitiveData ? 'Ocultar' : 'Mostrar'} Datos
+          </button>
+        </div>
+      </div>
+
+      {/* KPIs Principales */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+        {/* Ventas Totales */}
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Ventas Totales</p>
+              <p className="stats-value">
+                {showSensitiveData ? formatCurrency(stats.totalSales) : '***'}
+              </p>
+              <div className="flex items-center mt-1">
+                {trends.isPositive ? (
+                  <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
+                )}
+                <span className={`text-sm font-medium ${
+                  trends.isPositive ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {Math.abs(trends.salesChange).toFixed(1)}%
+                </span>
+                <span className="text-sm text-gray-500 ml-1">vs ayer</span>
+              </div>
+            </div>
+            <div className="p-3 bg-gradient-to-br from-green-100 to-green-200 rounded-lg">
+              <DollarSign className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Ventas de Hoy */}
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Ventas de Hoy</p>
+              <p className="stats-value">
+                {showSensitiveData ? formatCurrency(stats.todaySales) : '***'}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                {new Date().toLocaleDateString('es-AR', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg">
+              <Calendar className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Productos */}
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Total Productos</p>
+              <p className="stats-value">{stats.totalProducts}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {stats.lowStockProducts} con stock bajo
+              </p>
+            </div>
+            <div className="p-3 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg">
+              <Package className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Clientes */}
+        <div className="stats-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="stats-label">Total Clientes</p>
+              <p className="stats-value">{stats.totalCustomers}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Base de datos activa
+              </p>
+            </div>
+            <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg">
+              <Users className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Alertas y Estado */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Alertas */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+              Alertas del Sistema
+            </h3>
+          </div>
+          <div className="card-body">
+            <div className="space-y-3">
+              {stats.lowStockProducts > 0 && (
+                <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3" />
+                  <div>
+                    <p className="font-medium text-yellow-800">
+                      Stock Bajo
+                    </p>
+                    <p className="text-sm text-yellow-700">
+                      {stats.lowStockProducts} productos necesitan reposición
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {stats.activeShifts > 0 && (
+                <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <div>
+                    <p className="font-medium text-green-800">
+                      Turnos Activos
+                    </p>
+                    <p className="text-sm text-green-700">
+                      {stats.activeShifts} turno(s) en curso
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {stats.lowStockProducts === 0 && stats.activeShifts === 0 && (
+                <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-blue-600 mr-3" />
+                  <div>
+                    <p className="font-medium text-blue-800">
+                      Todo en Orden
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      No hay alertas pendientes
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Estado del Sistema */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Clock className="h-5 w-5 text-gray-600 mr-2" />
+              Estado del Sistema
+            </h3>
+          </div>
+          <div className="card-body">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Conexión a Firebase</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                  Conectado
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Sincronización</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                  En tiempo real
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Última actualización</span>
+                <span className="text-sm text-gray-900">
+                  {new Date().toLocaleTimeString('es-AR')}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Versión del sistema</span>
+                <span className="text-sm text-gray-900">v2.0.0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ventas Recientes y Stock Bajo */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Ventas Recientes */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <ShoppingCart className="h-5 w-5 text-green-600 mr-2" />
+              Ventas Recientes
+            </h3>
+          </div>
+          <div className="card-body">
+            {recentSales.length > 0 ? (
+              <div className="space-y-3">
+                {recentSales.map((sale) => (
+                  <div key={sale.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        Venta #{sale.id.slice(-6)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {formatDate(sale.timestamp)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">
+                        {showSensitiveData ? formatCurrency(sale.total || 0) : '***'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {sale.items?.length || 0} productos
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No hay ventas recientes</p>
+              </div>
             )}
           </div>
-          
-          {/* Botón de sincronización */}
-          <button
-            onClick={handleForceSync}
-            disabled={connectionStatus.pendingOperations === 0}
-            className="p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            title="Sincronizar datos"
-          >
-            <RefreshCw className="h-5 w-5" />
-          </button>
-          
-          {/* Botón de notificaciones */}
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="p-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors relative"
-          >
-            <Bell className="h-5 w-5" />
-            {recentNotifications.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                {recentNotifications.length}
-              </span>
+        </div>
+
+        {/* Productos con Stock Bajo */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Package className="h-5 w-5 text-red-600 mr-2" />
+              Stock Bajo
+            </h3>
+          </div>
+          <div className="card-body">
+            {lowStockItems.length > 0 ? (
+              <div className="space-y-3">
+                {lowStockItems.map((product) => (
+                  <div key={product.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {product.name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Categoría: {product.category}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-red-600">
+                        {product.stock || 0} {product.unit || 'unidades'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Mín: {product.minStock || 10}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                <p className="text-gray-500">Todo el stock está en orden</p>
+              </div>
             )}
-          </button>
-          
-          {/* Botón de actualizar */}
-          <button
-            onClick={handleRefresh}
-            className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
-            title="Actualizar datos"
-          >
-            <Zap className="h-5 w-5" />
-          </button>
+          </div>
         </div>
-      </div>
-
-      {/* Panel de notificaciones */}
-      {showNotifications && (
-        <div className="mb-6 bg-white rounded-2xl p-6 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4">Notificaciones Recientes</h3>
-          {recentNotifications.length === 0 ? (
-            <p className="text-gray-500">No hay notificaciones recientes</p>
-          ) : (
-            <div className="space-y-3">
-              {recentNotifications.map((notification, index) => (
-                <NotificationItem key={index} notification={notification} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Estadísticas principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
-        {statsCards.map((stat, index) => (
-          <StatCard key={index} {...stat} />
-        ))}
-      </div>
-
-      {/* Gráficos y análisis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
-        <SalesChart salesChart={salesChart} />
-        <ProductPerformance productPerformance={productPerformance} />
-      </div>
-
-      {/* Ventas recientes y alertas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        <RecentSales ventasRecientes={realtimeStats.ventasRecientes} />
-        <StockAlerts stockAlerts={stockAlerts} />
       </div>
     </div>
   );

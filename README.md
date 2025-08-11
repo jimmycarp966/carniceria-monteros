@@ -1,312 +1,388 @@
-# 🥩 Sistema de Administración - Carnicería Muñoz
+# 🥩 Sistema de Gestión para Carnicería
 
-Sistema completo de administración para carnicerías con optimizaciones avanzadas de rendimiento.
+Un sistema completo de gestión empresarial diseñado específicamente para carnicerías, con funcionalidades avanzadas de ventas, inventario, empleados, clientes y reportes.
 
-## ✨ Características Principales
+## 🚀 Características Principales
 
-### 🚀 **Optimizaciones de Rendimiento Implementadas**
+### 💰 **Gestión de Ventas**
+- Caja registradora avanzada con múltiples métodos de pago
+- Gestión de turnos y arqueos de caja
+- Historial completo de transacciones
+- Sistema de descuentos y promociones
+- Integración con clientes y cuenta corriente
 
-#### **1. Firebase Optimizado**
-- ✅ Listeners con límites y debouncing
-- ✅ Cache inteligente con invalidación automática
-- ✅ Paginación en consultas
-- ✅ Procesamiento en lotes para operaciones offline
+### 📦 **Control de Inventario**
+- Gestión de productos con categorías personalizables
+- Control de stock mínimo y máximo
+- Alertas automáticas de stock bajo
+- Trazabilidad de productos desde proveedores
+- Valorización automática del inventario
 
-#### **2. React Optimizado**
-- ✅ Componentes memoizados con `React.memo`
-- ✅ Hooks personalizados para optimización
-- ✅ Lazy loading de componentes
-- ✅ Virtualización para listas grandes
+### 👥 **Gestión de Personal**
+- Control de empleados con permisos granulares
+- Gestión de turnos y horarios
+- Sistema de comisiones y bonificaciones
+- Historial de actividades por empleado
 
-#### **3. Service Worker**
-- ✅ Cache de recursos estáticos
-- ✅ Estrategias de cache inteligentes
-- ✅ Funcionamiento offline
-- ✅ Actualizaciones automáticas
+### 👤 **Gestión de Clientes**
+- Base de datos completa de clientes
+- Sistema de cuenta corriente
+- Historial de compras y preferencias
+- Alertas de pagos pendientes
+- Segmentación de clientes
 
-#### **4. UI/UX Optimizada**
-- ✅ Reducción de efectos visuales pesados
-- ✅ Animaciones optimizadas
-- ✅ Debouncing en búsquedas
-- ✅ Paginación en componentes
+### 🏢 **Gestión de Proveedores**
+- Catálogo de proveedores con categorías
+- Control de órdenes de compra
+- Seguimiento de pagos y deudas
+- Evaluación de proveedores
 
-## 📊 **Módulos del Sistema**
-
-### 🏠 **Dashboard**
-- Estadísticas en tiempo real
-- Gráficos de ventas por hora
-- Productos más vendidos
-- Alertas de stock bajo
-- Notificaciones push
-
-### 💰 **Caja Registradora**
-- Interfaz táctil optimizada
-- Búsqueda rápida de productos
-- Múltiples métodos de pago
-- Impresión de tickets
-- Gestión de turnos
-
-### 📦 **Gestión de Productos**
-- Catálogo con paginación
-- Filtros avanzados
-- Gestión de categorías
-- Control de stock
-- Precios dinámicos
-
-### 📈 **Ventas y Reportes**
-- Historial de ventas
-- Reportes por período
-- Análisis de tendencias
+### 📊 **Reportes y Analytics**
+- Dashboard ejecutivo con KPIs
+- Reportes de ventas por período
+- Análisis de rentabilidad por producto
+- Reportes de inventario y stock
 - Exportación de datos
-- Gráficos interactivos
 
-### 👥 **Gestión de Clientes**
+## 🛠️ Tecnologías Utilizadas
+
+### **Frontend**
+- **React 18** - Biblioteca de interfaz de usuario
+- **Tailwind CSS** - Framework de estilos utility-first
+- **React Router** - Enrutamiento de la aplicación
+- **React Hook Form** - Manejo de formularios
+- **React Query** - Gestión de estado del servidor
+- **Lucide React** - Iconografía moderna
+
+### **Backend & Base de Datos**
+- **Firebase Firestore** - Base de datos NoSQL en tiempo real
+- **Firebase Authentication** - Sistema de autenticación
+- **Firebase Hosting** - Hosting de la aplicación
+- **Firebase Functions** - Funciones serverless (opcional)
+
+### **Herramientas de Desarrollo**
+- **Vite** - Build tool y dev server
+- **ESLint** - Linting de código
+- **Prettier** - Formateo de código
+- **PostCSS** - Procesamiento de CSS
+
+## 📱 Características Responsive
+
+- **Mobile First** - Diseño optimizado para móviles
+- **Tablet Ready** - Interfaz adaptada para tablets
+- **Desktop Optimized** - Experiencia completa en escritorio
+- **Touch Friendly** - Interfaz táctil optimizada
+- **Offline Capable** - Funcionalidad básica sin conexión
+
+## 🚀 Instalación y Configuración
+
+### **Prerrequisitos**
+- Node.js 18+ 
+- npm o yarn
+- Cuenta de Firebase
+
+### **1. Clonar el Repositorio**
+```bash
+git clone https://github.com/tu-usuario/carniceria-sistema.git
+cd carniceria-sistema
+```
+
+### **2. Instalar Dependencias**
+```bash
+# Instalar dependencias del cliente
+cd client
+npm install
+
+# Instalar dependencias del servidor (opcional)
+cd ../server
+npm install
+```
+
+### **3. Configurar Firebase**
+1. Crear proyecto en [Firebase Console](https://console.firebase.google.com)
+2. Habilitar Firestore Database
+3. Configurar reglas de seguridad
+4. Copiar configuración a `client/src/firebase.js`
+
+### **4. Variables de Entorno**
+Crear archivo `.env` en la carpeta `client`:
+```env
+VITE_FIREBASE_API_KEY=tu_api_key
+VITE_FIREBASE_AUTH_DOMAIN=tu_proyecto.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=tu_proyecto_id
+VITE_FIREBASE_STORAGE_BUCKET=tu_proyecto.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=tu_sender_id
+VITE_FIREBASE_APP_ID=tu_app_id
+```
+
+### **5. Ejecutar en Desarrollo**
+```bash
+# Cliente
+cd client
+npm run dev
+
+# Servidor (opcional)
+cd ../server
+npm run dev
+```
+
+## 🏗️ Estructura del Proyecto
+
+```
+carniceria-sistema/
+├── client/                 # Frontend React
+│   ├── public/            # Archivos públicos
+│   ├── src/
+│   │   ├── components/    # Componentes React
+│   │   ├── context/       # Contextos de React
+│   │   ├── data/          # Datos estáticos
+│   │   ├── hooks/         # Custom hooks
+│   │   ├── services/      # Servicios de Firebase
+│   │   └── utils/         # Utilidades
+│   ├── package.json
+│   └── tailwind.config.js
+├── server/                # Backend (opcional)
+├── firebase.json          # Configuración Firebase
+├── firestore.rules        # Reglas de seguridad
+└── README.md
+```
+
+## 📊 Módulos del Sistema
+
+### **1. Dashboard Principal**
+- Resumen ejecutivo de ventas
+- KPIs principales del negocio
+- Gráficos de tendencias
+- Alertas y notificaciones
+
+### **2. Caja Registradora**
+- Interfaz de ventas intuitiva
+- Múltiples métodos de pago
+- Gestión de descuentos
+- Impresión de tickets
+- Arqueo de caja
+
+### **3. Gestión de Productos**
+- Catálogo de productos
+- Categorías personalizables
+- Control de precios y stock
+- Imágenes y descripciones
+- Códigos de barras
+
+### **4. Control de Inventario**
+- Movimientos de stock
+- Alertas automáticas
+- Valorización
+- Reportes de inventario
+- Trazabilidad
+
+### **5. Gestión de Clientes**
 - Base de datos de clientes
+- Cuenta corriente
 - Historial de compras
-- Sistema de puntos
-- Comunicaciones
 - Segmentación
+- Comunicaciones
 
-### 👨‍💼 **Gestión de Empleados**
-- Control de acceso
+### **6. Gestión de Empleados**
+- Control de personal
+- Permisos granulares
 - Turnos y horarios
-- Rendimiento
 - Comisiones
-- Permisos
+- Actividades
 
-### 🚚 **Proveedores**
+### **7. Gestión de Proveedores**
 - Catálogo de proveedores
 - Órdenes de compra
-- Historial de entregas
+- Control de pagos
 - Evaluaciones
 - Contactos
 
-### 📋 **Inventario**
-- Control de stock
-- Alertas automáticas
-- Movimientos de inventario
-- Valuación
-- Reportes de mermas
+### **8. Reportes y Analytics**
+- Reportes de ventas
+- Análisis de rentabilidad
+- Reportes de inventario
+- KPIs del negocio
+- Exportación de datos
 
-## 🛠️ **Tecnologías Utilizadas**
+## 🔐 Seguridad y Permisos
 
-### **Frontend**
-- ⚛️ React 18 con optimizaciones
-- 🎨 Tailwind CSS
-- 🔥 Firebase (Firestore + Realtime Database)
-- 📱 PWA con Service Worker
-- 🚀 Lazy Loading y Code Splitting
+### **Niveles de Acceso**
+- **Administrador**: Acceso completo al sistema
+- **Gerente**: Gestión de ventas, inventario y reportes
+- **Cajero**: Operaciones de venta y caja
+- **Carnicero**: Gestión de productos e inventario
+- **Ayudante**: Operaciones básicas
 
-### **Backend**
-- 🔥 Firebase Functions
-- 📊 Firestore Database
-- 🔔 Cloud Messaging
-- 🗄️ Realtime Database
+### **Reglas de Seguridad**
+- Autenticación obligatoria
+- Validación de permisos por módulo
+- Auditoría de acciones críticas
+- Backup automático de datos
 
-### **Optimizaciones**
-- ⚡ Cache inteligente
-- 🔄 Debouncing y Throttling
-- 📱 Virtualización
-- 🎯 Memoización
-- 🚀 Service Worker
+## 📱 Características Móviles
 
-## 🚀 **Instalación y Configuración**
+### **Optimizaciones Mobile**
+- Interfaz táctil optimizada
+- Botones de tamaño adecuado
+- Navegación simplificada
+- Carga rápida en conexiones lentas
+- Modo offline básico
 
-### **Requisitos Previos**
+### **Funcionalidades Móviles**
+- Escaneo de códigos de barras
+- Captura de fotos de productos
+- Firma digital en entregas
+- Notificaciones push
+- Sincronización automática
+
+## 🚀 Despliegue
+
+### **Firebase Hosting**
 ```bash
-Node.js >= 16
-npm >= 8
-```
-
-### **Instalación**
-```bash
-# Clonar repositorio
-git clone https://github.com/tu-usuario/carniceria-munoz.git
-cd carniceria-munoz
-
-# Instalar dependencias
-npm install
-
-# Configurar Firebase
-cp .env.example .env
-# Editar .env con tus credenciales de Firebase
-```
-
-### **Configuración de Firebase**
-1. Crear proyecto en Firebase Console
-2. Habilitar Firestore Database
-3. Habilitar Realtime Database
-4. Configurar reglas de seguridad
-5. Agregar credenciales al `.env`
-
-### **Ejecutar en Desarrollo**
-```bash
-npm start
-```
-
-### **Construir para Producción**
-```bash
+# Construir para producción
+cd client
 npm run build
+
+# Desplegar
+firebase deploy
 ```
 
-## 📱 **Características PWA**
-
-- ✅ Instalable en dispositivos móviles
-- ✅ Funcionamiento offline
-- ✅ Notificaciones push
-- ✅ Cache inteligente
-- ✅ Actualizaciones automáticas
-
-## 🔧 **Optimizaciones Implementadas**
-
-### **1. Firebase Service Optimizado**
-```javascript
-// Cache inteligente con invalidación automática
-const smartCache = {
-  get(key) { /* ... */ },
-  set(key, data) { /* ... */ },
-  invalidate(pattern) { /* ... */ }
-};
+### **Vercel (Recomendado)**
+```bash
+# Conectar repositorio a Vercel
+# Configurar variables de entorno
+# Despliegue automático en cada push
 ```
 
-### **2. Componentes Memoizados**
-```javascript
-const ProductCard = memo(({ product, onEdit, onDelete }) => {
-  // Componente optimizado
-});
+### **Netlify**
+```bash
+# Conectar repositorio a Netlify
+# Configurar build settings
+# Desplegar automáticamente
 ```
 
-### **3. Hooks Personalizados**
-```javascript
-// Debouncing para búsquedas
-const debouncedSearch = useDebounce(searchTerm, 300);
+## 🔧 Configuración Avanzada
 
-// Cache optimizado
-const { getCachedData, setCachedData } = useCacheOptimization();
-```
+### **Personalización de Temas**
+- Colores personalizables
+- Logo de la empresa
+- Configuración de impresoras
+- Formatos de tickets
 
-### **4. Service Worker**
-```javascript
-// Cache de recursos estáticos
-self.addEventListener('fetch', (event) => {
-  // Estrategias de cache inteligentes
-});
-```
+### **Integraciones**
+- APIs de proveedores
+- Sistemas de pago
+- Servicios de delivery
+- Herramientas de contabilidad
 
-## 📊 **Métricas de Rendimiento**
+### **Backup y Restauración**
+- Backup automático diario
+- Exportación de datos
+- Restauración desde backup
+- Migración entre entornos
 
-### **Antes de las Optimizaciones**
-- ⏱️ Tiempo de carga inicial: ~8s
-- 🔄 Re-renders por minuto: ~120
-- 📱 Uso de memoria: ~150MB
-- 🌐 Peticiones a Firebase: ~50/min
+## 📈 Métricas y KPIs
 
-### **Después de las Optimizaciones**
-- ⏱️ Tiempo de carga inicial: ~2s
-- 🔄 Re-renders por minuto: ~15
-- 📱 Uso de memoria: ~80MB
-- 🌐 Peticiones a Firebase: ~10/min
+### **Ventas**
+- Ventas diarias/mensuales/anuales
+- Productos más vendidos
+- Horarios pico de ventas
+- Tasa de conversión
 
-## 🎯 **Beneficios de las Optimizaciones**
+### **Inventario**
+- Rotación de stock
+- Productos con bajo movimiento
+- Valor del inventario
+- Pérdidas por vencimiento
 
-### **Para el Usuario**
-- 🚀 Carga más rápida
-- 📱 Mejor experiencia móvil
-- 🔄 Navegación más fluida
-- 📊 Datos en tiempo real
-- 🔋 Menor consumo de batería
+### **Clientes**
+- Clientes nuevos vs recurrentes
+- Valor promedio por cliente
+- Frecuencia de compra
+- Satisfacción del cliente
 
-### **Para el Negocio**
-- 💰 Menor costo de servidor
-- 📈 Mayor productividad
-- 🔧 Menos errores
-- 📱 Mejor adopción móvil
-- 🎯 Mayor satisfacción del cliente
+### **Empleados**
+- Productividad por empleado
+- Ventas por empleado
+- Horas trabajadas
+- Comisiones generadas
 
-## 🔄 **Actualizaciones Automáticas**
+## 🐛 Solución de Problemas
 
-El sistema incluye:
-- ✅ Service Worker para cache
-- ✅ Actualizaciones en segundo plano
-- ✅ Notificaciones de nuevas versiones
-- ✅ Rollback automático en caso de errores
+### **Problemas Comunes**
+1. **Error de conexión a Firebase**
+   - Verificar configuración
+   - Revisar reglas de seguridad
+   - Comprobar credenciales
 
-## 📞 **Soporte**
+2. **Problemas de sincronización**
+   - Verificar conexión a internet
+   - Revisar logs de Firebase
+   - Forzar recarga de datos
 
-Para soporte técnico o consultas:
-- 📧 Email: soporte@carniceria-munoz.com
-- 📱 WhatsApp: +54 9 11 1234-5678
-- 🌐 Web: https://carniceria-munoz.com
+3. **Errores de permisos**
+   - Verificar rol del usuario
+   - Revisar configuración de permisos
+   - Contactar administrador
 
-## 📄 **Licencia**
+### **Logs y Debugging**
+- Consola del navegador
+- Firebase Console
+- Herramientas de desarrollo
+- Logs del servidor
+
+## 🤝 Contribución
+
+### **Cómo Contribuir**
+1. Fork del repositorio
+2. Crear rama para feature
+3. Implementar cambios
+4. Ejecutar tests
+5. Crear Pull Request
+
+### **Estándares de Código**
+- ESLint configuration
+- Prettier formatting
+- Conventional commits
+- Code review obligatorio
+
+## 📄 Licencia
 
 Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
 
+## 📞 Soporte
+
+### **Canales de Soporte**
+- **Email**: soporte@carniceria-sistema.com
+- **Documentación**: [docs.carniceria-sistema.com](https://docs.carniceria-sistema.com)
+- **Issues**: [GitHub Issues](https://github.com/tu-usuario/carniceria-sistema/issues)
+
+### **Horarios de Soporte**
+- **Lunes a Viernes**: 9:00 - 18:00 (GMT-3)
+- **Sábados**: 9:00 - 13:00 (GMT-3)
+- **Emergencias**: 24/7 para clientes premium
+
+## 🔄 Changelog
+
+### **v2.0.0** - Actualización Mayor
+- ✨ Nueva interfaz responsive
+- 🚀 Mejoras de performance
+- 🔧 Refactorización completa
+- 📱 Optimización móvil
+- 🎨 Nuevo diseño UI/UX
+
+### **v1.5.0** - Mejoras de Funcionalidad
+- 📊 Nuevos reportes
+- 🔐 Mejoras de seguridad
+- 📱 Funcionalidades móviles
+- 🐛 Correcciones de bugs
+
+### **v1.0.0** - Lanzamiento Inicial
+- 🎉 Primera versión estable
+- 💰 Sistema de ventas
+- 📦 Control de inventario
+- 👥 Gestión de empleados
+
 ---
 
-<<<<<<< Current (Your changes)
-**Desarrollado con ❤️ para optimizar el rendimiento de tu carnicería** 
-=======
-**Desarrollado con ❤️ para optimizar el rendimiento de tu carnicería** 
-
-## Configuración de Firebase
-
-1) Cliente (`client/.env`)
-
-Crea `client/.env` copiando `client/.env.example` y completa tus claves de Firebase:
-
-```
-REACT_APP_FIREBASE_API_KEY=...
-REACT_APP_FIREBASE_AUTH_DOMAIN=...
-REACT_APP_FIREBASE_PROJECT_ID=...
-REACT_APP_FIREBASE_DATABASE_URL=...
-REACT_APP_FIREBASE_STORAGE_BUCKET=...
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=...
-REACT_APP_FIREBASE_APP_ID=...
-REACT_APP_FIREBASE_MEASUREMENT_ID=...
-```
-
-2) Servidor (`server/.env` o credenciales)
-
-Crea `server/.env` copiando `server/.env.example` y elige UNA forma de proveer credenciales de Firebase Admin:
-- GOOGLE_APPLICATION_CREDENTIALS_JSON: pega el JSON completo del service account.
-- GOOGLE_APPLICATION_CREDENTIALS_B64: pega el mismo JSON pero codificado en base64.
-- GOOGLE_APPLICATION_CREDENTIALS o GOOGLE_APPLICATION_CREDENTIALS_PATH: ruta al archivo (por ejemplo `server/credentials/service-account.json`).
-
-3) Reglas de Firestore
-
-Revisa `firestore.rules` y despliega con:
-
-```
-firebase deploy --only firestore:rules
-```
-
-4) Arranque local
-
-```
-npm run install-all
-npm run dev
-``` 
-
-## Despliegue en Vercel (desde Git)
-
-1) Conecta tu repositorio a Vercel.
-2) Variables de entorno (Project Settings → Environment Variables):
-   - Añade todas las `REACT_APP_*` del cliente.
-3) Build & Output Settings:
-   - Build Command: `npm run vercel-build`
-   - Output Directory: `client/build`
-4) Deploy: al hacer push a `main` Vercel construirá el cliente.
-
-## CI de reglas de Firestore (sin local)
-
-Incluimos un workflow en `.github/workflows/firebase-rules.yml` que despliega `firestore.rules` e índices al hacer push a `main` cuando esos archivos cambian.
-
-Requisitos:
-- En GitHub → Settings → Secrets and variables → Actions, agrega `FIREBASE_TOKEN` (obtenido con `firebase login:ci`).
-  El proyecto de Firebase usado es el definido en `.firebaserc` (`carniceria-monteros`).
-
->>>>>>> Incoming (Background Agent changes)
-
-
-\nNota: despliegue activado desde Git a las 2025-08-10 00:58:21
+**Desarrollado con ❤️ para carnicerías de todo el mundo**
