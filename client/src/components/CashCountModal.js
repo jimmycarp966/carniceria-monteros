@@ -252,12 +252,16 @@ const CashCountModal = memo(({
     const totalAdditionalIncomes = additionalIncomes.reduce((sum, income) => sum + (income.amount || 0), 0);
     const totalAdditionalExpenses = additionalExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
+    // El total esperado debe incluir el monto inicial (que ya está incluido en las ventas en efectivo)
+    // y los gastos del turno (que ya están restados del efectivo esperado)
+    const totalExpectedWithInitial = totalExpected + openingAmount;
+    
     const finalTotal = totalCounted + totalAdditionalIncomes - totalAdditionalExpenses;
-    const finalExpected = totalExpected + totalAdditionalIncomes - totalAdditionalExpenses;
+    const finalExpected = totalExpectedWithInitial + totalAdditionalIncomes - totalAdditionalExpenses;
     const finalDifference = finalTotal - finalExpected;
 
     return {
-      totalExpected,
+      totalExpected: totalExpectedWithInitial,
       totalCounted,
       totalAdditionalIncomes,
       totalAdditionalExpenses,
@@ -557,7 +561,10 @@ const CashCountModal = memo(({
                       ${openingAmount.toLocaleString()}
                     </p>
                     <p className="text-xs text-blue-600 mt-1">
-                      Este monto debe estar incluido en el conteo de efectivo
+                      ⚠️ IMPORTANTE: Este monto debe estar incluido en el conteo de efectivo
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      El "Total Esperado" ya incluye este monto inicial
                     </p>
                   </div>
                   <div className="text-right">
