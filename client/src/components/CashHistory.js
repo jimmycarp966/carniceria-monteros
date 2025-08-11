@@ -10,9 +10,7 @@ import {
   Search,
   Filter,
   Download,
-  Printer,
-  AlertTriangle,
-  Plus
+  Printer
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { dayService } from '../services/firebaseService';
@@ -25,8 +23,6 @@ const CashHistory = ({ onBack }) => {
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [debugInfo, setDebugInfo] = useState(null);
-  const [shiftsInfo, setShiftsInfo] = useState(null);
 
 
   // Cargar historial de días
@@ -36,26 +32,9 @@ const CashHistory = ({ onBack }) => {
       const daysData = await dayService.getAllDays(50);
       setDays(daysData);
       console.log(`📊 Historial cargado: ${daysData.length} días`);
-      
-      // Si no hay días, hacer diagnóstico
-      if (daysData.length === 0) {
-        const debugResult = await debugDaysCollection();
-        setDebugInfo(debugResult);
-        
-        // También verificar turnos
-        const shiftsResult = await checkShiftsStatus();
-        setShiftsInfo(shiftsResult);
-      }
     } catch (error) {
       console.error('Error cargando historial:', error);
       toast.error('Error cargando historial de cajas');
-      
-      // Hacer diagnóstico en caso de error
-      const debugResult = await debugDaysCollection();
-      setDebugInfo(debugResult);
-      
-      const shiftsResult = await checkShiftsStatus();
-      setShiftsInfo(shiftsResult);
     } finally {
       setIsLoading(false);
     }
@@ -293,60 +272,7 @@ ${day.shifts?.map(shift => `
             }
           </p>
           
-          {/* Información de diagnóstico */}
-          {debugInfo && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center mb-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
-                <h4 className="font-medium text-yellow-800">Información de Diagnóstico</h4>
-              </div>
-              <p className="text-sm text-yellow-700 mb-3">
-                {debugInfo.hasDays 
-                  ? `Se encontraron ${debugInfo.days.length} días en la base de datos`
-                  : 'No se encontraron días en la colección "days"'
-                }
-              </p>
-              {debugInfo.error && (
-                <p className="text-sm text-red-600 mb-3">
-                  Error: {debugInfo.error}
-                </p>
-              )}
 
-            </div>
-          )}
-
-          {/* Información de turnos */}
-          {shiftsInfo && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center mb-2">
-                <Clock className="h-5 w-5 text-blue-600 mr-2" />
-                <h4 className="font-medium text-blue-800">Estado de Turnos</h4>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                <div className="text-center">
-                  <p className="text-sm text-blue-600">Total Turnos</p>
-                  <p className="text-lg font-bold text-blue-900">{shiftsInfo.totalShifts || 0}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-green-600">Activos</p>
-                  <p className="text-lg font-bold text-green-900">{shiftsInfo.activeShifts || 0}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-red-600">Cerrados</p>
-                  <p className="text-lg font-bold text-red-900">{shiftsInfo.closedShifts || 0}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-purple-600">Día Cerrado</p>
-                  <p className="text-lg font-bold text-purple-900">{shiftsInfo.dayClosedShifts || 0}</p>
-                </div>
-              </div>
-              {shiftsInfo.error && (
-                <p className="text-sm text-red-600">
-                  Error: {shiftsInfo.error}
-                </p>
-              )}
-            </div>
-          )}
         </div>
       ) : (
         <div className="space-y-4">

@@ -275,7 +275,7 @@ const MainLayout = ({ children }) => {
         <footer className="bg-white border-t border-gray-200 px-4 py-3">
           <div className="text-center">
             <p className="text-sm text-gray-500">
-              © 2024 Sistema de Gestión para Carnicería. Desarrollado con ❤️
+              Sistema de Gestión diseñado por DaniR.
             </p>
           </div>
         </footer>
