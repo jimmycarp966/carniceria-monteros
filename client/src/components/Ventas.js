@@ -24,6 +24,7 @@ const Ventas = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
+  const [cardType, setCardType] = useState('debito'); // 'debito' o 'credito'
   const [currentShift, setCurrentShift] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -166,6 +167,7 @@ const Ventas = () => {
         total: subtotal,
         finalTotal: subtotal,
         paymentMethod,
+        cardType: paymentMethod === 'tarjeta' ? cardType : null,
         receivedAmount: subtotal,
         change: 0,
         shiftId: currentShift.id,
@@ -476,6 +478,37 @@ const Ventas = () => {
                   </button>
                 ))}
               </div>
+
+              {/* Selector de tipo de tarjeta */}
+              {paymentMethod === 'tarjeta' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Tarjeta:</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setCardType('debito')}
+                      className={`p-3 rounded-xl border-2 transition-all duration-200 flex items-center justify-center ${
+                        cardType === 'debito'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-blue-300 bg-white'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      <span className="text-sm font-medium">Débito</span>
+                    </button>
+                    <button
+                      onClick={() => setCardType('credito')}
+                      className={`p-3 rounded-xl border-2 transition-all duration-200 flex items-center justify-center ${
+                        cardType === 'credito'
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 hover:border-indigo-300 bg-white'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      <span className="text-sm font-medium">Crédito</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Resumen */}
@@ -497,7 +530,9 @@ const Ventas = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Medio de Pago:</span>
-                    <span className="font-medium capitalize">{paymentMethod}</span>
+                    <span className="font-medium capitalize">
+                      {paymentMethod === 'tarjeta' ? `Tarjeta ${cardType}` : paymentMethod}
+                    </span>
                   </div>
                   <div className="border-t pt-3">
                     <div className="flex justify-between text-lg font-bold">

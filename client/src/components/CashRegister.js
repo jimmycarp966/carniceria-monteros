@@ -152,6 +152,25 @@ const CashRegister = () => {
   const [closingAmount, setClosingAmount] = useState(0);
   const [closingNotes, setClosingNotes] = useState('');
 
+  // Estados para el nuevo sistema de arqueo
+  const [cashCount, setCashCount] = useState({
+    1000: 0,  // $1000
+    500: 0,   // $500
+    200: 0,   // $200
+    100: 0,   // $100
+    50: 0,    // $50
+    20: 0,    // $20
+    10: 0,    // $10
+    5: 0,     // $5
+    2: 0,     // $2
+    1: 0      // $1
+  });
+  const [tarjetaDebitoAmount, setTarjetaDebitoAmount] = useState(0);
+  const [tarjetaCreditoAmount, setTarjetaCreditoAmount] = useState(0);
+  const [transferenciaAmount, setTransferenciaAmount] = useState(0);
+  const [mercadopagoAmount, setMercadopagoAmount] = useState(0);
+  const [showCashCountModal, setShowCashCountModal] = useState(false);
+
   // Estados para ingresos
   const [incomeAmount, setIncomeAmount] = useState(0);
   const [incomeDescription, setIncomeDescription] = useState('');
@@ -283,49 +302,84 @@ const CashRegister = () => {
 
 
 
-  // Cerrar turno
-  const closeShift = async () => {
+  // Función para cerrar turno
+  const closeShift = useCallback(async () => {
     if (!canCloseShift) {
       toast.error(`Su rol de ${userRole?.displayName} no puede cerrar turnos`);
       return;
     }
 
-    if (!currentShift) {
-      toast.error('No hay turno activo para cerrar');
-      return;
-    }
-
     try {
-      const updatedShift = {
+      const difference = calculateDifference();
+      const arqueoData = {
+        cashCount,
+        efectivoAmount: calculateCashTotal(),
+        tarjetaDebitoAmount,
+        tarjetaCreditoAmount,
+        tarjetaAmount: tarjetaDebitoAmount + tarjetaCreditoAmount,
+        transferenciaAmount,
+        mercadopagoAmount,
+        totalArqueo: calculateArqueoTotal(),
+        expectedAmount: shiftStats.netAmount,
+        difference,
+        hasDifference: Math.abs(difference) > 0
+      };
+
+      const shiftData = {
         ...currentShift,
-          endTime: new Date(),
-        closingAmount: parseFloat(closingAmount) || 0,
-        closingNotes: closingNotes.trim(),
+        endTime: new Date(),
+        closingAmount,
+        closingNotes,
         status: 'closed',
-        finalTotal: shiftStats.netAmount,
         closedBy: {
           id: currentUser?.id,
           name: currentUser?.name,
           email: currentUser?.email,
-          role: currentUser?.role,
-          timestamp: new Date()
-        }
+          role: currentUser?.role || 'ayudante'
+        },
+        arqueo: arqueoData
       };
 
-      await shiftService.updateShift(currentShift.id, updatedShift);
+      await shiftService.updateShift(currentShift.id, shiftData);
       
-      setCurrentShift(null);
+      // Sincronizar en tiempo real
+      await dataSyncService.syncShift({ ...shiftData, id: currentShift.id });
+      
       setShowCloseShiftModal(false);
       setClosingAmount(0);
       setClosingNotes('');
+      setCashCount({
+        1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
+        20: 0, 10: 0, 5: 0, 2: 0, 1: 0
+      });
+      setTarjetaDebitoAmount(0);
+      setTarjetaCreditoAmount(0);
+      setTransferenciaAmount(0);
+      setMercadopagoAmount(0);
       
       toast.success('Turno cerrado exitosamente');
       
+      // Recargar datos
+      const shifts = await shiftService.getAllShifts();
+      const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+      if (activeShift) {
+        setCurrentShift(activeShift);
+        loadShiftData(activeShift);
+      } else {
+        setCurrentShift(null);
+        setShiftStats({
+          salesCount: 0,
+          totalRevenue: 0,
+          totalAdditionalIncomes: 0,
+          netAmount: 0
+        });
+        setRecentActivity([]);
+      }
     } catch (error) {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
     }
-  };
+  }, [canCloseShift, userRole, currentUser, currentShift, closingAmount, closingNotes, shiftStats, cashCount, tarjetaDebitoAmount, tarjetaCreditoAmount, transferenciaAmount, mercadopagoAmount]);
 
   // Registrar ingreso adicional
   const registerIncome = async () => {
@@ -380,6 +434,33 @@ const CashRegister = () => {
       console.error('Error registrando ingreso:', error);
       toast.error('Error al registrar el ingreso');
     }
+  };
+
+  // Calcular total del arqueo de efectivo
+  const calculateCashTotal = () => {
+    return Object.entries(cashCount).reduce((total, [denomination, count]) => {
+      return total + (parseInt(denomination) * count);
+    }, 0);
+  };
+
+  // Calcular total general del arqueo
+  const calculateArqueoTotal = () => {
+    return calculateCashTotal() + (tarjetaDebitoAmount + tarjetaCreditoAmount) + transferenciaAmount + mercadopagoAmount;
+  };
+
+  // Calcular diferencia con el esperado
+  const calculateDifference = () => {
+    const expected = shiftStats.netAmount;
+    const actual = calculateArqueoTotal();
+    return actual - expected;
+  };
+
+  // Función para actualizar conteo de billetes/monedas
+  const updateCashCount = (denomination, count) => {
+    setCashCount(prev => ({
+      ...prev,
+      [denomination]: parseInt(count) || 0
+    }));
   };
 
   // Función para abrir turno
@@ -437,7 +518,7 @@ const CashRegister = () => {
   // Modal para cerrar turno
   const CloseShiftModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <LogOut className="h-6 w-6 mr-2 text-red-600" />
           Cerrar Turno
@@ -450,28 +531,74 @@ const CashRegister = () => {
             <div className="flex justify-between">
               <span>Ventas:</span>
               <span className="font-medium">{shiftStats.salesCount}</span>
-                </div>
+            </div>
             <div className="flex justify-between">
               <span>Ingresos:</span>
               <span className="font-medium text-green-600">${shiftStats.totalRevenue.toLocaleString()}</span>
-                </div>
+            </div>
             <div className="flex justify-between">
               <span>Ingresos Adicionales:</span>
               <span className="font-medium text-green-600">${shiftStats.totalAdditionalIncomes.toLocaleString()}</span>
-              </div>
+            </div>
             <div className="flex justify-between border-t pt-1">
               <span className="font-medium">Total Neto:</span>
               <span className="font-bold text-primary-600">${shiftStats.netAmount.toLocaleString()}</span>
-                </div>
-              </div>
             </div>
+          </div>
+        </div>
 
-              <div className="space-y-4">
+        {/* Arqueo */}
+        <div className="bg-blue-50 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-900">Arqueo de Caja</h4>
+            <button
+              onClick={() => setShowCashCountModal(true)}
+              className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-sm"
+            >
+              Realizar Arqueo
+            </button>
+          </div>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Efectivo:</span>
+              <span className="font-medium text-green-600">${calculateCashTotal().toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tarjeta Débito:</span>
+              <span className="font-medium text-blue-600">${tarjetaDebitoAmount.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tarjeta Crédito:</span>
+              <span className="font-medium text-indigo-600">${tarjetaCreditoAmount.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Transferencias:</span>
+              <span className="font-medium text-purple-600">${transferenciaAmount.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>MercadoPago:</span>
+              <span className="font-medium text-orange-600">${mercadopagoAmount.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between border-t pt-1">
+              <span className="font-medium">Total Arqueo:</span>
+              <span className="font-bold text-primary-600">${calculateArqueoTotal().toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">Diferencia:</span>
+              <span className={`font-bold ${calculateDifference() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {calculateDifference() >= 0 ? '+' : ''}${calculateDifference().toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Monto en Caja:</label>
-                  <div className="relative">
+            <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
+              <input
                 type="number"
                 value={closingAmount}
                 onChange={(e) => setClosingAmount(parseFloat(e.target.value) || 0)}
@@ -479,9 +606,9 @@ const CashRegister = () => {
                 placeholder="Contar dinero en caja"
               />
             </div>
-                  </div>
-                  
-                            <div>
+          </div>
+          
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones:</label>
             <textarea
               value={closingNotes}
@@ -490,25 +617,25 @@ const CashRegister = () => {
               rows="2"
               placeholder="Notas del cierre..."
             />
-                            </div>
-                </div>
+          </div>
+        </div>
 
         <div className="flex space-x-3 mt-6">
-                    <button
+          <button
             onClick={() => setShowCloseShiftModal(false)}
             className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-                    >
+          >
             Cancelar
-                    </button>
-                    <button
+          </button>
+          <button
             onClick={closeShift}
             className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
-                    >
+          >
             Cerrar Turno
-                    </button>
-                  </div>
-                </div>
-              </div>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 
   // Modal para registrar ingreso adicional
@@ -577,6 +704,188 @@ const CashRegister = () => {
                   </button>
                 </div>
                   </div>
+    </div>
+  );
+
+  // Modal para conteo de efectivo
+  const CashCountModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <DollarSign className="h-6 w-6 mr-2 text-green-600" />
+          Arqueo de Efectivo
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Denominaciones */}
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-3">Conteo de Billetes y Monedas</h4>
+            <div className="space-y-3">
+              {Object.entries(cashCount).map(([denomination, count]) => (
+                <div key={denomination} className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">
+                    ${parseInt(denomination).toLocaleString()}
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => updateCashCount(denomination, Math.max(0, count - 1))}
+                      className="w-8 h-8 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 flex items-center justify-center"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      value={count}
+                      onChange={(e) => updateCashCount(denomination, e.target.value)}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                      min="0"
+                    />
+                    <button
+                      onClick={() => updateCashCount(denomination, count + 1)}
+                      className="w-8 h-8 bg-green-200 text-green-700 rounded-full hover:bg-green-300 flex items-center justify-center"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Resumen */}
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-3">Resumen del Arqueo</h4>
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Efectivo:</span>
+                <span className="font-semibold text-green-600">
+                  ${calculateCashTotal().toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Tarjeta Débito:</span>
+                <span className="font-semibold text-blue-600">
+                  ${tarjetaDebitoAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Tarjeta Crédito:</span>
+                <span className="font-semibold text-indigo-600">
+                  ${tarjetaCreditoAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Transferencias:</span>
+                <span className="font-semibold text-purple-600">
+                  ${transferenciaAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">MercadoPago:</span>
+                <span className="font-semibold text-orange-600">
+                  ${mercadopagoAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Total Arqueo:</span>
+                  <span className="font-bold text-primary-600">
+                    ${calculateArqueoTotal().toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Esperado:</span>
+                  <span className="font-medium text-gray-600">
+                    ${shiftStats.netAmount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Diferencia:</span>
+                  <span className={`font-bold ${calculateDifference() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {calculateDifference() >= 0 ? '+' : ''}${calculateDifference().toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Inputs para métodos de pago */}
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tarjeta Débito:</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={tarjetaDebitoAmount}
+                    onChange={(e) => setTarjetaDebitoAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tarjeta Crédito:</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={tarjetaCreditoAmount}
+                    onChange={(e) => setTarjetaCreditoAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Transferencias:</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={transferenciaAmount}
+                    onChange={(e) => setTransferenciaAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">MercadoPago:</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={mercadopagoAmount}
+                    onChange={(e) => setMercadopagoAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
+          <button
+            onClick={() => setShowCashCountModal(false)}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              setClosingAmount(calculateArqueoTotal());
+              setShowCashCountModal(false);
+            }}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Confirmar Arqueo
+          </button>
+        </div>
+      </div>
     </div>
   );
 
@@ -833,6 +1142,7 @@ const CashRegister = () => {
         />}
         {showCloseShiftModal && <CloseShiftModal />}
         {showIncomeModal && <IncomeModal />}
+        {showCashCountModal && <CashCountModal />}
         {/* Eliminado: {showDailyReportModal && <DailyReportModal />} */}
       </div>
     </CashRegisterAccessGuard>
