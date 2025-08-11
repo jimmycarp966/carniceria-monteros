@@ -8,8 +8,6 @@ import {
   EyeOff,
   CheckCircle,
   XCircle,
-  Clock,
-  Calendar,
   BarChart3,
   AlertTriangle
 } from 'lucide-react';
@@ -56,7 +54,7 @@ const CashRegister = () => {
   const [mercadopagoAmount, setMercadopagoAmount] = useState(0);
 
   // Estados para ventas por método de pago
-  const [salesByPaymentMethod, setSalesByPaymentMethod] = useState({
+  const [, setSalesByPaymentMethod] = useState({
     efectivo: { count: 0, total: 0 },
     tarjetaDebito: { count: 0, total: 0 },
     tarjetaCredito: { count: 0, total: 0 },
@@ -564,23 +562,31 @@ const CashRegister = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={() => setShowIncomeModal(true)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Registrar Ingreso
-                  </button>
+                                 <div className="flex flex-wrap gap-3">
+                   <button
+                     onClick={() => setShowIncomeModal(true)}
+                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center"
+                   >
+                     <Plus className="h-4 w-4 mr-2" />
+                     Registrar Ingreso
+                   </button>
 
-                  <button
-                    onClick={() => setShowCloseShiftModal(true)}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Cerrar Turno
-                  </button>
-                </div>
+                   <button
+                     onClick={() => setShowCashCountModal(true)}
+                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+                   >
+                     <DollarSign className="h-4 w-4 mr-2" />
+                     Arqueo
+                   </button>
+
+                   <button
+                     onClick={() => setShowCloseShiftModal(true)}
+                     className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
+                   >
+                     <LogOut className="h-4 w-4 mr-2" />
+                     Cerrar Turno
+                   </button>
+                 </div>
               </div>
             </div>
 
@@ -616,9 +622,17 @@ const CashRegister = () => {
 
         {/* Modales */}
         {showOpenShiftModal && <OpenShiftModal />}
-        {showCloseShiftModal && <CloseShiftModal />}
-        {showIncomeModal && <IncomeModal />}
-        {showCashCountModal && <CashCountModal />}
+        {showCloseShiftModal && <CloseShiftModal 
+          closeShift={closeShift}
+          setShowCloseShiftModal={setShowCloseShiftModal}
+        />}
+        {showIncomeModal && <IncomeModal 
+          registerIncome={registerIncome}
+          setShowIncomeModal={setShowIncomeModal}
+        />}
+        {showCashCountModal && <CashCountModal 
+          updateCashCount={updateCashCount}
+        />}
       </div>
     </CashRegisterAccessGuard>
   );
@@ -702,7 +716,10 @@ const OpenShiftModal = memo(() => {
 });
 
 // Modal para cerrar turno
-const CloseShiftModal = memo(() => {
+const CloseShiftModal = memo(({ closeShift, setShowCloseShiftModal }) => {
+  const [closingAmount, setClosingAmount] = useState(0);
+  const [closingNotes, setClosingNotes] = useState('');
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-2xl">
@@ -710,13 +727,46 @@ const CloseShiftModal = memo(() => {
           <LogOut className="h-6 w-6 mr-2 text-red-600" />
           Cerrar Turno
         </h3>
-        <p className="text-gray-600 mb-4">Funcionalidad de cierre de turno</p>
-        <div className="flex justify-end">
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Monto de Cierre:</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={closingAmount}
+                onChange={(e) => setClosingAmount(parseFloat(e.target.value) || 0)}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notas de Cierre:</label>
+            <textarea
+              value={closingNotes}
+              onChange={(e) => setClosingNotes(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows="3"
+              placeholder="Notas adicionales..."
+            />
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
           <button
-            onClick={() => {/* Cerrar modal */}}
-            className="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+            onClick={() => setShowCloseShiftModal(false)}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
           >
-            Cerrar
+            Cancelar
+          </button>
+          <button
+            onClick={closeShift}
+            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
+          >
+            Cerrar Turno
           </button>
         </div>
       </div>
@@ -725,7 +775,11 @@ const CloseShiftModal = memo(() => {
 });
 
 // Modal para ingresos
-const IncomeModal = memo(() => {
+const IncomeModal = memo(({ registerIncome, setShowIncomeModal }) => {
+  const [incomeAmount, setIncomeAmount] = useState(0);
+  const [incomeDescription, setIncomeDescription] = useState('');
+  const [incomeCategory, setIncomeCategory] = useState('venta_adicional');
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
@@ -733,13 +787,59 @@ const IncomeModal = memo(() => {
           <Plus className="h-6 w-6 mr-2 text-green-600" />
           Registrar Ingreso
         </h3>
-        <p className="text-gray-600 mb-4">Funcionalidad de registro de ingresos</p>
-        <div className="flex justify-end">
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Monto:</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={incomeAmount}
+                onChange={(e) => setIncomeAmount(parseFloat(e.target.value) || 0)}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Descripción:</label>
+            <input
+              type="text"
+              value={incomeDescription}
+              onChange={(e) => setIncomeDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              placeholder="Descripción del ingreso"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Categoría:</label>
+            <select
+              value={incomeCategory}
+              onChange={(e) => setIncomeCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="venta_adicional">Venta Adicional</option>
+              <option value="servicio">Servicio</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
           <button
-            onClick={() => {/* Cerrar modal */}}
-            className="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+            onClick={() => setShowIncomeModal(false)}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
           >
-            Cerrar
+            Cancelar
+          </button>
+          <button
+            onClick={registerIncome}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Registrar
           </button>
         </div>
       </div>
@@ -748,7 +848,15 @@ const IncomeModal = memo(() => {
 });
 
 // Modal para conteo de efectivo
-const CashCountModal = memo(() => {
+const CashCountModal = memo(({ updateCashCount }) => {
+  const [denomination, setDenomination] = useState(1000);
+  const [count, setCount] = useState(0);
+
+  const handleUpdateCashCount = () => {
+    updateCashCount(denomination, count);
+    setCount(0);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-2xl">
@@ -756,13 +864,56 @@ const CashCountModal = memo(() => {
           <DollarSign className="h-6 w-6 mr-2 text-green-600" />
           Arqueo de Efectivo
         </h3>
-        <p className="text-gray-600 mb-4">Funcionalidad de arqueo de efectivo</p>
-        <div className="flex justify-end">
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Denominación:</label>
+            <select
+              value={denomination}
+              onChange={(e) => setDenomination(parseInt(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            >
+              <option value={20000}>$20,000</option>
+              <option value={10000}>$10,000</option>
+              <option value={5000}>$5,000</option>
+              <option value={2000}>$2,000</option>
+              <option value={1000}>$1,000</option>
+              <option value={500}>$500</option>
+              <option value={200}>$200</option>
+              <option value={100}>$100</option>
+              <option value={50}>$50</option>
+              <option value={20}>$20</option>
+              <option value={10}>$10</option>
+              <option value={5}>$5</option>
+              <option value={2}>$2</option>
+              <option value={1}>$1</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad:</label>
+            <input
+              type="number"
+              value={count}
+              onChange={(e) => setCount(parseInt(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              placeholder="0"
+            />
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
           <button
             onClick={() => {/* Cerrar modal */}}
-            className="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
           >
-            Cerrar
+            Cancelar
+          </button>
+          <button
+            onClick={handleUpdateCashCount}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Actualizar
           </button>
         </div>
       </div>
