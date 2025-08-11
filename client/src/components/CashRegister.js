@@ -65,6 +65,68 @@ const CashRegister = () => {
   const [incomeDescription, setIncomeDescription] = useState('');
   const [incomeCategory, setIncomeCategory] = useState('venta_adicional');
 
+  const loadShiftData = useCallback(async (shift) => {
+    try {
+      console.log(`📊 Cargando datos del turno: ${shift.id}`);
+      
+      // Cargar ventas del turno
+      const allSales = await saleService.getAllSales();
+      const shiftSales = allSales.filter(sale => sale.shiftId === shift.id);
+      
+      // Calcular estadísticas
+      const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+      const totalAdditionalIncomes = 0; // TODO: Implementar incomeService
+      
+      // Calcular ventas por método de pago
+      const salesByMethod = {
+        efectivo: { count: 0, total: 0 },
+        tarjetaDebito: { count: 0, total: 0 },
+        tarjetaCredito: { count: 0, total: 0 },
+        transferencia: { count: 0, total: 0 },
+        mercadopago: { count: 0, total: 0 }
+      };
+
+      shiftSales.forEach(sale => {
+        const paymentMethod = sale.paymentMethod;
+        if (paymentMethod === 'efectivo') {
+          salesByMethod.efectivo.count++;
+          salesByMethod.efectivo.total += sale.total || 0;
+        } else if (paymentMethod === 'tarjeta') {
+          if (sale.cardType === 'credito') {
+            salesByMethod.tarjetaCredito.count++;
+            salesByMethod.tarjetaCredito.total += sale.total || 0;
+          } else {
+            salesByMethod.tarjetaDebito.count++;
+            salesByMethod.tarjetaDebito.total += sale.total || 0;
+          }
+        } else if (paymentMethod === 'transferencia') {
+          salesByMethod.transferencia.count++;
+          salesByMethod.transferencia.total += sale.total || 0;
+        } else if (paymentMethod === 'mercadopago') {
+          salesByMethod.mercadopago.count++;
+          salesByMethod.mercadopago.total += sale.total || 0;
+        }
+      });
+
+      const netAmount = totalRevenue + totalAdditionalIncomes;
+
+      setShiftStats({
+        totalSales: shiftSales.length,
+        totalRevenue,
+        totalAdditionalIncomes,
+        salesCount: shiftSales.length,
+        netAmount
+      });
+
+      setSalesByPaymentMethod(salesByMethod);
+      setRecentActivity(shiftSales.slice(-5).reverse());
+
+      console.log(`✅ Datos cargados: ${shiftSales.length} ventas, $${totalRevenue} ingresos`);
+    } catch (error) {
+      console.error('Error cargando datos del turno:', error);
+    }
+  }, []);
+
   // Cargar datos iniciales
   useEffect(() => {
     const initCashRegister = async () => {
@@ -165,68 +227,6 @@ const CashRegister = () => {
       window.removeEventListener('forceResetShifts', handleForceResetShifts);
     };
   }, [currentShift, loadShiftData]);
-
-  const loadShiftData = useCallback(async (shift) => {
-    try {
-      console.log(`📊 Cargando datos del turno: ${shift.id}`);
-      
-      // Cargar ventas del turno
-      const allSales = await saleService.getAllSales();
-      const shiftSales = allSales.filter(sale => sale.shiftId === shift.id);
-      
-      // Calcular estadísticas
-      const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-      const totalAdditionalIncomes = 0; // TODO: Implementar incomeService
-      
-      // Calcular ventas por método de pago
-      const salesByMethod = {
-        efectivo: { count: 0, total: 0 },
-        tarjetaDebito: { count: 0, total: 0 },
-        tarjetaCredito: { count: 0, total: 0 },
-        transferencia: { count: 0, total: 0 },
-        mercadopago: { count: 0, total: 0 }
-      };
-
-      shiftSales.forEach(sale => {
-        const paymentMethod = sale.paymentMethod;
-        if (paymentMethod === 'efectivo') {
-          salesByMethod.efectivo.count++;
-          salesByMethod.efectivo.total += sale.total || 0;
-        } else if (paymentMethod === 'tarjeta') {
-          if (sale.cardType === 'credito') {
-            salesByMethod.tarjetaCredito.count++;
-            salesByMethod.tarjetaCredito.total += sale.total || 0;
-          } else {
-            salesByMethod.tarjetaDebito.count++;
-            salesByMethod.tarjetaDebito.total += sale.total || 0;
-          }
-        } else if (paymentMethod === 'transferencia') {
-          salesByMethod.transferencia.count++;
-          salesByMethod.transferencia.total += sale.total || 0;
-        } else if (paymentMethod === 'mercadopago') {
-          salesByMethod.mercadopago.count++;
-          salesByMethod.mercadopago.total += sale.total || 0;
-        }
-      });
-
-      const netAmount = totalRevenue + totalAdditionalIncomes;
-
-      setShiftStats({
-        totalSales: shiftSales.length,
-        totalRevenue,
-        totalAdditionalIncomes,
-        salesCount: shiftSales.length,
-        netAmount
-      });
-
-      setSalesByPaymentMethod(salesByMethod);
-      setRecentActivity(shiftSales.slice(-5).reverse());
-
-      console.log(`✅ Datos cargados: ${shiftSales.length} ventas, $${totalRevenue} ingresos`);
-    } catch (error) {
-      console.error('Error cargando datos del turno:', error);
-    }
-  }, []);
 
 
 
