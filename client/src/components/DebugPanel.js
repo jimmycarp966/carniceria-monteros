@@ -14,12 +14,7 @@ import {
 import realtimeService from '../services/realtimeService';
 import { runSystemTests, testRealtimeSync, checkSystemHealth } from '../utils/testing';
 import { 
-  productService, 
-  customerService, 
-  saleService, 
-  shiftService,
-  employeeService,
-  suppliersService
+  employeeService
 } from '../services/firebaseService';
 import toast from 'react-hot-toast';
 
