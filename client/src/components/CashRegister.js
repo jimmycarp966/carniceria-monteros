@@ -13,11 +13,13 @@ import {
   X,
   TrendingUp,
   Clock,
-  CreditCard
+  CreditCard,
+  History
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { shiftService, saleService, expensesService } from '../services/firebaseService';
 import CashCountModal from './CashCountModal';
+import CashHistory from './CashHistory';
 import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
@@ -50,6 +52,7 @@ const CashRegister = () => {
   const [showCashCountModal] = useState(false);
   const [showCashCountModalForClose, setShowCashCountModalForClose] = useState(false);
   const [showFinalizarDiaModal, setShowFinalizarDiaModal] = useState(false);
+  const [showCashHistory, setShowCashHistory] = useState(false);
 
   // Estados para cerrar turno (mantenidos para compatibilidad futura)
   // const [closingAmount, setClosingAmount] = useState(0);
@@ -818,6 +821,15 @@ const CashRegister = () => {
             </div>
 
             <div className="mt-4 lg:mt-0 flex items-center space-x-4">
+              {/* Botón del historial de cajas */}
+              <button
+                onClick={() => setShowCashHistory(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                <History className="h-4 w-4" />
+                <span className="text-sm">Historial</span>
+              </button>
+
               {/* Toggle para mostrar/ocultar montos */}
               <button
                 onClick={() => setShowAmounts(!showAmounts)}
@@ -1347,6 +1359,11 @@ const CashRegister = () => {
             onCheckCanFinalizarDia={checkCanFinalizarDia}
             dayFinalizado={dayFinalizado}
           />
+        )}
+
+        {/* Modal del historial de cajas */}
+        {showCashHistory && (
+          <CashHistory onBack={() => setShowCashHistory(false)} />
         )}
       </div>
     </CashRegisterAccessGuard>

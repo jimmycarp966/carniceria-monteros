@@ -1367,6 +1367,42 @@ export const dayService = {
       console.error('❌ Error cargando turnos del día:', error);
       throw error;
     }
+  },
+
+  async getAllDays(limit = 30) {
+    try {
+      const daysRef = collection(db, 'days');
+      const q = query(
+        daysRef, 
+        where('status', '==', 'closed'),
+        orderBy('closedAt', 'desc'),
+        limit(limit)
+      );
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('❌ Error cargando historial de días:', error);
+      throw error;
+    }
+  },
+
+  async getDayById(dayId) {
+    try {
+      const dayRef = doc(db, 'days', dayId);
+      const docSnap = await getDoc(dayRef);
+      
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error cargando día:', error);
+      throw error;
+    }
   }
 };
 
