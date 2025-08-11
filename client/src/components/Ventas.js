@@ -14,7 +14,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { productService, saleService, shiftService } from '../services/firebaseService';
-import realtimeService from '../services/realtimeService';
+import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
 
@@ -145,6 +145,14 @@ const Ventas = () => {
       const subtotal = calculateSubtotal();
       
       const saleData = {
+        items: [{
+          productId: selectedProduct.id,
+          name: selectedProduct.name,
+          price: selectedProduct.price,
+          quantity: quantity,
+          unit: selectedProduct.unit || 'kg',
+          total: subtotal
+        }],
         products: [{
           id: selectedProduct.id,
           name: selectedProduct.name,
@@ -156,6 +164,7 @@ const Ventas = () => {
         subtotal: subtotal,
         discount: 0,
         total: subtotal,
+        finalTotal: subtotal,
         paymentMethod,
         receivedAmount: subtotal,
         change: 0,
@@ -184,7 +193,7 @@ const Ventas = () => {
       });
       
       // Sincronizar en tiempo real
-      await realtimeService.syncSale(saleData);
+      await dataSyncService.syncSale(saleData);
       
       // Notificar a la caja sobre la nueva venta
       await realtimeService.notifySaleCompleted({
