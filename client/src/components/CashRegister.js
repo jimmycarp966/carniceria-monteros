@@ -22,6 +22,7 @@ import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
 import { verifyDaySummary } from '../utils/verifyDaySummary';
+import { testExpenses, addTestExpense } from '../utils/testExpenses';
 
 const CashRegister = () => {
   const { currentUser, userRole, canOpenShift, canCloseShift } = useCashRegisterAccess();
@@ -173,7 +174,7 @@ const CashRegister = () => {
         return saleDate === today;
       });
 
-      // Obtener gastos del día
+      // Obtener gastos del día - BUSCAR POR FECHA, NO POR SHIFTID
       const startDate = new Date(today);
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(today);
@@ -182,8 +183,28 @@ const CashRegister = () => {
       console.log('🔍 Buscando gastos del día:', today);
       console.log('📅 Rango de fechas:', startDate.toISOString(), 'a', endDate.toISOString());
       
-      const todayExpenses = await expensesService.getExpensesByDateRange(startDate, endDate);
-      console.log('💰 Gastos encontrados:', todayExpenses.length, todayExpenses);
+      // PRIMERO: Intentar obtener todos los gastos y filtrar por fecha
+      console.log('🔍 Estrategia 1: Obtener todos los gastos y filtrar por fecha...');
+      const allExpenses = await expensesService.getAllExpenses();
+      console.log(`📊 Total gastos en el sistema: ${allExpenses.length}`);
+      
+      const todayExpenses = allExpenses.filter(expense => {
+        const expenseDate = expense.createdAt?.toDate?.();
+        if (!expenseDate) {
+          console.log(`⚠️ Gasto ${expense.id} sin fecha válida:`, expense.createdAt);
+          return false;
+        }
+        
+        const expenseDateStr = expenseDate.toISOString().split('T')[0];
+        const isToday = expenseDateStr === today;
+        console.log(`  - ${expense.id}: ${expenseDateStr} | Es hoy: ${isToday}`);
+        return isToday;
+      });
+      
+      console.log('💰 Gastos encontrados para hoy:', todayExpenses.length);
+      todayExpenses.forEach(expense => {
+        console.log(`  ✅ ${expense.id}: $${expense.amount} | ${expense.reason} | ${expense.createdAt?.toDate?.()?.toISOString()}`);
+      });
       
       const totalExpenses = todayExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
       console.log('💰 Total gastos del día: $', totalExpenses.toLocaleString());
@@ -461,10 +482,8 @@ const CashRegister = () => {
         }
       };
 
+      // Actualizar turno en Firestore
       await shiftService.updateShift(currentShift.id, shiftData);
-      
-      // Sincronizar en tiempo real
-      await dataSyncService.syncShift({ ...shiftData, id: currentShift.id });
       
       // Limpiar estados
       setCashCount({
@@ -633,7 +652,8 @@ const CashRegister = () => {
         }
       };
 
-      const shiftId = await shiftService.addShift(shiftToCreate);
+      // Sincronizar turno (esto ya crea el turno en Firestore)
+      const shiftId = await dataSyncService.syncShift(shiftToCreate);
       
       // Actualizar estado local
       const newShift = { id: shiftId, ...shiftToCreate };
@@ -762,6 +782,31 @@ const CashRegister = () => {
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Verificar
+              </button>
+
+              {/* Botones de prueba para gastos */}
+              <button
+                onClick={async () => {
+                  console.log('🔍 Iniciando prueba de gastos...');
+                  await testExpenses();
+                  toast.success('Prueba de gastos completada. Revisa la consola.');
+                }}
+                className="bg-orange-600 text-white px-4 py-3 rounded-lg hover:bg-orange-700 font-medium flex items-center text-sm"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Probar Gastos
+              </button>
+
+              <button
+                onClick={async () => {
+                  console.log('➕ Agregando gasto de prueba...');
+                  await addTestExpense();
+                  toast.success('Gasto de prueba agregado. Revisa la consola.');
+                }}
+                className="bg-teal-600 text-white px-4 py-3 rounded-lg hover:bg-teal-700 font-medium flex items-center text-sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Gasto Test
               </button>
             </div>
             

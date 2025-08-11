@@ -101,6 +101,18 @@ export const expensesService = {
     }
   },
 
+  async getAllExpenses() {
+    try {
+      const expensesRef = collection(db, 'expenses');
+      const q = query(expensesRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      console.error('❌ Error cargando todos los gastos:', error);
+      throw error;
+    }
+  },
+
   async getExpensesByDateRange(startDate, endDate) {
     try {
       console.log('🔍 getExpensesByDateRange - Buscando gastos...');

@@ -201,8 +201,8 @@ const Ventas = () => {
       
       console.log('🛒 Procesando venta:', saleData);
       
-      // Guardar venta en Firestore
-      const saleId = await saleService.addSale(saleData);
+      // Sincronizar venta (esto ya crea la venta en Firestore)
+      const saleId = await dataSyncService.syncSale(saleData);
       console.log('✅ Venta guardada en Firestore:', saleId);
       
       // Actualizar stock del producto
@@ -210,15 +210,6 @@ const Ventas = () => {
         stock: selectedProduct.stock - quantity
       });
       console.log('✅ Stock actualizado');
-      
-      // Intentar sincronizar en tiempo real (sin bloquear si falla)
-      try {
-        await dataSyncService.syncSale(saleData);
-        console.log('✅ Sincronización en tiempo real completada');
-      } catch (syncError) {
-        console.warn('⚠️ Error en sincronización en tiempo real:', syncError);
-        // No bloquear la venta si falla la sincronización
-      }
       
       // Intentar notificar a la caja (sin bloquear si falla)
       try {

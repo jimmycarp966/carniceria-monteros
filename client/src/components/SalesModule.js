@@ -20,7 +20,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { productService, saleService, customerService, shiftService } from '../services/firebaseService';
-import realtimeService from '../services/realtimeService';
+import realtimeService, { dataSyncService } from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
 
@@ -374,8 +374,8 @@ const SalesModule = () => {
         }
       };
       
-      // Guardar venta
-      const saleId = await saleService.addSale(saleData);
+      // Sincronizar venta (esto ya crea la venta en Firestore)
+      const saleId = await dataSyncService.syncSale(saleData);
       
       // Actualizar stock de productos
       for (const item of cart) {
@@ -386,9 +386,6 @@ const SalesModule = () => {
           });
         }
       }
-      
-      // Sincronizar en tiempo real
-      await realtimeService.syncSale(saleData);
       
       // Notificar a la caja sobre la nueva venta
       await realtimeService.notifySaleCompleted({
