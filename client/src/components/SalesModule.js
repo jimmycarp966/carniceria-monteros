@@ -65,7 +65,7 @@ const SalesModule = () => {
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
 
   // Hook de acceso
-  const { currentUser, userRole } = useCashRegisterAccess();
+  const { currentUser } = useCashRegisterAccess();
 
   // Función para simular lectura de balanza (se puede conectar a balanza real)
   const readFromScale = () => {

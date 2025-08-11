@@ -31,7 +31,7 @@ const Ventas = () => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Hook de acceso
-  const { currentUser, userRole } = useCashRegisterAccess();
+  const { currentUser } = useCashRegisterAccess();
 
   // Cargar datos iniciales
   useEffect(() => {
