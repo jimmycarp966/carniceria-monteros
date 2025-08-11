@@ -78,6 +78,113 @@ const DebugPanel = () => {
     toast.success('Prueba de tiempo real iniciada');
   };
 
+  // Función para borrar inmediatamente el turno problemático
+  const forceDeleteProblematicShift = async () => {
+    console.log('🔥 BORRANDO TURNO PROBLEMÁTICO INMEDIATAMENTE...');
+    
+    try {
+      const { collection, getDocs, deleteDoc, doc, query, where } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      // Buscar el turno específico con apertura $5.000 y notas "prueba 1"
+      console.log('🔍 Buscando turno problemático...');
+      const shiftsSnapshot = await getDocs(collection(db, 'shifts'));
+      const allShifts = shiftsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Filtrar el turno problemático
+      const problematicShift = allShifts.find(shift => 
+        (shift.openingAmount === 5000 || shift.openingAmount === '5000') &&
+        (shift.notes === 'prueba 1' || shift.notes?.includes('prueba'))
+      );
+      
+      if (problematicShift) {
+        console.log(`🎯 TURNO PROBLEMÁTICO ENCONTRADO: ${problematicShift.id}`);
+        console.log(`   - Apertura: $${problematicShift.openingAmount}`);
+        console.log(`   - Notas: ${problematicShift.notes}`);
+        console.log(`   - Estado: ${problematicShift.status}`);
+        console.log(`   - Empleado: ${problematicShift.employeeName}`);
+        
+        // BORRAR EL TURNO PROBLEMÁTICO
+        await deleteDoc(doc(db, 'shifts', problematicShift.id));
+        console.log(`✅ TURNO PROBLEMÁTICO BORRADO: ${problematicShift.id}`);
+        
+        // También borrar de Realtime Database
+        try {
+          const { ref, remove } = await import('firebase/database');
+          const { realtimeDb } = await import('../firebase');
+          
+          if (realtimeDb) {
+            await remove(ref(realtimeDb, `shifts/${problematicShift.id}`));
+            console.log(`✅ TURNO BORRADO DE RTDB: ${problematicShift.id}`);
+          }
+        } catch (error) {
+          console.warn('⚠️ Error borrando de RTDB:', error);
+        }
+        
+        // Limpiar localStorage
+        localStorage.removeItem('currentShift');
+        localStorage.removeItem('shiftData');
+        localStorage.removeItem('cashRegisterState');
+        console.log('✅ localStorage limpiado');
+        
+        // Disparar evento de reset
+        window.dispatchEvent(new CustomEvent('forceResetShifts'));
+        console.log('✅ Evento de reset disparado');
+        
+        toast.success(`¡Turno problemático borrado! ID: ${problematicShift.id}`);
+        
+        // Recargar página después de 2 segundos
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+      } else {
+        console.log('❌ No se encontró el turno problemático específico');
+        
+        // Si no se encuentra, borrar TODOS los turnos
+        console.log('🔥 BORRANDO TODOS LOS TURNOS COMO FALBACK...');
+        for (const shift of allShifts) {
+          await deleteDoc(doc(db, 'shifts', shift.id));
+          console.log(`✅ BORRADO: ${shift.id}`);
+        }
+        
+        // Limpiar RTDB completamente
+        try {
+          const { ref, remove } = await import('firebase/database');
+          const { realtimeDb } = await import('../firebase');
+          
+          if (realtimeDb) {
+            await remove(ref(realtimeDb, 'shifts'));
+            console.log('✅ RTDB limpiado completamente');
+          }
+        } catch (error) {
+          console.warn('⚠️ Error limpiando RTDB:', error);
+        }
+        
+        // Limpiar localStorage
+        localStorage.removeItem('currentShift');
+        localStorage.removeItem('shiftData');
+        localStorage.removeItem('cashRegisterState');
+        console.log('✅ localStorage limpiado');
+        
+        // Disparar evento de reset
+        window.dispatchEvent(new CustomEvent('forceResetShifts'));
+        console.log('✅ Evento de reset disparado');
+        
+        toast.success(`¡${allShifts.length} turnos borrados completamente!`);
+        
+        // Recargar página después de 2 segundos
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
+      
+    } catch (error) {
+      console.error('💥 Error borrando turno problemático:', error);
+      toast.error('Error borrando turno problemático');
+    }
+  };
+
   // Función específica para diagnosticar y borrar turnos problemáticos
   const diagnoseAndForceDeleteShifts = async () => {
     console.log('🔍 DIAGNÓSTICO COMPLETO DE TURNOS...');
@@ -561,6 +668,13 @@ const DebugPanel = () => {
                >
                  <AlertTriangle className="h-4 w-4 mr-2" />
                  🔍 Diagnosticar Turnos
+               </button>
+                  <button
+                 onClick={forceDeleteProblematicShift}
+                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
+               >
+                 <Trash2 className="h-4 w-4 mr-2" />
+                 🔥 Borrar Turno Problemático
                </button>
                   <button
                  onClick={() => setShowResetConfirm(true)}
