@@ -668,24 +668,74 @@ const CashRegister = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">No hay turno activo</h2>
             <p className="text-gray-600 mb-6">Para comenzar a operar la caja debe abrir un turno</p>
             
-            <button
-              onClick={() => {
-                if (!canOpenShift) {
-                  toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
-                  return;
-                }
-                setShowOpenShiftModal(true);
-              }}
-              disabled={!canOpenShift}
-              className={`px-6 py-3 rounded-lg font-medium flex items-center mx-auto ${
-                canOpenShift 
-                  ? 'bg-primary-600 text-white hover:bg-primary-700' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <LogIn className="h-5 w-5 mr-2" />
-              {canOpenShift ? 'Abrir Turno' : 'Sin Permisos para Abrir Turno'}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={() => {
+                  if (!canOpenShift) {
+                    toast.error(`Su rol de ${userRole?.displayName} no puede abrir turnos`);
+                    return;
+                  }
+                  setShowOpenShiftModal(true);
+                }}
+                disabled={!canOpenShift}
+                className={`px-6 py-3 rounded-lg font-medium flex items-center ${
+                  canOpenShift 
+                    ? 'bg-primary-600 text-white hover:bg-primary-700' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <LogIn className="h-5 w-5 mr-2" />
+                {canOpenShift ? 'Abrir Turno' : 'Sin Permisos para Abrir Turno'}
+              </button>
+              
+              {canFinalizarDia && (
+                <button
+                  onClick={async () => {
+                    await loadDaySummary();
+                    setShowFinalizarDiaModal(true);
+                  }}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium flex items-center"
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  Finalizar Día
+                </button>
+              )}
+            </div>
+            
+            {/* Mostrar estado de turnos cuando no hay turno activo */}
+            {(todayShifts.morning || todayShifts.afternoon) && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Estado de Turnos del Día</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                    <span className="text-sm font-medium">Mañana:</span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      todayShifts.morning ? 
+                        (todayShifts.morning.status === 'closed' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800')
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {todayShifts.morning ? 
+                        (todayShifts.morning.status === 'closed' ? 'Cerrado' : 'Activo')
+                        : 'No abierto'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                    <span className="text-sm font-medium">Tarde:</span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      todayShifts.afternoon ? 
+                        (todayShifts.afternoon.status === 'closed' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800')
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {todayShifts.afternoon ? 
+                        (todayShifts.afternoon.status === 'closed' ? 'Cerrado' : 'Activo')
+                        : 'No abierto'
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* Con turno activo - Mostrar estadísticas y controles */
