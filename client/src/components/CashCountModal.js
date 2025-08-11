@@ -302,9 +302,9 @@ const CashCountModal = memo(({
 
       toast.success('Arqueo de caja guardado exitosamente');
       
-      // Llamar callback de completado
+      // AUTOMÁTICAMENTE CERRAR EL TURNO después del arqueo
       if (onCashCountComplete) {
-        onCashCountComplete(cashCountData, differences);
+        await onCashCountComplete(cashCountData, calculatedDifferences);
       }
       
     } catch (error) {

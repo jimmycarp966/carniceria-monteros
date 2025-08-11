@@ -791,6 +791,52 @@ export const shiftService = {
     }
   },
 
+  async finalizarDia(daySummary) {
+    try {
+      // Cerrar todos los turnos activos del día
+      const activeShifts = daySummary.shifts.filter(shift => shift.status === 'active');
+      
+      for (const shift of activeShifts) {
+        const shiftRef = doc(db, 'shifts', shift.id);
+        await updateDoc(shiftRef, {
+          endTime: serverTimestamp(),
+          status: 'closed',
+          dayClosed: true,
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      // Crear registro del día cerrado
+      const dayData = {
+        date: daySummary.date,
+        totalShifts: daySummary.totalShifts,
+        totalSales: daySummary.totalSales,
+        totalRevenue: daySummary.totalRevenue,
+        shifts: daySummary.shifts.map(shift => ({
+          id: shift.id,
+          type: shift.type,
+          employeeName: shift.employeeName,
+          totalSales: shift.totalSales,
+          totalRevenue: shift.totalRevenue
+        })),
+        closedAt: serverTimestamp(),
+        status: 'closed'
+      };
+
+      await dayService.createDay(dayData);
+
+      // Limpiar cache
+      smartCache.invalidate('shifts');
+      smartCache.invalidate('days');
+      
+      console.log('✅ Día finalizado:', daySummary.date);
+      return true;
+    } catch (error) {
+      console.error('❌ Error finalizando día:', error);
+      throw error;
+    }
+  },
+
   async updateShift(shiftId, shiftData) {
     try {
       const shiftRef = doc(db, 'shifts', shiftId);
@@ -1182,6 +1228,90 @@ export const authzService = {
     } catch (error) {
       console.error('❌ Error obteniendo permisos:', error);
       return [];
+    }
+  }
+};
+
+// Servicio de días (nuevo)
+export const dayService = {
+  async getCurrentDay() {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const daysRef = collection(db, 'days');
+      const q = query(daysRef, where('date', '==', today));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.docs.length > 0) {
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error cargando día actual:', error);
+      throw error;
+    }
+  },
+
+  async createDay(dayData) {
+    try {
+      const daysRef = collection(db, 'days');
+      const docRef = await addDoc(daysRef, {
+        ...dayData,
+        date: dayData.date || new Date().toISOString().split('T')[0],
+        status: 'active',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      smartCache.invalidate('days');
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error creando día:', error);
+      throw error;
+    }
+  },
+
+  async closeDay(dayId, closingData) {
+    try {
+      const dayRef = doc(db, 'days', dayId);
+      await updateDoc(dayRef, {
+        ...closingData,
+        status: 'closed',
+        closedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      smartCache.invalidate('days');
+      return dayId;
+    } catch (error) {
+      console.error('❌ Error cerrando día:', error);
+      throw error;
+    }
+  },
+
+  async getShiftsForDay(date) {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const shiftsRef = collection(db, 'shifts');
+      const q = query(
+        shiftsRef, 
+        where('startTime', '>=', startOfDay),
+        where('startTime', '<=', endOfDay)
+      );
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('❌ Error cargando turnos del día:', error);
+      throw error;
     }
   }
 };

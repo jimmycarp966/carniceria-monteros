@@ -87,6 +87,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Días
+    match /days/{id} {
+      allow read: if isAuth();
+      allow create: if hasPerm('sales') || isAdmin();
+      allow update: if hasPerm('sales') || isAdmin();
+      allow delete: if isAdmin();
+    }
+
     // Gastos
     match /expenses/{id} {
       allow read: if hasPerm('expenses') || isAdmin();

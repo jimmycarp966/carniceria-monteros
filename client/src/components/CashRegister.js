@@ -9,7 +9,9 @@ import {
   CheckCircle,
   XCircle,
   BarChart3,
-  AlertTriangle
+  AlertTriangle,
+  X,
+  TrendingUp
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { shiftService, saleService } from '../services/firebaseService';
@@ -40,6 +42,7 @@ const CashRegister = () => {
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showCashCountModal] = useState(false);
   const [showCashCountModalForClose, setShowCashCountModalForClose] = useState(false);
+  const [showFinalizarDiaModal, setShowFinalizarDiaModal] = useState(false);
 
   // Estados para cerrar turno (mantenidos para compatibilidad futura)
   // const [closingAmount, setClosingAmount] = useState(0);
@@ -625,13 +628,13 @@ const CashRegister = () => {
                      Arqueo
                    </button>
 
-                   <button
-                     onClick={() => setShowCloseShiftModal(true)}
-                     className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
-                   >
-                     <LogOut className="h-4 w-4 mr-2" />
-                     Cerrar Turno
-                   </button>
+                                       <button
+                      onClick={() => setShowFinalizarDiaModal(true)}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Finalizar Día
+                    </button>
                  </div>
               </div>
             </div>
@@ -688,6 +691,40 @@ const CashRegister = () => {
             currentUser={currentUser}
             onCashCountComplete={completeShiftClose}
             onClose={() => setShowCashCountModalForClose(false)}
+          />
+        )}
+        {showFinalizarDiaModal && (
+          <FinalizarDiaModal
+            onFinalizarDia={async (daySummary) => {
+              try {
+                setIsLoading(true);
+                await shiftService.finalizarDia(daySummary);
+                toast.success('Día finalizado exitosamente');
+                setShowFinalizarDiaModal(false);
+                // Recargar datos de la caja
+                const shifts = await shiftService.getAllShifts();
+                const activeShift = shifts.find(shift => shift.status === 'active' || !shift.endTime);
+                if (activeShift) {
+                  setCurrentShift(activeShift);
+                  loadShiftData(activeShift);
+                } else {
+                  setCurrentShift(null);
+                  setShiftStats({
+                    totalSales: 0,
+                    totalRevenue: 0,
+                    totalAdditionalIncomes: 0,
+                    netAmount: 0
+                  });
+                  setRecentActivity([]);
+                }
+              } catch (error) {
+                console.error('Error finalizando día:', error);
+                toast.error('Error al finalizar el día');
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            setShowFinalizarDiaModal={setShowFinalizarDiaModal}
           />
         )}
       </div>
@@ -926,4 +963,206 @@ const IncomeModal = memo(({ registerIncome, setShowIncomeModal }) => {
   );
 });
 
+// Modal para finalizar día
+const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [daySummary, setDaySummary] = useState(null);
+
+  useEffect(() => {
+    const loadDaySummary = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const shifts = await shiftService.getShiftsByDate(today);
+        
+        const summary = {
+          date: today,
+          totalShifts: shifts.length,
+          totalSales: 0,
+          totalRevenue: 0,
+          shifts: shifts.map(shift => ({
+            id: shift.id,
+            type: shift.type,
+            employeeName: shift.employeeName,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            totalSales: shift.totalSales || 0,
+            totalRevenue: shift.totalRevenue || 0,
+            status: shift.status
+          }))
+        };
+
+        // Calcular totales
+        summary.totalSales = summary.shifts.reduce((sum, shift) => sum + shift.totalSales, 0);
+        summary.totalRevenue = summary.shifts.reduce((sum, shift) => sum + shift.totalRevenue, 0);
+
+        setDaySummary(summary);
+      } catch (error) {
+        console.error('Error cargando resumen del día:', error);
+        toast.error('Error cargando datos del día');
+      }
+    };
+
+    loadDaySummary();
+  }, []);
+
+  const handleFinalizarDia = async () => {
+    if (!daySummary) return;
+    
+    setIsLoading(true);
+    try {
+      await onFinalizarDia(daySummary);
+      setShowFinalizarDiaModal(false);
+    } catch (error) {
+      console.error('Error finalizando día:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!daySummary) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando resumen del día...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+      <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-3 bg-red-100 rounded-full">
+              <LogOut className="h-8 w-8 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Finalizar Día</h2>
+              <p className="text-sm text-gray-600">
+                {new Date(daySummary.date).toLocaleDateString('es-AR', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowFinalizarDiaModal(false)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Resumen del día */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-blue-50 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-600">Total Turnos</p>
+                  <p className="text-2xl font-bold text-blue-900">{daySummary.totalShifts}</p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-green-50 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-600">Total Ventas</p>
+                  <p className="text-2xl font-bold text-green-900">{daySummary.totalSales}</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+
+            <div className="bg-purple-50 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-600">Ingresos Totales</p>
+                  <p className="text-2xl font-bold text-purple-900">${daySummary.totalRevenue.toLocaleString()}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Detalle de turnos */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Detalle de Turnos</h3>
+            <div className="space-y-3">
+              {daySummary.shifts.map((shift) => (
+                <div key={shift.id} className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        Turno {shift.type === 'morning' ? 'Mañana' : 'Tarde'} - {shift.employeeName}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {shift.startTime?.toDate?.()?.toLocaleTimeString() || 'N/A'} - {shift.endTime?.toDate?.()?.toLocaleTimeString() || 'En curso'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">${shift.totalRevenue.toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">{shift.totalSales} ventas</p>
+                      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        shift.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {shift.status === 'active' ? 'Activo' : 'Cerrado'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Advertencia */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <p className="text-yellow-800 font-medium">Advertencia</p>
+            </div>
+            <p className="text-yellow-700 mt-2">
+              Al finalizar el día, todos los turnos se cerrarán permanentemente y no se podrán modificar.
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+        </div>
+
+        {/* Botones */}
+        <div className="flex space-x-3 mt-8">
+          <button
+            onClick={() => setShowFinalizarDiaModal(false)}
+            disabled={isLoading}
+            className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleFinalizarDia}
+            disabled={isLoading}
+            className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Finalizando...
+              </>
+            ) : (
+              'Finalizar Día'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default CashRegister;
+
