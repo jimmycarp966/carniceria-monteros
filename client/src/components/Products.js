@@ -29,20 +29,20 @@ const ProductCard = memo(({ product, onEdit, onDelete, onView, getCategoryColor,
   return (
     <div className="card hover:shadow-lg transition-all duration-300 group">
       {/* Header del card */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3 lg:mb-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="text-3xl">{product.image}</div>
+          <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
+            <div className="text-2xl lg:text-3xl">{product.image}</div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
-              <p className="text-sm text-gray-500 truncate">{product.description}</p>
+              <h3 className="text-base lg:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
+              <p className="text-xs lg:text-sm text-gray-500 truncate">{product.description}</p>
             </div>
           </div>
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-${getCategoryColor(product.category)}-100 text-${getCategoryColor(product.category)}-800`}>
             {product.category}
           </span>
         </div>
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity lg:block hidden">
           <div className="dropdown relative">
             <button className="p-1 rounded-full hover:bg-gray-100">
               <MoreVertical className="h-4 w-4 text-gray-500" />
@@ -75,46 +75,47 @@ const ProductCard = memo(({ product, onEdit, onDelete, onView, getCategoryColor,
       </div>
       
       {/* Información del producto */}
-      <div className="space-y-3 mb-4">
+      <div className="space-y-2 lg:space-y-3 mb-3 lg:mb-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">Precio:</span>
-          <span className="text-xl font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</span>
+          <span className="text-xs lg:text-sm text-gray-500">Precio:</span>
+          <span className="text-lg lg:text-xl font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">Stock:</span>
-          <div className="flex items-center space-x-2">
-            <span className={`text-sm font-medium text-${stockStatus.color}-600`}>
+          <span className="text-xs lg:text-sm text-gray-500">Stock:</span>
+          <div className="flex items-center space-x-1 lg:space-x-2">
+            <span className={`text-xs lg:text-sm font-medium text-${stockStatus.color}-600`}>
               {(Number(product.stock) || 0)} {product.unit || ''}
             </span>
-            <div className={`w-2 h-2 rounded-full bg-${stockStatus.color}-500`}></div>
+            <div className={`w-1.5 lg:w-2 h-1.5 lg:h-2 rounded-full bg-${stockStatus.color}-500`}></div>
           </div>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">Origen:</span>
-          <span className="text-sm text-gray-700">{product.origin}</span>
+          <span className="text-xs lg:text-sm text-gray-500">Origen:</span>
+          <span className="text-xs lg:text-sm text-gray-700 truncate">{product.origin}</span>
         </div>
         {product.salesCount > 0 && (
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">Ventas:</span>
-            <span className="text-sm text-blue-600 font-medium">{product.salesCount}</span>
+            <span className="text-xs lg:text-sm text-gray-500">Ventas:</span>
+            <span className="text-xs lg:text-sm text-blue-600 font-medium">{product.salesCount}</span>
           </div>
         )}
       </div>
 
-      {/* Acciones rápidas */}
+      {/* Acciones rápidas - Optimizadas para móvil */}
       <div className="flex space-x-2">
         <button
           onClick={() => onEdit(product)}
-          className="flex-1 btn btn-secondary text-sm py-2 flex items-center justify-center"
+          className="flex-1 btn btn-secondary text-xs lg:text-sm py-2 flex items-center justify-center"
         >
-          <Edit className="h-4 w-4 mr-1" />
-          Editar
+          <Edit className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
+          <span className="hidden sm:inline">Editar</span>
+          <span className="sm:hidden">Editar</span>
         </button>
         <button
           onClick={() => onDelete(product.id)}
-          className="btn btn-danger text-sm py-2 px-3 flex items-center justify-center"
+          className="btn btn-danger text-xs lg:text-sm py-2 px-2 lg:px-3 flex items-center justify-center"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-3 w-3 lg:h-4 lg:w-4" />
         </button>
       </div>
     </div>
@@ -497,59 +498,145 @@ const Products = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Mejorado */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header Optimizado para Móvil */}
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gradient">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gradient">
             Productos
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Gestiona el catálogo de productos de la carnicería
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+        
+        {/* Botones optimizados para móvil */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
           <button
             onClick={handleRefresh}
             disabled={syncing}
-            className="btn btn-secondary"
+            className="btn btn-secondary text-sm sm:text-base"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-            Actualizar
+            <RefreshCw className={`h-4 w-4 mr-1 sm:mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Actualizar</span>
+            <span className="sm:hidden">Actualizar</span>
           </button>
           <button
             onClick={handleViewModeToggle}
-            className="btn btn-secondary"
+            className="btn btn-secondary text-sm sm:text-base"
           >
-            {viewMode === 'grid' ? <List className="h-4 w-4 mr-2" /> : <Grid className="h-4 w-4 mr-2" />}
-            {viewMode === 'grid' ? 'Lista' : 'Grid'}
+            {viewMode === 'grid' ? <List className="h-4 w-4 mr-1 sm:mr-2" /> : <Grid className="h-4 w-4 mr-1 sm:mr-2" />}
+            <span className="hidden sm:inline">{viewMode === 'grid' ? 'Lista' : 'Grid'}</span>
+            <span className="sm:hidden">{viewMode === 'grid' ? 'Lista' : 'Grid'}</span>
           </button>
           <button
             onClick={handleShowAddModal}
-            className="btn btn-primary"
+            className="btn btn-primary text-sm sm:text-base col-span-2 sm:col-span-1"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Producto
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Agregar Producto</span>
+            <span className="sm:hidden">Agregar</span>
           </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <StatsCards stats={stats} />
+      {/* Stats Cards - Optimizado para móvil */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 lg:gap-4">
+        <div className="stats-card">
+          <div className="flex items-center">
+            <Package className="h-5 w-5 lg:h-6 lg:w-6 text-orange-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Total</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.total}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stats-card">
+          <div className="flex items-center">
+            <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">En Stock</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.inStock}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stats-card">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Stock Bajo</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.lowStock}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stats-card">
+          <div className="flex items-center">
+            <Package className="h-5 w-5 lg:h-6 lg:w-6 text-red-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Sin Stock</p>
+              <p className="stats-value text-lg lg:text-xl">{stats.outOfStock}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stats-card lg:col-span-2">
+          <div className="flex items-center">
+            <DollarSign className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
+            <div className="ml-2 lg:ml-3">
+              <p className="stats-label text-xs lg:text-sm">Valor Total</p>
+              <p className="stats-value text-lg lg:text-xl">
+                ${(stats.totalValue / 1000).toFixed(0)}k
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Filters */}
-      <Filters 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        categories={categories}
-        onClearFilters={handleClearFilters}
-      />
+      {/* Filters - Optimizado para móvil */}
+      <div className="card p-4 lg:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="form-label text-sm lg:text-base">Buscar Producto</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="form-input pl-10 text-sm lg:text-base"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="form-label text-sm lg:text-base">Categoría</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="form-select text-sm lg:text-base"
+            >
+              <option value="">Todas las categorías</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.name}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="sm:col-span-2 lg:col-span-1">
+            <button
+              onClick={handleClearFilters}
+              className="btn btn-secondary w-full text-sm lg:text-base"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Limpiar Filtros
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* Products Display */}
+      {/* Products Display - Optimizado para móvil */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-6">
           {filteredProducts.map(product => (
             <ProductCard
               key={product.id}
@@ -573,15 +660,15 @@ const Products = () => {
         />
       )}
 
-      {/* Empty State */}
+      {/* Empty State - Optimizado para móvil */}
       {filteredProducts.length === 0 && (
-        <div className="text-center py-12">
-          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron productos</h3>
-          <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda</p>
+        <div className="text-center py-8 lg:py-12">
+          <Package className="h-12 w-12 lg:h-16 lg:w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg lg:text-xl font-medium text-gray-900 mb-2">No se encontraron productos</h3>
+          <p className="text-sm lg:text-base text-gray-500 mb-4 px-4">Intenta ajustar los filtros de búsqueda</p>
           <button
             onClick={handleShowAddModal}
-            className="btn btn-primary"
+            className="btn btn-primary text-sm lg:text-base"
           >
             <Plus className="h-4 w-4 mr-2" />
             Agregar Primer Producto
@@ -640,41 +727,41 @@ const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) =
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content p-6 max-w-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900">
+      <div className="modal-content p-4 lg:p-6 max-w-2xl mx-4">
+        <div className="flex items-center justify-between mb-4 lg:mb-6">
+          <h3 className="text-lg lg:text-xl font-bold text-gray-900">
             {product ? 'Editar Producto' : 'Agregar Producto'}
           </h3>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 p-1"
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Nombre del Producto</label>
+              <label className="form-label text-sm lg:text-base">Nombre del Producto</label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                className="form-input"
+                className="form-input text-sm lg:text-base"
                 placeholder="Ej: Asado de Tira"
               />
             </div>
             <div>
-              <label className="form-label">Categoría</label>
+              <label className="form-label text-sm lg:text-base">Categoría</label>
               <select
                 required
                 value={formData.category}
                 onChange={(e) => handleInputChange('category', e.target.value)}
-                className="form-select"
+                className="form-select text-sm lg:text-base"
               >
                 <option value="">Seleccionar categoría</option>
                 {categories.map(category => (
@@ -687,64 +774,64 @@ const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) =
           </div>
 
           <div>
-            <label className="form-label">Descripción</label>
+            <label className="form-label text-sm lg:text-base">Descripción</label>
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
               rows="3"
-              className="form-input"
+              className="form-input text-sm lg:text-base"
               placeholder="Descripción del producto..."
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="form-label">Precio</label>
+              <label className="form-label text-sm lg:text-base">Precio</label>
               <input
                 type="number"
                 required
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', e.target.value)}
-                className="form-input"
+                className="form-input text-sm lg:text-base"
                 placeholder="0"
                 min="0"
                 step="0.01"
               />
             </div>
             <div>
-              <label className="form-label">Stock</label>
+              <label className="form-label text-sm lg:text-base">Stock</label>
               <input
                 type="number"
                 required
                 value={formData.stock}
                 onChange={(e) => handleInputChange('stock', e.target.value)}
-                className="form-input"
+                className="form-input text-sm lg:text-base"
                 placeholder="0"
                 min="0"
               />
             </div>
-            <div>
-              <label className="form-label">Stock Mínimo</label>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="form-label text-sm lg:text-base">Stock Mínimo</label>
               <input
                 type="number"
                 required
                 value={formData.minStock}
                 onChange={(e) => handleInputChange('minStock', e.target.value)}
-                className="form-input"
+                className="form-input text-sm lg:text-base"
                 placeholder="10"
                 min="0"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="form-label">Unidad</label>
+              <label className="form-label text-sm lg:text-base">Unidad</label>
               <select
                 required
                 value={formData.unit}
                 onChange={(e) => handleInputChange('unit', e.target.value)}
-                className="form-select"
+                className="form-select text-sm lg:text-base"
               >
                 <option value="kg">kg</option>
                 <option value="unidad">unidad</option>
@@ -753,39 +840,39 @@ const ProductModal = memo(({ product, onSave, onCancel, categories, syncing }) =
               </select>
             </div>
             <div>
-              <label className="form-label">Origen</label>
+              <label className="form-label text-sm lg:text-base">Origen</label>
               <input
                 type="text"
                 value={formData.origin}
                 onChange={(e) => handleInputChange('origin', e.target.value)}
-                className="form-input"
+                className="form-input text-sm lg:text-base"
                 placeholder="Tucumán"
               />
             </div>
-            <div>
-              <label className="form-label">Emoji/Ícono</label>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="form-label text-sm lg:text-base">Emoji/Ícono</label>
               <input
                 type="text"
                 value={formData.image}
                 onChange={(e) => handleInputChange('image', e.target.value)}
-                className="form-input"
+                className="form-input text-sm lg:text-base"
                 placeholder="🥩"
               />
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
             <button
               type="button"
               onClick={onCancel}
-              className="btn btn-secondary"
+              className="btn btn-secondary text-sm lg:text-base order-2 sm:order-1"
               disabled={syncing}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary text-sm lg:text-base order-1 sm:order-2"
               disabled={syncing}
             >
               {syncing ? (
@@ -810,24 +897,24 @@ const ProductViewModal = memo(({ product, onClose, getCategoryColor, getStockSta
   
   return (
     <div className="modal-overlay">
-      <div className="modal-content p-6 max-w-lg">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900">Detalles del Producto</h3>
+      <div className="modal-content p-4 lg:p-6 max-w-lg mx-4">
+        <div className="flex items-center justify-between mb-4 lg:mb-6">
+          <h3 className="text-lg lg:text-xl font-bold text-gray-900">Detalles del Producto</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 p-1"
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         
         <div className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <div className="text-4xl">{product.image}</div>
+          <div className="flex items-center space-x-3 lg:space-x-4">
+            <div className="text-3xl lg:text-4xl">{product.image}</div>
             <div>
-              <h4 className="text-xl font-semibold text-gray-900">{product.name}</h4>
+              <h4 className="text-lg lg:text-xl font-semibold text-gray-900">{product.name}</h4>
               <span className={`badge badge-${getCategoryColor(product.category)}`}>
                 {product.category}
               </span>
@@ -835,42 +922,42 @@ const ProductViewModal = memo(({ product, onClose, getCategoryColor, getStockSta
           </div>
           
           <div>
-            <p className="text-gray-600">{product.description}</p>
+            <p className="text-sm lg:text-base text-gray-600">{product.description}</p>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-500">Precio</label>
-              <p className="text-lg font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</p>
+              <label className="text-xs lg:text-sm font-medium text-gray-500">Precio</label>
+              <p className="text-base lg:text-lg font-bold text-gray-900">${(Number(product.price) || 0).toLocaleString()}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Stock</label>
-              <p className={`text-lg font-bold text-${stockStatus.color}-600`}>
+              <label className="text-xs lg:text-sm font-medium text-gray-500">Stock</label>
+              <p className={`text-base lg:text-lg font-bold text-${stockStatus.color}-600`}>
                 {(Number(product.stock) || 0)} {product.unit || ''}
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Stock Mínimo</label>
-              <p className="text-lg font-medium text-gray-900">{product.minStock || 10}</p>
+              <label className="text-xs lg:text-sm font-medium text-gray-500">Stock Mínimo</label>
+              <p className="text-base lg:text-lg font-medium text-gray-900">{product.minStock || 10}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Unidad</label>
-              <p className="text-lg font-medium text-gray-900">{product.unit || 'kg'}</p>
+              <label className="text-xs lg:text-sm font-medium text-gray-500">Unidad</label>
+              <p className="text-base lg:text-lg font-medium text-gray-900">{product.unit || 'kg'}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Origen</label>
-              <p className="text-lg font-medium text-gray-900">{product.origin}</p>
+              <label className="text-xs lg:text-sm font-medium text-gray-500">Origen</label>
+              <p className="text-base lg:text-lg font-medium text-gray-900">{product.origin}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Ventas</label>
-              <p className="text-lg font-medium text-blue-600">{product.salesCount || 0}</p>
+              <label className="text-xs lg:text-sm font-medium text-gray-500">Ventas</label>
+              <p className="text-base lg:text-lg font-medium text-blue-600">{product.salesCount || 0}</p>
             </div>
           </div>
           
           <div className="flex justify-end pt-4">
             <button
               onClick={onClose}
-              className="btn btn-secondary"
+              className="btn btn-secondary text-sm lg:text-base"
             >
               Cerrar
             </button>
