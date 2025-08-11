@@ -341,26 +341,64 @@ const CashRegister = () => {
       }
     };
 
+    // Listener para reset forzado de turnos
+    const handleForceResetShifts = () => {
+      console.log('🔄 Recibido evento de reset forzado de turnos');
+      setCurrentShift(null);
+      setShiftStats({
+        totalSales: 0,
+        totalRevenue: 0,
+        totalAdditionalIncomes: 0,
+        salesCount: 0,
+        netAmount: 0
+      });
+      setRecentActivity([]);
+      setCashCount({
+        20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
+        20: 0, 10: 0, 5: 0, 2: 0, 1: 0
+      });
+      toast.success('Turnos reseteados completamente');
+    };
+
+    initCashRegister();
+    
+    // Agregar listener para reset forzado
+    window.addEventListener('forceResetShifts', handleForceResetShifts);
+
+    return () => {
+      window.removeEventListener('forceResetShifts', handleForceResetShifts);
+    };
+  }, []); // Solo se ejecuta una vez al montar el componente
+
+  // Configurar listeners de tiempo real (separado del useEffect principal)
+  useEffect(() => {
     const setupListeners = () => {
       console.log('🔧 Configurando listeners de tiempo real...');
       
       // Escuchar cambios en ventas
       realtimeService.on('sales_updated', (data) => {
         console.log('💰 Ventas actualizadas:', data);
-        if (currentShift && data.sales) {
-          console.log('🔄 Recargando datos del turno por ventas actualizadas');
-          loadShiftData(currentShift);
-        }
+        // Usar setCurrentShift con callback para acceder al estado actual
+        setCurrentShift(currentShiftState => {
+          if (currentShiftState && data.sales) {
+            console.log('🔄 Recargando datos del turno por ventas actualizadas');
+            loadShiftData(currentShiftState);
+          }
+          return currentShiftState;
+        });
       });
 
       // Escuchar nuevas ventas
       realtimeService.on('sale_synced', (data) => {
         console.log('💰 Nueva venta sincronizada:', data);
-        if (currentShift) {
-          console.log('🔄 Recargando datos del turno por nueva venta');
-          loadShiftData(currentShift);
-          toast.success('Nueva venta registrada en la caja');
-        }
+        setCurrentShift(currentShiftState => {
+          if (currentShiftState) {
+            console.log('🔄 Recargando datos del turno por nueva venta');
+            loadShiftData(currentShiftState);
+            toast.success('Nueva venta registrada en la caja');
+          }
+          return currentShiftState;
+        });
       });
 
       // Escuchar nuevos turnos sincronizados
@@ -368,8 +406,9 @@ const CashRegister = () => {
         console.log('🔄 Turno sincronizado:', data);
         if (data.shiftData && data.shiftData.status === 'active') {
           console.log('✅ Configurando turno activo desde shift_synced');
-          setCurrentShift({ id: data.shiftId, ...data.shiftData });
-          loadShiftData({ id: data.shiftId, ...data.shiftData });
+          const newShift = { id: data.shiftId, ...data.shiftData };
+          setCurrentShift(newShift);
+          loadShiftData(newShift);
           toast.success(`Turno ${data.shiftData.type === 'morning' ? 'mañana' : 'tarde'} abierto exitosamente`);
         }
       });
@@ -404,39 +443,15 @@ const CashRegister = () => {
       console.log('✅ Listeners de tiempo real configurados');
     };
 
-    // Listener para reset forzado de turnos
-    const handleForceResetShifts = () => {
-      console.log('🔄 Recibido evento de reset forzado de turnos');
-      setCurrentShift(null);
-      setShiftStats({
-        totalSales: 0,
-        totalRevenue: 0,
-        totalAdditionalIncomes: 0,
-        salesCount: 0,
-        netAmount: 0
-      });
-      setRecentActivity([]);
-      setCashCount({
-        20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
-        20: 0, 10: 0, 5: 0, 2: 0, 1: 0
-      });
-      toast.success('Turnos reseteados completamente');
-    };
-
-    initCashRegister();
     setupListeners();
-    
-    // Agregar listener para reset forzado
-    window.addEventListener('forceResetShifts', handleForceResetShifts);
 
     return () => {
       realtimeService.off('sales_updated');
       realtimeService.off('sale_synced');
       realtimeService.off('shift_synced');
       realtimeService.off('shifts_updated');
-      window.removeEventListener('forceResetShifts', handleForceResetShifts);
     };
-  }, [currentShift, loadShiftData, checkCanFinalizarDia]);
+  }, []); // Sin dependencias para evitar re-renders infinitos
 
 
 
