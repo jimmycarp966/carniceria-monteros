@@ -1,0 +1,5 @@
+[33mf7cbfa0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Mejoras en gestión de turnos: sincronización con usuario, validación secuencial y control de Finalizar Día
+[33m029a939[m Fix: Corregir errores de Firebase en arqueo y cierre de turno - Pasar cashCountId directamente en lugar de cashCountData - Corregir campo cashCountId en shiftData y arqueo
+[33mf5e7480[m Simplificar sistema: arqueo cierra turno automáticamente, agregar Finalizar Día con resumen
+[33m0d20458[m Agregar reglas de Firebase para colección cash_counts
+[33m44ac130[m Eliminar variable no utilizada setShowCashCountModal

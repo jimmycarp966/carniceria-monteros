@@ -283,7 +283,7 @@ const CashRegister = () => {
       realtimeService.off('shifts_updated');
       window.removeEventListener('forceResetShifts', handleForceResetShifts);
     };
-  }, [currentShift, loadShiftData]);
+  }, [currentShift, loadShiftData, checkCanFinalizarDia]);
 
 
 
@@ -410,7 +410,7 @@ const CashRegister = () => {
       console.error('Error cerrando turno:', error);
       toast.error('Error al cerrar el turno');
     }
-  }, [currentShift, currentUser, loadShiftData]);
+  }, [currentShift, currentUser, loadShiftData, checkCanFinalizarDia]);
 
   // Registrar ingreso adicional
   const registerIncome = useCallback(async () => {
