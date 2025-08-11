@@ -84,7 +84,7 @@ const CashRegister = () => {
       const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
       const totalAdditionalIncomes = 0; // TODO: Implementar incomeService
       
-      // Calcular ventas por método de pago
+      // Calcular ventas por método de pago usando normalización
       const salesByMethod = {
         efectivo: { count: 0, total: 0 },
         tarjetaDebito: { count: 0, total: 0 },
@@ -94,24 +94,10 @@ const CashRegister = () => {
       };
 
       shiftSales.forEach(sale => {
-        const paymentMethod = sale.paymentMethod;
-        if (paymentMethod === 'efectivo') {
-          salesByMethod.efectivo.count++;
-          salesByMethod.efectivo.total += sale.total || 0;
-        } else if (paymentMethod === 'tarjeta') {
-          if (sale.cardType === 'credito') {
-            salesByMethod.tarjetaCredito.count++;
-            salesByMethod.tarjetaCredito.total += sale.total || 0;
-          } else {
-            salesByMethod.tarjetaDebito.count++;
-            salesByMethod.tarjetaDebito.total += sale.total || 0;
-          }
-        } else if (paymentMethod === 'transferencia') {
-          salesByMethod.transferencia.count++;
-          salesByMethod.transferencia.total += sale.total || 0;
-        } else if (paymentMethod === 'mercadopago') {
-          salesByMethod.mercadopago.count++;
-          salesByMethod.mercadopago.total += sale.total || 0;
+        const normalizedMethod = normalizePaymentMethod(sale.paymentMethod);
+        if (salesByMethod[normalizedMethod]) {
+          salesByMethod[normalizedMethod].count++;
+          salesByMethod[normalizedMethod].total += sale.total || 0;
         }
       });
 
@@ -139,6 +125,38 @@ const CashRegister = () => {
     morning: null,
     afternoon: null
   });
+
+  // Función para normalizar métodos de pago (igual que en verifyDaySummary)
+  const normalizePaymentMethod = (method) => {
+    if (!method) return 'efectivo';
+    
+    const methodLower = method.toLowerCase();
+    
+    // Mapeo de diferentes nombres usados en los componentes
+    const methodMap = {
+      // Efectivo
+      'cash': 'efectivo',
+      'efectivo': 'efectivo',
+      
+      // Tarjetas
+      'card': 'tarjetaDebito', // Por defecto débito
+      'tarjeta': 'tarjetaDebito', // Por defecto débito
+      'tarjetadebito': 'tarjetaDebito',
+      'tarjetacredito': 'tarjetaCredito',
+      'debit': 'tarjetaDebito',
+      'credito': 'tarjetaCredito',
+      
+      // Transferencia
+      'transfer': 'transferencia',
+      'transferencia': 'transferencia',
+      
+      // MercadoPago
+      'mercadopago': 'mercadopago',
+      'mp': 'mercadopago'
+    };
+    
+    return methodMap[methodLower] || 'efectivo';
+  };
 
   // Función para cargar el resumen del día
   const loadDaySummary = useCallback(async () => {
@@ -172,20 +190,29 @@ const CashRegister = () => {
         };
       });
 
+      // Calcular ventas por método de pago usando normalización
+      const salesByPaymentMethod = {
+        efectivo: 0,
+        tarjetaDebito: 0,
+        tarjetaCredito: 0,
+        transferencia: 0,
+        mercadopago: 0
+      };
+
+      todaySales.forEach(sale => {
+        const normalizedMethod = normalizePaymentMethod(sale.paymentMethod);
+        if (salesByPaymentMethod[normalizedMethod] !== undefined) {
+          salesByPaymentMethod[normalizedMethod] += sale.total || 0;
+        }
+      });
+
       const summary = {
         date: today,
         totalShifts: shifts.length,
         totalSales: todaySales.length,
         totalRevenue: todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0),
         shifts: shiftsWithTotals,
-        // Agregar estadísticas adicionales
-        salesByPaymentMethod: {
-          efectivo: todaySales.filter(s => s.paymentMethod === 'efectivo').reduce((sum, s) => sum + (s.total || 0), 0),
-          tarjetaDebito: todaySales.filter(s => s.paymentMethod === 'tarjetaDebito').reduce((sum, s) => sum + (s.total || 0), 0),
-          tarjetaCredito: todaySales.filter(s => s.paymentMethod === 'tarjetaCredito').reduce((sum, s) => sum + (s.total || 0), 0),
-          transferencia: todaySales.filter(s => s.paymentMethod === 'transferencia').reduce((sum, s) => sum + (s.total || 0), 0),
-          mercadopago: todaySales.filter(s => s.paymentMethod === 'mercadopago').reduce((sum, s) => sum + (s.total || 0), 0)
-        }
+        salesByPaymentMethod
       };
 
       setDaySummary(summary);

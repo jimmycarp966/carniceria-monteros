@@ -1,6 +1,38 @@
 // Script de verificación para comparar resumen del día con ventas reales
 import { saleService, shiftService } from '../services/firebaseService';
 
+// Función para normalizar métodos de pago
+const normalizePaymentMethod = (method) => {
+  if (!method) return 'efectivo';
+  
+  const methodLower = method.toLowerCase();
+  
+  // Mapeo de diferentes nombres usados en los componentes
+  const methodMap = {
+    // Efectivo
+    'cash': 'efectivo',
+    'efectivo': 'efectivo',
+    
+    // Tarjetas
+    'card': 'tarjetaDebito', // Por defecto débito
+    'tarjeta': 'tarjetaDebito', // Por defecto débito
+    'tarjetadebito': 'tarjetaDebito',
+    'tarjetacredito': 'tarjetaCredito',
+    'debit': 'tarjetaDebito',
+    'credito': 'tarjetaCredito',
+    
+    // Transferencia
+    'transfer': 'transferencia',
+    'transferencia': 'transferencia',
+    
+    // MercadoPago
+    'mercadopago': 'mercadopago',
+    'mp': 'mercadopago'
+  };
+  
+  return methodMap[methodLower] || 'efectivo';
+};
+
 export const verifyDaySummary = async (date = new Date()) => {
   try {
     console.log('🔍 VERIFICANDO CONSISTENCIA DEL RESUMEN DEL DÍA');
@@ -21,7 +53,8 @@ export const verifyDaySummary = async (date = new Date()) => {
     console.log(`✅ Ventas encontradas: ${todaySales.length}`);
     console.log('📋 Detalles de ventas:');
     todaySales.forEach((sale, index) => {
-      console.log(`   ${index + 1}. ID: ${sale.id} | Total: $${sale.total} | Método: ${sale.paymentMethod} | Turno: ${sale.shiftId}`);
+      const normalizedMethod = normalizePaymentMethod(sale.paymentMethod);
+      console.log(`   ${index + 1}. ID: ${sale.id} | Total: $${sale.total} | Método original: ${sale.paymentMethod} | Método normalizado: ${normalizedMethod} | Turno: ${sale.shiftId}`);
     });
     
     // 2. Obtener turnos del día
@@ -44,15 +77,15 @@ export const verifyDaySummary = async (date = new Date()) => {
     };
     
     todaySales.forEach(sale => {
-      const method = sale.paymentMethod;
-      if (salesByPaymentMethod[method]) {
-        salesByPaymentMethod[method].count++;
-        salesByPaymentMethod[method].total += sale.total || 0;
+      const normalizedMethod = normalizePaymentMethod(sale.paymentMethod);
+      if (salesByPaymentMethod[normalizedMethod]) {
+        salesByPaymentMethod[normalizedMethod].count++;
+        salesByPaymentMethod[normalizedMethod].total += sale.total || 0;
       }
     });
     
     console.log(`✅ Total real de ventas: $${totalRevenue.toLocaleString()}`);
-    console.log('📊 Ventas por método de pago:');
+    console.log('📊 Ventas por método de pago (normalizado):');
     Object.entries(salesByPaymentMethod).forEach(([method, data]) => {
       if (data.count > 0) {
         console.log(`   - ${method}: ${data.count} ventas por $${data.total.toLocaleString()}`);
@@ -106,7 +139,7 @@ export const verifyDaySummary = async (date = new Date()) => {
     if (salesWithoutShift.length > 0) {
       console.log(`⚠️  ADVERTENCIA: ${salesWithoutShift.length} ventas sin turno asignado:`);
       salesWithoutShift.forEach(sale => {
-        console.log(`   - Venta ${sale.id}: $${sale.total}`);
+        console.log(`   - Venta ${sale.id}: $${sale.total} | Método: ${sale.paymentMethod}`);
       });
     } else {
       console.log('✅ Todas las ventas tienen turno asignado');
@@ -119,6 +152,17 @@ export const verifyDaySummary = async (date = new Date()) => {
       console.log(`   - Total de ventas: $${totalRevenue}`);
       console.log(`   - Suma de turnos: $${shiftTotalsSum}`);
       console.log(`   - Diferencia: $${Math.abs(shiftTotalsSum - totalRevenue)}`);
+      
+      // Mostrar ventas que no están en turnos
+      const salesInShifts = todaySales.filter(sale => sale.shiftId && shifts.find(s => s.id === sale.shiftId));
+      const salesNotInShifts = todaySales.filter(sale => !salesInShifts.find(s => s.id === sale.id));
+      
+      if (salesNotInShifts.length > 0) {
+        console.log(`   - Ventas no encontradas en turnos actuales: ${salesNotInShifts.length}`);
+        salesNotInShifts.forEach(sale => {
+          console.log(`     * Venta ${sale.id}: $${sale.total} | Turno ID: ${sale.shiftId}`);
+        });
+      }
     } else {
       console.log('✅ Los totales coinciden perfectamente');
     }
@@ -134,6 +178,24 @@ export const verifyDaySummary = async (date = new Date()) => {
       console.log('✅ No hay ventas duplicadas');
     }
     
+    // Mostrar resumen de métodos de pago originales vs normalizados
+    console.log('\n📊 RESUMEN DE MÉTODOS DE PAGO:');
+    console.log('===============================');
+    const originalMethods = {};
+    todaySales.forEach(sale => {
+      const original = sale.paymentMethod || 'sin método';
+      const normalized = normalizePaymentMethod(sale.paymentMethod);
+      if (!originalMethods[original]) {
+        originalMethods[original] = { count: 0, total: 0, normalized };
+      }
+      originalMethods[original].count++;
+      originalMethods[original].total += sale.total || 0;
+    });
+    
+    Object.entries(originalMethods).forEach(([original, data]) => {
+      console.log(`   - Original: "${original}" → Normalizado: "${data.normalized}" | ${data.count} ventas por $${data.total.toLocaleString()}`);
+    });
+    
     console.log('\n🎯 VERIFICACIÓN COMPLETADA');
     console.log('==========================');
     
@@ -145,7 +207,8 @@ export const verifyDaySummary = async (date = new Date()) => {
         totalRevenue,
         salesWithoutShift: salesWithoutShift.length,
         totalsMatch: Math.abs(shiftTotalsSum - totalRevenue) <= 0.01,
-        noDuplicates: saleIds.length === uniqueSaleIds.length
+        noDuplicates: saleIds.length === uniqueSaleIds.length,
+        originalMethods
       }
     };
     
