@@ -6,7 +6,8 @@ import {
   TrendingUp, 
   Filter,
   Clock,
-  Percent
+  Percent,
+  BarChart3
 } from 'lucide-react';
 import { shiftService, saleService } from '../services/firebaseService';
 import realtimeService from '../services/realtimeService';
@@ -39,6 +40,18 @@ const SalesReports = () => {
   const [selectedSaleForDiscount, setSelectedSaleForDiscount] = useState(null);
   const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState(0);
+
+  // Estados para reporte diario
+  const [showDailyReportModal, setShowDailyReportModal] = useState(false);
+  const [dailyReport, setDailyReport] = useState({
+    totalSales: 0,
+    totalRevenue: 0,
+    totalAdditionalIncomes: 0,
+    totalShifts: 0,
+    morningShift: null,
+    afternoonShift: null,
+    netAmount: 0
+  });
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -177,8 +190,55 @@ const SalesReports = () => {
     setPaymentMethodFilter('all');
     setShiftFilter('all');
     setCustomerFilter('all');
-    setFilteredSales(filterSalesByDate(sales, selectedDate));
-    toast.success('Filtros limpiados');
+    
+    // Aplicar filtros limpios
+    applyAdvancedFilters();
+  };
+
+  // Generar reporte diario
+  const generateDailyReport = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Obtener todos los turnos del día
+      const shifts = await shiftService.getAllShifts();
+      const todayShifts = shifts.filter(shift => {
+        const shiftDate = shift.date || (shift.openTime?.toDate ? shift.openTime.toDate().toISOString().split('T')[0] : new Date(shift.openTime).toISOString().split('T')[0]);
+        return shiftDate === today;
+      });
+
+      // Obtener todas las ventas del día
+      const todaySales = sales.filter(sale => {
+        const saleDate = sale.date || (sale.timestamp?.toDate ? sale.timestamp.toDate().toISOString().split('T')[0] : new Date(sale.timestamp).toISOString().split('T')[0]);
+        return saleDate === today;
+      });
+
+      // Calcular estadísticas
+      const totalSales = todaySales.length;
+      const totalRevenue = todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+      const totalAdditionalIncomes = todayShifts.reduce((sum, shift) => sum + (shift.additionalIncomes || 0), 0);
+      
+      // Separar turnos por tipo
+      const morningShift = todayShifts.find(shift => shift.type === 'morning');
+      const afternoonShift = todayShifts.find(shift => shift.type === 'afternoon');
+      
+      const netAmount = totalRevenue + totalAdditionalIncomes;
+
+      setDailyReport({
+        totalSales,
+        totalRevenue,
+        totalAdditionalIncomes,
+        totalShifts: todayShifts.length,
+        morningShift,
+        afternoonShift,
+        netAmount
+      });
+
+      setShowDailyReportModal(true);
+    } catch (error) {
+      console.error('Error generando reporte diario:', error);
+      toast.error('Error al generar el reporte diario');
+    }
   };
 
   // Función para aplicar descuento a una venta (funcionalidad movida desde caja)
@@ -329,6 +389,149 @@ const SalesReports = () => {
     </div>
   );
 
+  // Modal para reporte diario
+  const DailyReportModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <BarChart3 className="h-6 w-6 mr-2 text-blue-600" />
+          Reporte Diario - {new Date().toLocaleDateString('es-ES')}
+        </h3>
+
+        {/* Resumen general */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6">
+          <h4 className="font-semibold text-gray-900 mb-3">Resumen del Día</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{dailyReport.totalShifts}</div>
+              <div className="text-sm text-gray-600">Turnos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{dailyReport.totalSales}</div>
+              <div className="text-sm text-gray-600">Ventas</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">${dailyReport.totalRevenue.toLocaleString()}</div>
+              <div className="text-sm text-gray-600">Ingresos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary-600">${dailyReport.netAmount.toLocaleString()}</div>
+              <div className="text-sm text-gray-600">Total Neto</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Detalle por turnos */}
+        <div className="space-y-4 mb-6">
+          {/* Turno Mañana */}
+          {dailyReport.morningShift && (
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+              <h5 className="font-semibold text-orange-800 mb-2 flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                Turno Mañana
+              </h5>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Empleado:</span>
+                  <span className="font-medium ml-2">{dailyReport.morningShift.employeeName}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Apertura:</span>
+                  <span className="font-medium ml-2">${dailyReport.morningShift.openingAmount?.toLocaleString() || '0'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Estado:</span>
+                  <span className={`font-medium ml-2 ${dailyReport.morningShift.status === 'active' ? 'text-green-600' : 'text-gray-600'}`}>
+                    {dailyReport.morningShift.status === 'active' ? 'Activo' : 'Cerrado'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Hora:</span>
+                  <span className="font-medium ml-2">
+                    {dailyReport.morningShift.openTime?.toDate ? 
+                      dailyReport.morningShift.openTime.toDate().toLocaleTimeString() :
+                      new Date(dailyReport.morningShift.openTime).toLocaleTimeString()
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Turno Tarde */}
+          {dailyReport.afternoonShift && (
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <h5 className="font-semibold text-purple-800 mb-2 flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                Turno Tarde
+              </h5>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Empleado:</span>
+                  <span className="font-medium ml-2">{dailyReport.afternoonShift.employeeName}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Apertura:</span>
+                  <span className="font-medium ml-2">${dailyReport.afternoonShift.openingAmount?.toLocaleString() || '0'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Estado:</span>
+                  <span className={`font-medium ml-2 ${dailyReport.afternoonShift.status === 'active' ? 'text-green-600' : 'text-gray-600'}`}>
+                    {dailyReport.afternoonShift.status === 'active' ? 'Activo' : 'Cerrado'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Hora:</span>
+                  <span className="font-medium ml-2">
+                    {dailyReport.afternoonShift.openTime?.toDate ? 
+                      dailyReport.afternoonShift.openTime.toDate().toLocaleTimeString() :
+                      new Date(dailyReport.afternoonShift.openTime).toLocaleTimeString()
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!dailyReport.morningShift && !dailyReport.afternoonShift && (
+            <div className="text-center py-8 text-gray-500">
+              <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+              <p>No hay turnos registrados para hoy</p>
+            </div>
+          )}
+        </div>
+
+        {/* Desglose financiero */}
+        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+          <h5 className="font-semibold text-gray-900 mb-3">Desglose Financiero</h5>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Ventas del día:</span>
+              <span className="font-medium">${dailyReport.totalRevenue.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Ingresos adicionales:</span>
+              <span className="font-medium">${dailyReport.totalAdditionalIncomes.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between border-t pt-2 font-semibold">
+              <span>Total del día:</span>
+              <span className="text-primary-600">${dailyReport.netAmount.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowDailyReportModal(false)}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -361,6 +564,14 @@ const SalesReports = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
+            
+            <button
+              onClick={generateDailyReport}
+              className="btn btn-primary flex items-center justify-center"
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Reporte Diario
+            </button>
             
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -631,6 +842,7 @@ const SalesReports = () => {
 
       {/* Modal de Descuento */}
       {showDiscountModal && <DiscountModal />}
+      {showDailyReportModal && <DailyReportModal />}
     </div>
   );
 };
