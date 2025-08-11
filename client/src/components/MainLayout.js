@@ -3,26 +3,24 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { toast } from 'react-toastify';
-import { 
-  Store, 
-  LogOut, 
-  Home, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  UserCheck, 
-  Truck, 
-  Tag, 
-  BarChart3, 
-  Menu, 
-  X, 
-  DollarSign, 
-  Settings, 
-  Bug, 
+import {
+  Store,
+  LogOut,
+  Home,
+  Package,
+  ShoppingCart,
+  Users,
+  UserCheck,
+  Truck,
+  Tag,
+  BarChart3,
+  Menu,
+  X,
+  DollarSign,
+  Settings,
+  Bug,
   CreditCard,
-  Bell,
-  Search,
-  ChevronDown
+  Bell
 } from 'lucide-react';
 import { usePermissions } from '../context/PermissionsContext';
 
@@ -35,7 +33,6 @@ const MainLayout = ({ children }) => {
   const [user, setUser] = useState(null);
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -76,10 +73,6 @@ const MainLayout = ({ children }) => {
 
   const toggleNotifications = useCallback(() => {
     setNotificationsOpen(prev => !prev);
-  }, []);
-
-  const toggleSearch = useCallback(() => {
-    setSearchOpen(prev => !prev);
   }, []);
 
   // Navegación principal
@@ -238,14 +231,6 @@ const MainLayout = ({ children }) => {
 
             {/* Acciones del header */}
             <div className="flex items-center space-x-2">
-              {/* Búsqueda */}
-              <button
-                onClick={toggleSearch}
-                className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-
               {/* Notificaciones */}
               <div className="relative">
                 <button
