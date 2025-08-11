@@ -154,6 +154,10 @@ const CashRegister = () => {
 
   // Estados para el nuevo sistema de arqueo
   const [cashCount, setCashCount] = useState({
+    20000: 0, // $20000
+    10000: 0, // $10000
+    5000: 0,  // $5000
+    2000: 0,  // $2000
     1000: 0,  // $1000
     500: 0,   // $500
     200: 0,   // $200
@@ -170,6 +174,15 @@ const CashRegister = () => {
   const [transferenciaAmount, setTransferenciaAmount] = useState(0);
   const [mercadopagoAmount, setMercadopagoAmount] = useState(0);
   const [showCashCountModal, setShowCashCountModal] = useState(false);
+
+  // Estados para ventas por método de pago (del sistema)
+  const [salesByPaymentMethod, setSalesByPaymentMethod] = useState({
+    efectivo: { count: 0, total: 0 },
+    tarjetaDebito: { count: 0, total: 0 },
+    tarjetaCredito: { count: 0, total: 0 },
+    transferencia: { count: 0, total: 0 },
+    mercadopago: { count: 0, total: 0 }
+  });
 
   // Estados para ingresos
   const [incomeAmount, setIncomeAmount] = useState(0);
@@ -262,6 +275,41 @@ const CashRegister = () => {
       // Calcular estadísticas
       const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
       const totalAdditionalIncomes = shiftIncomes.reduce((sum, income) => sum + (income.amount || 0), 0);
+      
+      // Calcular ventas por método de pago
+      const salesByMethod = {
+        efectivo: { count: 0, total: 0 },
+        tarjetaDebito: { count: 0, total: 0 },
+        tarjetaCredito: { count: 0, total: 0 },
+        transferencia: { count: 0, total: 0 },
+        mercadopago: { count: 0, total: 0 }
+      };
+
+      shiftSales.forEach(sale => {
+        const paymentMethod = sale.paymentMethod;
+        const cardType = sale.cardType;
+        
+        if (paymentMethod === 'efectivo') {
+          salesByMethod.efectivo.count++;
+          salesByMethod.efectivo.total += sale.total || 0;
+        } else if (paymentMethod === 'tarjeta') {
+          if (cardType === 'debito') {
+            salesByMethod.tarjetaDebito.count++;
+            salesByMethod.tarjetaDebito.total += sale.total || 0;
+          } else if (cardType === 'credito') {
+            salesByMethod.tarjetaCredito.count++;
+            salesByMethod.tarjetaCredito.total += sale.total || 0;
+          }
+        } else if (paymentMethod === 'transferencia') {
+          salesByMethod.transferencia.count++;
+          salesByMethod.transferencia.total += sale.total || 0;
+        } else if (paymentMethod === 'mercadopago') {
+          salesByMethod.mercadopago.count++;
+          salesByMethod.mercadopago.total += sale.total || 0;
+        }
+      });
+
+      setSalesByPaymentMethod(salesByMethod);
       
       setShiftStats({
         totalSales: shiftSales.length,
@@ -364,8 +412,7 @@ const CashRegister = () => {
       setClosingAmount(0);
       setClosingNotes('');
       setCashCount({
-        1000: 0, 500: 0, 200: 0, 100: 0, 50: 0,
-        20: 0, 10: 0, 5: 0, 2: 0, 1: 0
+        20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0, 5: 0, 2: 0, 1: 0
       });
       setTarjetaDebitoAmount(0);
       setTarjetaCreditoAmount(0);
@@ -539,6 +586,43 @@ const CashRegister = () => {
             <div className="flex justify-between border-t pt-1">
               <span className="font-medium">Total Neto:</span>
               <span className="font-bold text-primary-600">${shiftStats.netAmount.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Ventas por método de pago (del sistema) */}
+        <div className="bg-yellow-50 rounded-lg p-4 mb-4">
+          <h4 className="font-medium text-gray-900 mb-3">Ventas por Método de Pago (Sistema)</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Efectivo:</span>
+              <span className="font-medium text-green-600">
+                {salesByPaymentMethod.efectivo.count} ventas - ${salesByPaymentMethod.efectivo.total.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tarjeta Débito:</span>
+              <span className="font-medium text-blue-600">
+                {salesByPaymentMethod.tarjetaDebito.count} ventas - ${salesByPaymentMethod.tarjetaDebito.total.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tarjeta Crédito:</span>
+              <span className="font-medium text-indigo-600">
+                {salesByPaymentMethod.tarjetaCredito.count} ventas - ${salesByPaymentMethod.tarjetaCredito.total.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Transferencias:</span>
+              <span className="font-medium text-purple-600">
+                {salesByPaymentMethod.transferencia.count} ventas - ${salesByPaymentMethod.transferencia.total.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>MercadoPago:</span>
+              <span className="font-medium text-orange-600">
+                {salesByPaymentMethod.mercadopago.count} ventas - ${salesByPaymentMethod.mercadopago.total.toLocaleString()}
+              </span>
             </div>
           </div>
         </div>

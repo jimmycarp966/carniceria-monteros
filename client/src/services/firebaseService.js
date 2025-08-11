@@ -748,19 +748,37 @@ export const shiftService = {
       const shiftRef = doc(db, 'shifts', shiftId);
       await updateDoc(shiftRef, {
         ...closingData,
-        status: 'closed',
         endTime: serverTimestamp(),
+        status: 'closed',
         updatedAt: serverTimestamp()
       });
 
       // Limpiar cache
       smartCache.invalidate('shifts');
-      // Si hay gasto vinculado, invalidar cache de expenses del turno
-      smartCache.invalidate('expenses');
       
       console.log('✅ Turno cerrado:', shiftId);
+      return shiftId;
     } catch (error) {
       console.error('❌ Error cerrando turno:', error);
+      throw error;
+    }
+  },
+
+  async updateShift(shiftId, shiftData) {
+    try {
+      const shiftRef = doc(db, 'shifts', shiftId);
+      await updateDoc(shiftRef, {
+        ...shiftData,
+        updatedAt: serverTimestamp()
+      });
+
+      // Limpiar cache
+      smartCache.invalidate('shifts');
+      
+      console.log('✅ Turno actualizado:', shiftId);
+      return shiftId;
+    } catch (error) {
+      console.error('❌ Error actualizando turno:', error);
       throw error;
     }
   },
