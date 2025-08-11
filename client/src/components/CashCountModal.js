@@ -304,7 +304,7 @@ const CashCountModal = memo(({
       
       // AUTOMÁTICAMENTE CERRAR EL TURNO después del arqueo
       if (onCashCountComplete) {
-        await onCashCountComplete(cashCountData, calculatedDifferences);
+        await onCashCountComplete(cashCountId, calculatedDifferences);
       }
       
     } catch (error) {

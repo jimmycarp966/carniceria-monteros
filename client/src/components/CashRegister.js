@@ -278,7 +278,7 @@ const CashRegister = () => {
   }, [canCloseShift, userRole, currentShift]);
 
   // Función para completar el cierre después del arqueo
-  const completeShiftClose = useCallback(async (cashCountData, differences) => {
+  const completeShiftClose = useCallback(async (cashCountId, differences) => {
     try {
       const shiftData = {
         ...currentShift,
@@ -292,10 +292,10 @@ const CashRegister = () => {
           email: currentUser?.email,
           role: currentUser?.role || 'ayudante'
         },
-        cashCountId: cashCountData.id,
+        cashCountId: cashCountId,
         arqueo: {
           ...differences,
-          cashCountData
+          cashCountId: cashCountId
         }
       };
 
