@@ -8,7 +8,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { saleService } from './firebaseService';
+import { saleService, expensesService } from './firebaseService';
 
 // Servicio de arqueo de caja
 export const cashCountService = {
@@ -21,6 +21,10 @@ export const cashCountService = {
       const shiftSales = await saleService.getSalesByShift(shiftId, forceRefresh);
       
       console.log(`📊 Ventas encontradas: ${shiftSales.length}`);
+      
+      // Obtener gastos del turno
+      const shiftExpenses = await expensesService.getExpensesByShift(shiftId);
+      console.log(`💰 Gastos encontrados: ${shiftExpenses.length}`);
       
       const salesByMethod = {
         efectivo: { count: 0, total: 0, expected: 0 },
@@ -74,10 +78,25 @@ export const cashCountService = {
         totalAmount += saleAmount;
       });
 
+      // Agregar gastos del turno como egresos esperados
+      const totalExpenses = shiftExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      console.log(`💰 Total gastos del turno: $${totalExpenses.toLocaleString()}`);
+      
+      // Los gastos se restan del efectivo esperado (asumiendo que se pagan en efectivo)
+      if (totalExpenses > 0) {
+        salesByMethod.efectivo.expected -= totalExpenses;
+        console.log(`📉 Efectivo esperado ajustado por gastos: $${salesByMethod.efectivo.expected.toLocaleString()}`);
+      }
+
       console.log(`✅ Procesadas ${totalProcessed} ventas por $${totalAmount.toLocaleString()}`);
+      console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
       console.log('📊 Resumen por método:', salesByMethod);
 
-      return salesByMethod;
+      return {
+        ...salesByMethod,
+        shiftExpenses,
+        totalExpenses
+      };
     } catch (error) {
       console.error('Error obteniendo ventas por método de pago:', error);
       throw error;

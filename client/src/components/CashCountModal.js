@@ -43,6 +43,9 @@ const CashCountModal = memo(({
 
   // Estados de validación
   const [validationErrors, setValidationErrors] = useState([]);
+  
+  // Estado para gastos del turno
+  const [shiftExpenses, setShiftExpenses] = useState([]);
 
   // Función para recargar datos de ventas
   const reloadSalesData = async () => {
@@ -66,11 +69,22 @@ const CashCountModal = memo(({
           mercadopago: { expected: salesData.mercadopago.expected, counted: prev.mercadopago.counted }
         }));
         
-        // Mostrar resumen de ventas cargadas
-        const totalExpected = Object.values(salesData).reduce((sum, method) => sum + (method.expected || 0), 0);
-        console.log(`✅ Ventas recargadas: $${totalExpected.toLocaleString()} en total`);
+        // Actualizar gastos del turno
+        setShiftExpenses(salesData.shiftExpenses || []);
         
-        toast.success(`Ventas actualizadas: $${totalExpected.toLocaleString()}`, { duration: 3000 });
+        // Mostrar resumen de ventas cargadas
+        const totalExpected = Object.values(salesData).reduce((sum, method) => {
+          if (typeof method === 'object' && method.expected !== undefined) {
+            return sum + (method.expected || 0);
+          }
+          return sum;
+        }, 0);
+        
+        const totalExpenses = salesData.totalExpenses || 0;
+        console.log(`✅ Ventas recargadas: $${totalExpected.toLocaleString()} en total`);
+        console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
+        
+        toast.success(`Ventas actualizadas: $${totalExpected.toLocaleString()} | Gastos: $${totalExpenses.toLocaleString()}`, { duration: 3000 });
       }
     } catch (error) {
       console.error('Error recargando datos de ventas:', error);
@@ -106,12 +120,23 @@ const CashCountModal = memo(({
           console.log('🔧 Montos esperados configurados:', expectedMethods);
           setPaymentMethods(expectedMethods);
           
-          // Mostrar resumen de ventas cargadas
-          const totalExpected = Object.values(salesData).reduce((sum, method) => sum + (method.expected || 0), 0);
-          console.log(`✅ Ventas cargadas: $${totalExpected.toLocaleString()} en total`);
+          // Actualizar gastos del turno
+          setShiftExpenses(salesData.shiftExpenses || []);
           
-          if (totalExpected > 0) {
-            toast.success(`Ventas cargadas: $${totalExpected.toLocaleString()}`, { duration: 3000 });
+          // Mostrar resumen de ventas cargadas
+          const totalExpected = Object.values(salesData).reduce((sum, method) => {
+            if (typeof method === 'object' && method.expected !== undefined) {
+              return sum + (method.expected || 0);
+            }
+            return sum;
+          }, 0);
+          
+          const totalExpenses = salesData.totalExpenses || 0;
+          console.log(`✅ Ventas cargadas: $${totalExpected.toLocaleString()} en total`);
+          console.log(`💰 Gastos del turno: $${totalExpenses.toLocaleString()}`);
+          
+          if (totalExpected > 0 || totalExpenses > 0) {
+            toast.success(`Ventas: $${totalExpected.toLocaleString()} | Gastos: $${totalExpenses.toLocaleString()}`, { duration: 3000 });
           }
         }
       } catch (error) {
@@ -460,6 +485,49 @@ const CashCountModal = memo(({
             })}
           </div>
 
+          {/* Gastos del Turno */}
+          {shiftExpenses.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <CreditCard className="h-5 w-5 mr-2 text-orange-600" />
+                Gastos del Turno (Ya Registrados)
+              </h3>
+              
+              <div className="bg-orange-50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium text-orange-600">Total Gastos del Turno</p>
+                    <p className="text-xl font-bold text-orange-900">
+                      ${shiftExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-orange-600">{shiftExpenses.length} gastos registrados</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {shiftExpenses.map((expense) => (
+                    <div key={expense.id} className="bg-white border border-orange-200 rounded-lg p-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{expense.reason || 'Gasto operativo'}</p>
+                          <p className="text-xs text-gray-600">
+                            {expense.createdAt?.toDate?.()?.toLocaleTimeString() || 'N/A'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-orange-600 text-sm">-${expense.amount.toLocaleString()}</p>
+                          <p className="text-xs text-gray-500">{expense.type || 'operational'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Ingresos y Egresos Adicionales */}
           <div className="space-y-6">
             {/* Ingresos Adicionales */}
@@ -588,7 +656,7 @@ const CashCountModal = memo(({
         <div className="mt-8 bg-gray-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Arqueo</h3>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Esperado</p>
               <p className="text-lg font-bold text-gray-900">${totals.totalExpected.toLocaleString()}</p>
@@ -596,6 +664,10 @@ const CashCountModal = memo(({
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Contado</p>
               <p className="text-lg font-bold text-blue-600">${totals.totalCounted.toLocaleString()}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Gastos del Turno</p>
+              <p className="text-lg font-bold text-orange-600">${shiftExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toLocaleString()}</p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Ingresos Adicionales</p>
