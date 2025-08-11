@@ -11,7 +11,7 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { runSystemTests, testRealtimeSync, checkSystemHealth } from '../utils/testing';
 import { 
   productService, 

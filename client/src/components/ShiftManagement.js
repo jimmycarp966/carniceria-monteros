@@ -9,7 +9,7 @@ import {
   User,
   Shield
 } from 'lucide-react';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { shiftService, expensesService } from '../services/firebaseService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';

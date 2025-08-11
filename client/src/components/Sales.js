@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { ShoppingCart, Plus, Minus, Trash2, DollarSign, Calendar, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { shiftService } from '../services/firebaseService';
-import { dataSyncService, realtimeService } from '../services/realtimeService';
+import realtimeService, { dataSyncService } from '../services/realtimeService';
 import ErrorBoundary from './ErrorBoundary';
 
 const Sales = () => {

@@ -20,7 +20,7 @@ import {
   LogOut,
   LogIn
 } from 'lucide-react';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { shiftService, saleService } from '../services/firebaseService';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
@@ -345,8 +345,8 @@ const CashRegister = () => {
     }
   }, [canOpenShift, userRole, currentUser, openingAmount, shiftType, notes]);
 
-  // Modal para abrir turno - usar useCallback para evitar re-renders
-  const OpenShiftModal = useCallback(() => (
+  // Modal para abrir turno - componente separado para evitar re-renders
+  const OpenShiftModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
@@ -389,10 +389,10 @@ const CashRegister = () => {
                 className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 placeholder="0"
               />
-        </div>
-      </div>
+            </div>
+          </div>
 
-                    <div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Notas (opcional):</label>
             <textarea
               value={notes}
@@ -401,26 +401,26 @@ const CashRegister = () => {
               rows="2"
               placeholder="Observaciones del turno..."
             />
-                    </div>
-                    </div>
+          </div>
+        </div>
 
         <div className="flex space-x-3 mt-6">
-                <button
+          <button
             onClick={() => setShowOpenShiftModal(false)}
             className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
           >
             Cancelar
-                </button>
-                <button
+          </button>
+          <button
             onClick={openShift}
             className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
           >
             Abrir Turno
-                </button>
-            </div>
-          </div>
+          </button>
         </div>
-  ), [shiftType, openingAmount, notes, currentUser, userRole, openShift]);
+      </div>
+    </div>
+  );
 
   // Modal para cerrar turno
   const CloseShiftModal = () => (

@@ -9,7 +9,7 @@ import {
   Percent
 } from 'lucide-react';
 import { shiftService, saleService } from '../services/firebaseService';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import toast from 'react-hot-toast';
 
 const SalesReports = () => {

@@ -1,5 +1,5 @@
 // Script completo para probar todas las funcionalidades del sistema
-import { realtimeService, dataSyncService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { productService, saleService, customerService, shiftService } from '../services/firebaseService';
 
 export const runComprehensiveTests = async () => {

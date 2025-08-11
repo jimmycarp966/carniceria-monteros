@@ -14,7 +14,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { productService, saleService, shiftService } from '../services/firebaseService';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { useCashRegisterAccess } from '../hooks/useCashRegisterAccess';
 import toast from 'react-hot-toast';
 

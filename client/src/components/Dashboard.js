@@ -11,7 +11,7 @@ import {
   RefreshCw,
   ShoppingCart
 } from 'lucide-react';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { productService, saleService, customerService } from '../services/firebaseService';
 import toast from 'react-hot-toast';
 

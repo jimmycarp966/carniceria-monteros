@@ -13,7 +13,7 @@ import {
   User,
   Shield
 } from 'lucide-react';
-import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { productService, shiftService } from '../services/firebaseService';
 import ShiftManagement from './ShiftManagement';
 import CashRegisterAccessGuard from './CashRegisterAccessGuard';

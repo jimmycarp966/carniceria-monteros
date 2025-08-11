@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 
 // Hook para optimizar re-renders
 export const useOptimizedCallback = (callback, deps) => {

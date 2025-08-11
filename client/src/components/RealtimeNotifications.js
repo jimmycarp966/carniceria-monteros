@@ -9,7 +9,7 @@ import {
   Users,
   TrendingUp
 } from 'lucide-react';
-import { realtimeService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import toast from 'react-hot-toast';
 
 const RealtimeNotifications = () => {

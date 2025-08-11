@@ -1,5 +1,5 @@
 // Script de prueba para verificar funcionamiento del sistema
-import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
+import realtimeService, { dataSyncService, notificationService } from '../services/realtimeService';
 import { productService, saleService, shiftService } from '../services/firebaseService';
 
 export const runSystemTests = async () => {

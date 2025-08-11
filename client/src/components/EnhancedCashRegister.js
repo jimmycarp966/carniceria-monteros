@@ -17,7 +17,7 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react';
-import { realtimeService, dataSyncService, notificationService } from '../services/realtimeService';
+import realtimeService from '../services/realtimeService';
 import { productService, shiftService, customerService, saleService } from '../services/firebaseService';
 import ShiftManagement from './ShiftManagement';
 import toast from 'react-hot-toast';
