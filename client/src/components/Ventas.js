@@ -326,7 +326,7 @@ const Ventas = () => {
           onClick={async () => {
             try {
               console.log('🔍 Ejecutando diagnóstico de turnos...');
-              const fixedCount = await shiftService.verifyAndFixShiftStatus();
+              await shiftService.verifyAndFixShiftStatus();
               const activeShift = await shiftService.getActiveShift();
               
               if (activeShift) {
