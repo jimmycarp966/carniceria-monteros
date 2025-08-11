@@ -138,6 +138,62 @@ const CashRegister = () => {
     afternoon: null
   });
 
+  // Función para cargar el resumen del día
+  const loadDaySummary = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const shifts = await shiftService.getShiftsByDate(today);
+      
+      // Obtener todas las ventas del día para calcular totales reales
+      const allSales = await saleService.getAllSales();
+      const todaySales = allSales.filter(sale => {
+        const saleDate = sale.timestamp?.toDate?.()?.toISOString()?.split('T')[0] || 
+                        sale.createdAt?.toDate?.()?.toISOString()?.split('T')[0];
+        return saleDate === today;
+      });
+
+      // Calcular totales por turno
+      const shiftsWithTotals = shifts.map(shift => {
+        const shiftSales = todaySales.filter(sale => sale.shiftId === shift.id);
+        const totalSales = shiftSales.length;
+        const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+        
+        return {
+          id: shift.id,
+          type: shift.type,
+          employeeName: shift.employeeName,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          totalSales,
+          totalRevenue,
+          status: shift.status
+        };
+      });
+
+      const summary = {
+        date: today,
+        totalShifts: shifts.length,
+        totalSales: todaySales.length,
+        totalRevenue: todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0),
+        shifts: shiftsWithTotals,
+        // Agregar estadísticas adicionales
+        salesByPaymentMethod: {
+          efectivo: todaySales.filter(s => s.paymentMethod === 'efectivo').reduce((sum, s) => sum + (s.total || 0), 0),
+          tarjetaDebito: todaySales.filter(s => s.paymentMethod === 'tarjetaDebito').reduce((sum, s) => sum + (s.total || 0), 0),
+          tarjetaCredito: todaySales.filter(s => s.paymentMethod === 'tarjetaCredito').reduce((sum, s) => sum + (s.total || 0), 0),
+          transferencia: todaySales.filter(s => s.paymentMethod === 'transferencia').reduce((sum, s) => sum + (s.total || 0), 0),
+          mercadopago: todaySales.filter(s => s.paymentMethod === 'mercadopago').reduce((sum, s) => sum + (s.total || 0), 0)
+        }
+      };
+
+      setDaySummary(summary);
+      console.log('📊 Resumen del día cargado:', summary);
+    } catch (error) {
+      console.error('Error cargando resumen del día:', error);
+      toast.error('Error cargando datos del día');
+    }
+  }, []);
+
   // Función para verificar si se puede finalizar el día
   const checkCanFinalizarDia = useCallback(async () => {
     try {
@@ -1179,63 +1235,8 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal }) =>
   const [daySummary, setDaySummary] = useState(null);
 
   useEffect(() => {
-      const loadDaySummary = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const shifts = await shiftService.getShiftsByDate(today);
-      
-      // Obtener todas las ventas del día para calcular totales reales
-      const allSales = await saleService.getAllSales();
-      const todaySales = allSales.filter(sale => {
-        const saleDate = sale.timestamp?.toDate?.()?.toISOString()?.split('T')[0] || 
-                        sale.createdAt?.toDate?.()?.toISOString()?.split('T')[0];
-        return saleDate === today;
-      });
-
-      // Calcular totales por turno
-      const shiftsWithTotals = shifts.map(shift => {
-        const shiftSales = todaySales.filter(sale => sale.shiftId === shift.id);
-        const totalSales = shiftSales.length;
-        const totalRevenue = shiftSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-        
-        return {
-          id: shift.id,
-          type: shift.type,
-          employeeName: shift.employeeName,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
-          totalSales,
-          totalRevenue,
-          status: shift.status
-        };
-      });
-
-      const summary = {
-        date: today,
-        totalShifts: shifts.length,
-        totalSales: todaySales.length,
-        totalRevenue: todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0),
-        shifts: shiftsWithTotals,
-        // Agregar estadísticas adicionales
-        salesByPaymentMethod: {
-          efectivo: todaySales.filter(s => s.paymentMethod === 'efectivo').reduce((sum, s) => sum + (s.total || 0), 0),
-          tarjetaDebito: todaySales.filter(s => s.paymentMethod === 'tarjetaDebito').reduce((sum, s) => sum + (s.total || 0), 0),
-          tarjetaCredito: todaySales.filter(s => s.paymentMethod === 'tarjetaCredito').reduce((sum, s) => sum + (s.total || 0), 0),
-          transferencia: todaySales.filter(s => s.paymentMethod === 'transferencia').reduce((sum, s) => sum + (s.total || 0), 0),
-          mercadopago: todaySales.filter(s => s.paymentMethod === 'mercadopago').reduce((sum, s) => sum + (s.total || 0), 0)
-        }
-      };
-
-      setDaySummary(summary);
-      console.log('📊 Resumen del día cargado:', summary);
-    } catch (error) {
-      console.error('Error cargando resumen del día:', error);
-      toast.error('Error cargando datos del día');
-    }
-  };
-
     loadDaySummary();
-  }, []);
+  }, [loadDaySummary]);
 
   const handleFinalizarDia = async () => {
     if (!daySummary) return;
