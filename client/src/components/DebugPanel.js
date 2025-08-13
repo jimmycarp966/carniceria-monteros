@@ -562,8 +562,8 @@ const DebugPanel = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="modal-overlay p-4">
+      <div className="modal-content shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-bold flex items-center">
             <Bug className="h-6 w-6 mr-2" />
@@ -740,9 +740,9 @@ const DebugPanel = () => {
        </div>
 
        {/* Modal de Confirmación de Reset */}
-       {showResetConfirm && (
-         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
+      {showResetConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content shadow-2xl max-w-md w-full mx-4">
              <div className="p-6">
                <div className="flex items-center mb-4">
                  <AlertTriangle className="h-8 w-8 text-red-600 mr-3" />

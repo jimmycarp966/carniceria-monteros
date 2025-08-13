@@ -362,6 +362,28 @@ p {
     max-height: calc(100vh - 10rem);
     overflow-y: auto;
   }
+
+  /* Ajustes para pantallas con poca altura */
+  @media (max-height: 640px) {
+    .modal-content {
+      top: 0.5rem;
+      max-height: calc(100vh - 1rem);
+      padding: 1rem;
+    }
+  }
+
+  /* Ajustes para pantallas muy angostas */
+  @media (max-width: 360px) {
+    .modal-content {
+      padding: 0.75rem;
+    }
+  }
+
+  /* Considerar areas seguras en móviles con notch */
+  .modal-content {
+    margin-top: env(safe-area-inset-top);
+    margin-bottom: env(safe-area-inset-bottom);
+  }
   
   /* ===== BADGES ===== */
   .badge {

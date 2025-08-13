@@ -315,8 +315,8 @@ const SalesReports = () => {
   };
 
   const DiscountModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+    <div className="modal-overlay">
+      <div className="modal-content p-6 w-full max-w-md">
         <h3 className="text-xl font-bold text-gray-900 mb-4">Aplicar Descuento</h3>
         
         <div className="mb-4">
@@ -391,8 +391,8 @@ const SalesReports = () => {
 
   // Modal para reporte diario
   const DailyReportModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay">
+      <div className="modal-content p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <BarChart3 className="h-6 w-6 mr-2 text-blue-600" />
           Reporte Diario - {new Date().toLocaleDateString('es-ES')}

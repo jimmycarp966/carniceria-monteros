@@ -131,7 +131,7 @@ const MainLayout = ({ children }) => {
   );
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Overlay para móvil */}
       {sidebarOpen && (
         <div 

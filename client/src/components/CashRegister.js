@@ -1401,8 +1401,8 @@ const OpenShiftModal = memo(({ onOpenShift, setShowOpenShiftModal }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+    <div className="modal-overlay">
+      <div className="modal-content p-6 w-full max-w-md">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <LogIn className="h-6 w-6 mr-2 text-green-600" />
           Abrir Turno
@@ -1481,8 +1481,8 @@ const CloseShiftModal = memo(({ closeShift, setShowCloseShiftModal }) => {
   const [closingNotes, setClosingNotes] = useState('');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl">
+    <div className="modal-overlay">
+      <div className="modal-content p-6 w-full max-w-2xl">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <LogOut className="h-6 w-6 mr-2 text-red-600" />
           Cerrar Turno
@@ -1541,8 +1541,8 @@ const IncomeModal = memo(({ registerIncome, setShowIncomeModal }) => {
   const [incomeCategory, setIncomeCategory] = useState('venta_adicional');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+    <div className="modal-overlay">
+      <div className="modal-content p-6 w-full max-w-md">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <Plus className="h-6 w-6 mr-2 text-green-600" />
           Registrar Ingreso
@@ -1649,8 +1649,8 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
 
   if (!daySummary) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8">
+      <div className="modal-overlay">
+        <div className="modal-content p-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando resumen del día...</p>
         </div>
@@ -1659,8 +1659,8 @@ const FinalizarDiaModal = memo(({ onFinalizarDia, setShowFinalizarDiaModal, dayS
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay">
+      <div className="modal-content p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <div className={`p-3 rounded-full ${dayFinalizado ? 'bg-blue-100' : 'bg-red-100'}`}>

@@ -414,8 +414,8 @@ const SalesModule = () => {
 
   // Modal de gestión de clientes
   const CustomerModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay">
+      <div className="modal-content p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-gray-900">
             {editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'}
@@ -532,8 +532,8 @@ const SalesModule = () => {
     const totalPrice = isWeightMode ? (selectedProduct?.price * weight) : (selectedProduct?.price * quantity);
     
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+      <div className="modal-overlay">
+        <div className="modal-content p-6 w-full max-w-md">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Agregar Producto</h3>
             <button
@@ -659,8 +659,8 @@ const SalesModule = () => {
     const change = paymentMethod === 'efectivo' ? Math.max(0, receivedAmount - total) : 0;
     
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="modal-overlay">
+        <div className="modal-content p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Procesar Pago</h3>
             <button

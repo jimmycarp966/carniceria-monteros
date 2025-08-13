@@ -417,8 +417,8 @@ const SimpleCashRegister = () => {
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-6 w-80 max-w-sm">
+      <div className="modal-overlay">
+        <div className="modal-content p-6 w-80 max-w-sm">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">{title}</h3>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl">
